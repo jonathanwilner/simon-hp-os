@@ -40,12 +40,12 @@
           ./goran/desktop/microsoft365-webapps.nix
           ./goran/desktop/cosmic-niri.nix
           ./goran/desktop/hp-os.nix
-          ./goran/desktop/search-qwen.nix
+          ./goran/desktop/search-iq.nix
           ./goran/desktop/niri.nix
           ./goran/desktop/launchers.nix
           ./goran/desktop/dms.nix
           ./goran/desktop/power.nix
-          ./goran/desktop/harmonyos.nix
+          ./goran/desktop/hp-os-theme.nix
           ./goran/desktop/apps.nix
           ./goran/headphones/home.nix
         ];

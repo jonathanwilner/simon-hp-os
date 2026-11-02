@@ -14,7 +14,7 @@ SCHEMA = {'type': 'array', 'items': {'type': 'string'}, 'minItems': 1, 'maxItems
 def main():
     for query, expected in FIXTURES:
         payload = {
-            'model': 'hp-os-search-qwen', 'temperature': 0,
+            'model': 'hp-os-search-iq', 'temperature': 0,
             'max_tokens': 96,
             'chat_template_kwargs': {'enable_thinking': False},
             'response_format': {'type': 'json_schema', 'json_schema': {

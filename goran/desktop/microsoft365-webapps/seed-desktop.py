@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 
 home = Path.home()
-state = home / ".local/state/harmonyshell/user"
+state = Path(os.environ.get("XDG_STATE_HOME", home / ".local/state")) / "hp-os/user"
 path = state / "desktop-items.json"
 marker = state / "microsoft365-desktop-v1.json"
 if marker.exists():

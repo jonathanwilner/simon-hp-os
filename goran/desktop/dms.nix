@@ -14,7 +14,7 @@ let
       runHook postCheck
     '';
   });
-  themePath = "${config.xdg.configHome}/DankMaterialShell/themes/harmonyos.json";
+  themePath = "${config.xdg.configHome}/DankMaterialShell/themes/hp-os.json";
   initialSettings = builtins.toJSON {
     currentThemeName = "custom";
     customThemeFile = themePath;

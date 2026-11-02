@@ -26,6 +26,7 @@
                                   goran/desktop-mode-current))))
               (if (fboundp 'fleet-emacs-style-apply)
                   (fleet-emacs-style-apply
+                   ;; External fleet-emacs-style palette identifier retained for compatibility.
                    (if (eq mode 'dark) 'rio-dark 'harmonyos-light))
                 (mapc #'disable-theme custom-enabled-themes)
                 (load-theme (if (eq mode 'dark) 'modus-vivendi 'modus-operandi) t))

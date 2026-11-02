@@ -1,6 +1,6 @@
 {
   "$schema": "https://design-tokens.github.io/community-group/format/",
-  "name": "HarmonyOS-inspired desktop tokens",
+  "name": "HP-OS desktop tokens",
   "source": {
     "project": "OpenHarmony global_system_resources",
     "release": "7.0",

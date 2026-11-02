@@ -14,13 +14,13 @@ let
     openclSupport = false;
   };
 in pkgs.writeShellApplication {
-  name = "hp-os-search-qwen";
+  name = "hp-os-search-iq";
   runtimeInputs = [ server ];
   text = ''
     export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2
     exec llama-server \
       --model ${model} \
-      --alias hp-os-search-qwen \
+      --alias hp-os-search-iq \
       --host 127.0.0.1 --port 30002 \
       --ctx-size 2048 --threads 2 --threads-batch 2 \
       --parallel 1 --n-gpu-layers 0 \

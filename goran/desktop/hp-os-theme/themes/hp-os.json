@@ -1,6 +1,6 @@
 {
   "dark": {
-    "name": "HarmonyOS Dark",
+    "name": "HP-OS Dark",
     "primary": "#5291FF",
     "primaryText": "#0D0D0D",
     "primaryContainer": "#1D3F74",
@@ -22,7 +22,7 @@
     "matugen_type": "scheme-neutral"
   },
   "light": {
-    "name": "HarmonyOS Light",
+    "name": "HP-OS Light",
     "primary": "#0A59F7",
     "primaryText": "#FFFFFF",
     "primaryContainer": "#CEDEFE",

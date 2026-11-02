@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+"$(dirname "$0")/hp-os-theme-migrate"
 
 config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
 cache_home="${XDG_CACHE_HOME:-$HOME/.cache}"
@@ -7,8 +8,8 @@ state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
 settings="$config_home/DankMaterialShell/settings.json"
 session="$state_home/DankMaterialShell/session.json"
 theme_file="@theme_file@"
-state_dir="$state_home/nixos-intc/harmonyos-dms-theme"
-backup="$state_dir/settings.pre-harmonyos.json"
+state_dir="$state_home/nixos-intc/hp-os-dms-theme"
+backup="$state_dir/settings.pre-hp-os.json"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -17,22 +18,22 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     *)
-      printf 'usage: harmonyos-theme-apply [--theme-file PATH]\n' >&2
+      printf 'usage: hp-os-theme-apply [--theme-file PATH]\n' >&2
       exit 2
       ;;
   esac
 done
 
 if [[ ! -f "$settings" ]]; then
-  printf 'harmonyos-theme-apply: DMS settings do not exist: %s\n' "$settings" >&2
+  printf 'hp-os-theme-apply: DMS settings do not exist: %s\n' "$settings" >&2
   exit 1
 fi
 if [[ ! -e "$theme_file" ]]; then
-  printf 'harmonyos-theme-apply: theme file does not exist: %s\n' "$theme_file" >&2
+  printf 'hp-os-theme-apply: theme file does not exist: %s\n' "$theme_file" >&2
   exit 1
 fi
 if ! @jq@ -e 'type == "object"' "$settings" >/dev/null; then
-  printf 'harmonyos-theme-apply: refusing to modify invalid JSON: %s\n' "$settings" >&2
+  printf 'hp-os-theme-apply: refusing to modify invalid JSON: %s\n' "$settings" >&2
   exit 1
 fi
 
@@ -192,5 +193,5 @@ if command -v systemctl >/dev/null 2>&1 && [[ -n "${XDG_RUNTIME_DIR:-}" ]]; then
   systemctl --user start dms-theme-sync.service >/dev/null 2>&1 || true
 fi
 
-printf 'Applied HarmonyOS theme. Original DMS settings: %s\n' "$backup"
+printf 'Applied HP-OS theme. Original DMS settings: %s\n' "$backup"
 printf 'DMS was not restarted; restart it only from an unlocked session if a live refresh is needed.\n'

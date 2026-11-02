@@ -1,8 +1,8 @@
-# Local search query model
+# Ask IQ local search service
 
 The desktop runs Qwen3.5-0.8B Q4_0 from the llama.cpp maintainers' GGUF repository with llama.cpp on two CPU threads.
 The service binds only `127.0.0.1:30002`; its OpenAI-compatible model name is
-`hp-os-search-qwen`. It starts with the graphical user session and remains ready
+`hp-os-search-iq`. It starts at user login and remains ready
 for explicit search requests. It uses no GPU, cloud account or API key.
 
 The model download is 563,036,064 bytes, pinned to GGUF revision
@@ -17,9 +17,9 @@ chat template. Clients should also use `/no_think`, a JSON schema, and at most
 query and its filename/content results when this optional model is unavailable.
 This small model suggests keywords; it does not establish file contents.
 
-Run `python3 pkgs/hp-os-search-qwen/verify.py` against a running service for two
+Run `python3 pkgs/hp-os-search-iq/verify.py` against a running service for two
 bounded English/Chinese fixtures. The check reports actual latency and usage.
-Service logs: `journalctl --user -u hp-os-search-qwen`.
+Service logs: `journalctl --user -u hp-os-search-iq`.
 
 ## Qualification
 

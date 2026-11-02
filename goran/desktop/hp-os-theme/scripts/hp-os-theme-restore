@@ -1,20 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
+"$(dirname "$0")/hp-os-theme-migrate"
 
 config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
 state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
 settings="$config_home/DankMaterialShell/settings.json"
-state_dir="$state_home/nixos-intc/harmonyos-dms-theme"
-backup="$state_dir/settings.pre-harmonyos.json"
+state_dir="$state_home/nixos-intc/hp-os-dms-theme"
+backup="$state_dir/settings.pre-hp-os.json"
 fontconfig_alias="$config_home/fontconfig/conf.d/99-dms-theme-sync.conf"
-fontconfig_backup="$state_dir/fontconfig.pre-harmonyos.conf"
+fontconfig_backup="$state_dir/fontconfig.pre-hp-os.conf"
 
 if [[ ! -f "$backup" ]]; then
-  printf 'harmonyos-theme-restore: no original settings snapshot found: %s\n' "$backup" >&2
+  printf 'hp-os-theme-restore: no original settings snapshot found: %s\n' "$backup" >&2
   exit 1
 fi
 if ! @jq@ -e 'type == "object"' "$backup" >/dev/null; then
-  printf 'harmonyos-theme-restore: refusing to restore invalid JSON: %s\n' "$backup" >&2
+  printf 'hp-os-theme-restore: refusing to restore invalid JSON: %s\n' "$backup" >&2
   exit 1
 fi
 
@@ -50,7 +51,7 @@ if [[ -d "$niri_dms_dir" ]]; then
   ' "$backup")
   cat >"$niri_dms_dir/layout.kdl" <<EOF
 // ! DO NOT EDIT !
-// ! AUTO-GENERATED FROM THE PRE-HARMONYOS DMS SETTINGS !
+// ! AUTO-GENERATED FROM THE PRE-HP-OS DMS SETTINGS !
 // ! CHANGES WILL BE OVERWRITTEN BY DMS !
 
 layout {
@@ -77,7 +78,7 @@ fi
 if [[ -f "$fontconfig_backup" ]]; then
   rm -f "$fontconfig_alias"
   install -m600 "$fontconfig_backup" "$fontconfig_alias"
-elif [[ -L "$fontconfig_alias" ]] && [[ "$(readlink -f "$fontconfig_alias")" == *harmonyos-dms-theme* ]]; then
+elif [[ -L "$fontconfig_alias" ]] && [[ "$(readlink -f "$fontconfig_alias")" == *hp-os-dms-theme* || "$(readlink -f "$fontconfig_alias")" == *harmonyos-dms-theme* ]]; then
   rm -f "$fontconfig_alias"
 fi
 

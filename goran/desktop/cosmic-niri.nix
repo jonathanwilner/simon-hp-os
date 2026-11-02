@@ -25,7 +25,7 @@ let
     exec /usr/libexec/xdg-desktop-portal-gtk
   '';
 in {
-  imports = [ ./cosmic-harmony-theme.nix ];
+  imports = [ ./cosmic-hp-os-theme.nix ];
   home.packages = [ cosmicFiles ];
   xdg.mimeApps.defaultApplications."inode/directory" = [ "com.system76.CosmicFiles.desktop" ];
   # A preserved HP-OS session can still have an older generation in XDG_DATA_DIRS.

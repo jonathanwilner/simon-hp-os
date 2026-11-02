@@ -1,8 +1,8 @@
 { config, lib, pkgs, ... }:
 let
-  theme = pkgs.callPackage ./harmonyos-theme/package.nix { };
+  theme = pkgs.callPackage ./hp-os-theme/package.nix { };
   sync = import ./theme-sync.nix { inherit config pkgs; };
-  themePath = "${config.xdg.configHome}/DankMaterialShell/themes/harmonyos.json";
+  themePath = "${config.xdg.configHome}/DankMaterialShell/themes/hp-os.json";
 in {
   home.packages = [ theme pkgs.fira ];
   systemd.user.services.dms.Service.Environment = [
@@ -13,12 +13,12 @@ in {
     sansSerif = [ "HarmonyOS Sans" "HarmonyOS Sans SC" "Noto Sans" ];
     monospace = [ "Fira Mono" "Noto Sans Mono" ];
   };
-  xdg.configFile."fontconfig/conf.d/99-harmonyos.conf".source =
-    "${theme}/etc/fonts/conf.d/60-harmonyos-sans.conf";
-  xdg.configFile."DankMaterialShell/themes/harmonyos.json".source =
-    "${theme}/share/harmonyos-dms-theme/themes/harmonyos.json";
-  xdg.configFile."harmonyos-theme/tokens.json".source =
-    "${theme}/share/harmonyos-dms-theme/tokens/harmonyos.json";
+  xdg.configFile."fontconfig/conf.d/99-hp-os.conf".source =
+    "${theme}/etc/fonts/conf.d/60-hp-os-sans.conf";
+  xdg.configFile."DankMaterialShell/themes/hp-os.json".source =
+    "${theme}/share/hp-os-dms-theme/themes/hp-os.json";
+  xdg.configFile."hp-os-theme/tokens.json".source =
+    "${theme}/share/hp-os-dms-theme/tokens/hp-os.json";
 
   gtk = {
     enable = true;
@@ -51,7 +51,7 @@ in {
     font-size = 13
     # Add vertical breathing room while preserving the terminal column grid.
     adjust-cell-height = 2
-    theme = light:harmonyos-light,dark:harmonyos-dark
+    theme = light:hp-os-light,dark:hp-os-dark
     minimum-contrast = 4.5
     faint-opacity = 0.75
     keybind = ctrl+shift+c=copy_to_clipboard
@@ -60,11 +60,11 @@ in {
     keybind = ctrl+insert=copy_to_clipboard
     keybind = shift+insert=paste_from_clipboard
   '';
-  xdg.configFile."ghostty/themes/harmonyos-light".source = ./terminal-themes/harmonyos-light;
-  xdg.configFile."ghostty/themes/harmonyos-dark".source = ./terminal-themes/harmonyos-dark;
+  xdg.configFile."ghostty/themes/hp-os-light".source = ./terminal-themes/hp-os-light;
+  xdg.configFile."ghostty/themes/hp-os-dark".source = ./terminal-themes/hp-os-dark;
   xdg.configFile."alacritty/alacritty.toml".text = ''
     [general]
-    import = [ "${config.xdg.configHome}/alacritty/harmonyos.toml" ]
+    import = [ "${config.xdg.configHome}/alacritty/hp-os.toml" ]
     live_config_reload = true
     [font]
     normal = { family = "Fira Mono", style = "Regular" }
@@ -80,17 +80,17 @@ in {
       { key = "Insert", mods = "Shift", action = "Paste" },
     ]
   '';
-  xdg.configFile."alacritty/themes/harmonyos-light.toml".source = ./terminal-themes/harmonyos-light.toml;
-  xdg.configFile."alacritty/themes/harmonyos-dark.toml".source = ./terminal-themes/harmonyos-dark.toml;
+  xdg.configFile."alacritty/themes/hp-os-light.toml".source = ./terminal-themes/hp-os-light.toml;
+  xdg.configFile."alacritty/themes/hp-os-dark.toml".source = ./terminal-themes/hp-os-dark.toml;
 
-  home.activation.goranHarmonyosTheme = lib.hm.dag.entryAfter [
+  home.activation.goranHposTheme = lib.hm.dag.entryAfter [
     "linkGeneration" "goranDmsSettingsInit" "goranDmsVpnWidgets"
   ] ''
     export DMS_SHELL_DIR=${config.programs.dank-material-shell.package}/share/quickshell/dms
-    $DRY_RUN_CMD ${theme}/bin/harmonyos-theme-apply --theme-file ${lib.escapeShellArg themePath}
+    $DRY_RUN_CMD ${theme}/bin/hp-os-theme-apply --theme-file ${lib.escapeShellArg themePath}
   '';
-  home.activation.goranHarmonyosRefresh = lib.hm.dag.entryAfter [
-    "reloadSystemd" "goranHarmonyosTheme"
+  home.activation.goranHposRefresh = lib.hm.dag.entryAfter [
+    "reloadSystemd" "goranHposTheme"
   ] ''
     $DRY_RUN_CMD ${pkgs.fontconfig}/bin/fc-cache -f "$HOME/.nix-profile/share/fonts"
     if [ -z "''${DRY_RUN_CMD:-}" ] && ${pkgs.systemd}/bin/systemctl --user is-active --quiet dms.service; then
@@ -100,7 +100,7 @@ in {
   '';
   systemd.user.services.dms-theme-sync = {
     Unit = {
-      Description = "Sync HarmonyOS desktop and terminal themes with DMS";
+      Description = "Sync HP-OS desktop and terminal themes with DMS";
       # DMS starts after the session target. Explicitly put theme sync after
       # that target too, so its WantedBy dependency cannot order it before
       # the target and create a target -> DMS -> theme sync -> target cycle.

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# Retain the original pre-theme backups across the HP-OS rename.
+state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
+old="$state_home/nixos-intc/harmonyos-dms-theme"
+new="$state_home/nixos-intc/hp-os-dms-theme"
+for kind in settings fontconfig; do
+  ext=json
+  [[ "$kind" == fontconfig ]] && ext=conf
+  source="$old/$kind.pre-harmonyos.$ext"
+  target="$new/$kind.pre-hp-os.$ext"
+  if [[ -f "$source" && ! -e "$target" ]]; then
+    install -d -m700 "$new"
+    install -m600 "$source" "$target"
+  fi
+done

@@ -127,7 +127,7 @@ in {
         rotation.mode = lib.mkDefault "off";
       };
     };
-    home.activation.hpOsKeyboard = lib.hm.dag.entryAfter [ "harmonyNiriBindings" ] ''
+    home.activation.hpOsKeyboard = lib.hm.dag.entryAfter [ "hposNiriBindings" ] ''
       run ${installKeyboard}
     '';
     home.activation.hpOsNativePam = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
@@ -135,7 +135,7 @@ in {
         "$HOME/.local/state/hp-os/native-pam/current" \
         ${lib.getLib hpPkgs.pcre2}/lib/libpcre2-8.so.0
     '';
-    home.activation.hpOsDesktopControls = lib.hm.dag.entryAfter [ "linkGeneration" "harmonyNiriBindings" ] ''
+    home.activation.hpOsDesktopControls = lib.hm.dag.entryAfter [ "linkGeneration" "hposNiriBindings" ] ''
       run ${pkgs.python3}/bin/python3 ${./hp-os-battery.py} "$HOME/.config/hp-os/config.json"
     '';
     home.packages = [ fonts launcher ];

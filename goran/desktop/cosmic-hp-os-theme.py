@@ -57,7 +57,7 @@ def component(p, base=None, solid=False, transparent=False):
 
 def theme_values(mode, version):
     p = PALETTES[mode]
-    values = {'name': f'HP-OS Harmony {mode}'}
+    values = {'name': f'HP-OS {mode}'}
     for key, surface in [('background','canvas'), ('primary','primary'), ('secondary','secondary')]:
         values[key] = dict(base=Color(p[surface]), component=component(p),
                            divider=Color(p['divider']), on=Color(p['text']),

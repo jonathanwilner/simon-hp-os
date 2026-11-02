@@ -76,5 +76,10 @@ HP-OS code retains its GNU GPLv3 license, original authorship and
 their own licenses and notices. This independent Linux desktop is not a Huawei product.
 
 **HarmonyOS Sans is bundled unmodified.** Its font files, license and required
-notice are retained in `goran/desktop/harmonyos-theme/`. See
-[LICENSE_Fonts](goran/desktop/harmonyos-theme/LICENSE_Fonts).
+notice are retained in `goran/desktop/hp-os-theme/`. See
+[LICENSE_Fonts](goran/desktop/hp-os-theme/LICENSE_Fonts).
+
+**Ask IQ** expands local file searches with the small Qwen3.5-0.8B model on
+the CPU. Search retains the original query alongside suggested keywords.
+The service runs locally at login with a 2 GB memory limit and two CPU threads.
+See [Ask IQ service](pkgs/hp-os-search-iq/README.md).

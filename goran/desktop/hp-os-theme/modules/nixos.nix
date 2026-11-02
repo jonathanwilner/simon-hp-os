@@ -7,13 +7,13 @@
 }:
 
 let
-  cfg = config.jw.harmonyosDmsTheme;
+  cfg = config.jw.hposDmsTheme;
   system = pkgs.stdenv.hostPlatform.system;
   themePackage = self.packages.${system}.default;
 in
 {
-  options.jw.harmonyosDmsTheme = {
-    enable = lib.mkEnableOption "the HarmonyOS-inspired DMS/Niri desktop theme";
+  options.jw.hposDmsTheme = {
+    enable = lib.mkEnableOption "the HP-OS DMS/Niri desktop theme";
 
     user = lib.mkOption {
       type = lib.types.str;
@@ -39,14 +39,14 @@ in
       "HarmonyOS Sans TC"
       "HarmonyOS Sans Naskh Arabic UI"
     ];
-    fonts.fontconfig.localConf = lib.mkAfter (builtins.readFile ../fontconfig/60-harmonyos-sans.conf);
+    fonts.fontconfig.localConf = lib.mkAfter (builtins.readFile ../fontconfig/60-hp-os-sans.conf);
     fonts.fontconfig.defaultFonts.monospace = lib.mkBefore [ "Fira Mono" ];
 
     environment.systemPackages = [ themePackage ];
 
     home-manager.users.${cfg.user} = {
       imports = [ self.homeManagerModules.default ];
-      jw.harmonyosDmsTheme = {
+      jw.hposDmsTheme = {
         enable = true;
         package = themePackage;
       };

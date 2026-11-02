@@ -1,7 +1,7 @@
 # Ported from Slazenger nixos-intc home.nix at 8d85a03 (28 Sep 2026).
 { config, pkgs }:
 let
-  harmonyOsMonoFontFamily = "Fira Mono";
+  hposMonoFontFamily = "Fira Mono";
   dmsEmacsThemeApplyScript = "${config.home.profileDirectory}/bin/dms-emacs-theme-apply";
 in
 pkgs.writeShellScript "dms-theme-sync" ''
@@ -143,7 +143,7 @@ pkgs.writeShellScript "dms-theme-sync" ''
 
     # DMS's decorative palette can use lower-contrast tones that work for
     # large shell UI, but Emacs applies these to dense 11pt text.  Keep the
-    # HarmonyOS hue while enforcing >= 4.5:1 contrast on each mode's surfaces.
+    # HP-OS hue while enforcing >= 4.5:1 contrast on each mode's surfaces.
     if [ "$mode" = "light" ]; then
       emacs_fg_muted="#626a72"
       emacs_accent="#0064d0"
@@ -155,17 +155,17 @@ pkgs.writeShellScript "dms-theme-sync" ''
     fi
 
     font_family="Inter Variable"
-    mono_font_family="${harmonyOsMonoFontFamily}"
+    mono_font_family="${hposMonoFontFamily}"
     font_weight="400"
     font_scale="1"
     if [ -s "$settings_json" ]; then
       font_family="$($JQ_BIN -r '.fontFamily // "Inter Variable"' "$settings_json" 2>/dev/null || echo "Inter Variable")"
-      mono_font_family="$($JQ_BIN -r '.monoFontFamily // "${harmonyOsMonoFontFamily}"' "$settings_json" 2>/dev/null || echo "${harmonyOsMonoFontFamily}")"
+      mono_font_family="$($JQ_BIN -r '.monoFontFamily // "${hposMonoFontFamily}"' "$settings_json" 2>/dev/null || echo "${hposMonoFontFamily}")"
       font_weight="$($JQ_BIN -r '.fontWeight // 400' "$settings_json" 2>/dev/null || echo "400")"
       font_scale="$($JQ_BIN -r '.fontScale // 1' "$settings_json" 2>/dev/null || echo "1")"
     fi
     if [ -z "$font_family" ] || [ "$font_family" = "null" ]; then font_family="Inter Variable"; fi
-    if [ -z "$mono_font_family" ] || [ "$mono_font_family" = "null" ]; then mono_font_family="${harmonyOsMonoFontFamily}"; fi
+    if [ -z "$mono_font_family" ] || [ "$mono_font_family" = "null" ]; then mono_font_family="${hposMonoFontFamily}"; fi
     case "$font_weight" in ""|*[!0-9]*) font_weight="400" ;; esac
     case "$font_scale" in ""|*[!0-9.]*|.*|*.) font_scale="1" ;; esac
 
@@ -240,14 +240,14 @@ pkgs.writeShellScript "dms-theme-sync" ''
 
     ensure_writable "$fuzzel_dir/fuzzel.ini"
     ensure_writable "$swaync_dir/style.css"
-    ensure_writable "$alacritty_dir/harmonyos.toml"
+    ensure_writable "$alacritty_dir/hp-os.toml"
 
     # Alacritty cannot select a light/dark pair itself. Keep its imported,
     # writable palette synchronized with the same DMS mode used by GTK and
     # Emacs; live_config_reload updates existing terminal windows.
-    alacritty_variant="$alacritty_dir/themes/harmonyos-$mode.toml"
+    alacritty_variant="$alacritty_dir/themes/hp-os-$mode.toml"
     if [ -s "$alacritty_variant" ]; then
-      ${pkgs.coreutils}/bin/cp "$alacritty_variant" "$alacritty_dir/harmonyos.toml"
+      ${pkgs.coreutils}/bin/cp "$alacritty_variant" "$alacritty_dir/hp-os.toml"
     fi
 
     # Ghostty follows the desktop portal through its light/dark theme pair.
@@ -404,15 +404,15 @@ EOF
 
     font_family_el="$($JQ_BIN -Rn --arg value "$font_family" '$value')"
     mono_font_family_el="$($JQ_BIN -Rn --arg value "$mono_font_family" '$value')"
-    emacs_theme="$emacs_dir/harmonyos-desktop-theme.el"
+    emacs_theme="$emacs_dir/hp-os-desktop-theme.el"
     ensure_writable "$emacs_theme"
-    emacs_theme_tmp="$($MKTEMP_BIN "$emacs_dir/.harmonyos-desktop-theme.el.XXXXXX")"
+    emacs_theme_tmp="$($MKTEMP_BIN "$emacs_dir/.hp-os-desktop-theme.el.XXXXXX")"
     cat > "$emacs_theme_tmp" <<EOF
-;;; harmonyos-desktop-theme.el --- generated from the active DMS palette -*- lexical-binding: t; -*-
+;;; hp-os-desktop-theme.el --- generated from the active DMS palette -*- lexical-binding: t; -*-
 
 (require 'patrl-desktop-theme)
 
-(defconst jw/harmonyos-renderer-version $theme_renderer_version)
+(defconst jw/hp-os-renderer-version $theme_renderer_version)
 
 (patrl/desktop-theme-apply
  (list :mode '$mode
@@ -431,12 +431,14 @@ EOF
        :notmuch-font-family "JetBrains Mono"
        :font-height $emacs_font_height))
 
-(provide 'harmonyos-desktop-theme)
-;;; harmonyos-desktop-theme.el ends here
+(provide 'hp-os-desktop-theme)
+;;; hp-os-desktop-theme.el ends here
 EOF
 
     $MV_BIN -f "$emacs_theme_tmp" "$emacs_theme"
 
+    # Compatibility for the separately installed fleet Emacs loader.
+    ${pkgs.coreutils}/bin/ln -sfn "$emacs_theme" "$emacs_dir/harmonyos-desktop-theme.el"
     ${dmsEmacsThemeApplyScript} || true
     theme_fingerprint_tmp="$($MKTEMP_BIN "''${theme_fingerprint_file}.XXXXXX")"
     printf '%s\n' "$theme_fingerprint" > "$theme_fingerprint_tmp"

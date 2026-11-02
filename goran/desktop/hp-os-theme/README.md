@@ -1,37 +1,37 @@
-# HarmonyOS-inspired DMS + Niri theme
+# HP-OS DMS + Niri theme
 
 > **Font notice:** This theme software uses and bundles unmodified HarmonyOS Sans Fonts. The fonts are governed by the bundled [`LICENSE_Fonts`](./LICENSE_Fonts), are not open-source software, and must not be redistributed as a standalone font package.
 
-This flake packages a HarmonyOS-inspired desktop theme for DankMaterialShell (DMS) on Niri. It contains:
+This flake packages a HP-OS desktop theme for DankMaterialShell (DMS) on Niri. It contains:
 
 - a dual light/dark DMS palette derived from OpenHarmony 7 system-resource tokens;
 - unmodified HarmonyOS Sans variable fonts, verified against their upstream SHA-256 hashes at build time;
 - a NixOS module that installs the combined theme/font package and makes HarmonyOS Sans the preferred sans-serif family;
-- a Home Manager module that installs the DMS theme, applies Harmony-like typography/spacing/radii, and creates a one-time settings backup;
+- a Home Manager module that installs the DMS theme, applies HP-OS typography/spacing/radii, and creates a one-time settings backup;
 - host integration that follows DMS light/dark changes in GTK 3/4, Fuzzel, SwayNC, Alacritty, Ghostty, and Emacs PGTK without forcing `GTK_THEME`;
-- `harmonyos-theme-apply` and `harmonyos-theme-restore` commands for reversible runtime changes.
+- `hp-os-theme-apply` and `hp-os-theme-restore` commands for reversible runtime changes.
 
-The visual language uses the desktop/tablet-appropriate HarmonyOS conventions: a 16 px dialog/window radius, a 2/4/8/12/16/24 spacing scale, 12/14/16/20 core UI type sizes, restrained neutral surfaces, and blue focus/brand accents. It is an interoperability theme, not a Huawei product or an assertion of pixel-for-pixel identity.
+The visual language uses the desktop/tablet-appropriate HP-OS conventions: a 16 px dialog/window radius, a 2/4/8/12/16/24 spacing scale, 12/14/16/20 core UI type sizes, restrained neutral surfaces, and blue focus/brand accents. It is an interoperability theme, not a Huawei product or an assertion of pixel-for-pixel identity.
 
 HarmonyOS Sans is used for proportional interface text. Fixed-width DMS
 surfaces and terminal emulators use Fira Mono, with Noto Sans Mono as the
-generic fallback. Ghostty selects dedicated HarmonyOS light/dark palettes;
+generic fallback. Ghostty selects dedicated HP-OS light/dark palettes;
 Alacritty imports a mode-specific palette selected by the DMS theme-sync
 service and reloads it without recreating the terminal window.
 
 ## Use from another flake
 
 ```nix
-inputs.harmonyos-dms-theme = {
-  url = "path:./flakes/harmonyos-dms-theme";
+inputs.hp-os-dms-theme = {
+  url = "path:./flakes/hp-os-dms-theme";
   inputs.nixpkgs.follows = "nixpkgs";
 };
 
 # In the target NixOS module list:
-harmonyos-dms-theme.nixosModules.default
+hp-os-dms-theme.nixosModules.default
 
 # In the host configuration:
-jw.harmonyosDmsTheme = {
+jw.hposDmsTheme = {
   enable = true;
   user = "simon";
 };
@@ -44,15 +44,15 @@ The NixOS module imports and enables the matching Home Manager module for the se
 Home Manager activation applies the theme after the existing `dmsSettingsInit` activation step. Before the first change it saves:
 
 ```text
-~/.local/state/nixos-intc/harmonyos-dms-theme/settings.pre-harmonyos.json
-~/.local/state/nixos-intc/harmonyos-dms-theme/fontconfig.pre-harmonyos.conf
+~/.local/state/nixos-intc/hp-os-dms-theme/settings.pre-hp-os.json
+~/.local/state/nixos-intc/hp-os-dms-theme/fontconfig.pre-hp-os.conf
 ```
 
 Manual commands:
 
 ```bash
-harmonyos-theme-apply
-harmonyos-theme-restore
+hp-os-theme-apply
+hp-os-theme-restore
 ```
 
 The restore command saves the current settings with a timestamp before restoring the original snapshot. It also restores the previous generic-font rule and Niri geometry. It does not restart DMS, so it is safe to run while the desktop is locked or while a remote session is fragile. Restart the DMS user service from an unlocked session to make the restored palette and in-process shell typography take effect immediately.
@@ -60,10 +60,10 @@ The restore command saves the current settings with a timestamp before restoring
 The host's DMS theme-sync service owns the writable runtime integrations. It
 uses the active DMS font/palette for GTK 3/4 settings and generated CSS, a
 high-contrast Fuzzel selection/focus treatment, and a generated Emacs Lisp
-theme. Restoring the pre-Harmony DMS settings and rerunning theme sync therefore
+theme. Restoring the pre-HP-OS DMS settings and rerunning theme sync therefore
 returns these integrations to the restored DMS font and colors as well.
 
-NixOS generations remain the system-level fallback. A normal boot-generation rollback removes the font preference/package, while `harmonyos-theme-restore` restores the pre-theme writable DMS settings.
+NixOS generations remain the system-level fallback. A normal boot-generation rollback removes the font preference/package, while `hp-os-theme-restore` restores the pre-theme writable DMS settings.
 
 ## Source and licensing
 
