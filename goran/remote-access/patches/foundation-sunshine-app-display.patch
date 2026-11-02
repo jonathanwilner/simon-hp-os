@@ -1,0 +1,172 @@
+--- a/src/nvhttp.cpp
++++ b/src/nvhttp.cpp
+@@ -447,7 +447,7 @@
+   }
+ 
+   std::shared_ptr<rtsp_stream::launch_session_t>
+-  make_launch_session(bool host_audio, const args_t &args) {
++  make_launch_session(bool host_audio, const args_t &args, int app_id) {
+     auto launch_session = std::make_shared<rtsp_stream::launch_session_t>();
+ 
+     launch_session->id = ++session_id_counter;
+@@ -468,7 +468,7 @@
+     }
+     launch_session->unique_id = (get_arg(args, "uniqueid", "unknown"));
+     launch_session->client_name = (get_arg(args, "clientname", "unknown"));
+-    launch_session->appid = util::from_view(get_arg(args, "appid", "unknown"));
++    launch_session->appid = app_id;
+     if (config::video.rtx_hdr == "per_app") {
+       if (const auto app_rtx_hdr = proc::proc.get_app_rtx_hdr_config(launch_session->appid)) {
+         launch_session->synthetic_hdr = *app_rtx_hdr;
+@@ -515,8 +515,12 @@
+       }
+     }
+ 
+-    // Get display_name from query parameter if provided
+-    std::string display_name = get_arg(args, "display_name", "");
++    // Named display apps take precedence over the client's remembered display.
++    // Generic apps retain the existing client/global display selection behavior.
++    std::string display_name = proc::proc.get_app_display_name(app_id);
++    if (display_name.empty()) {
++      display_name = get_arg(args, "display_name", "");
++    }
+     if (!display_name.empty()) {
+       launch_session->env["SUNSHINE_CLIENT_DISPLAY_NAME"] = display_name;
+       BOOST_LOG(info) << "Launch session will use specified display: " << display_name;
+@@ -854,7 +858,7 @@
+     }
+ 
+     host_audio = util::from_view(get_arg(args, "localAudioPlayMode"));
+-    const auto launch_session = make_launch_session(host_audio, args);
++    const auto launch_session = make_launch_session(host_audio, args, appid);
+     launch_session->rtsp_peer_address = net::addr_to_normalized_string(request->remote_endpoint().address());
+     const auto fingerprint_match = client_fingerprint::match_client(args);
+     launch_session->highly_suspected_unknown_client = fingerprint_match.suspicious;
+@@ -1022,7 +1026,7 @@
+     if (no_active_sessions && args.find("localAudioPlayMode"s) != std::end(args)) {
+       host_audio = util::from_view(get_arg(args, "localAudioPlayMode"));
+     }
+-    const auto launch_session = make_launch_session(host_audio, args);
++    const auto launch_session = make_launch_session(host_audio, args, current_appid);
+     if (launch_session->width <= 0 || launch_session->height <= 0 || launch_session->fps <= 0) {
+       BOOST_LOG(warning) << "Resume request has no usable mode; keeping the current display resolution and refresh rate for compatibility. "sv
+                             "Update Moonlight-Switch to a version that sends mode on Resume when one is available."sv;
+--- a/src/process.cpp
++++ b/src/process.cpp
+@@ -496,6 +496,19 @@
+   }
+ 
+   std::string
++  proc_t::get_app_display_name(int app_id) const {
++    // Preserve the selected app's display across resume, including config reloads.
++    if (_app_id == app_id && _app_id > 0) {
++      return _app.display_name;
++    }
++    const auto app_id_string = std::to_string(app_id);
++    const auto iter = std::find_if(_apps.begin(), _apps.end(), [&app_id_string](const auto &app) {
++      return app.id == app_id_string;
++    });
++    return iter == _apps.end() ? std::string() : iter->display_name;
++  }
++
++  std::string
+   proc_t::get_last_run_app_name() {
+     return _app.name;
+   }
+@@ -837,6 +850,7 @@
+         auto name = parse_env_val(this_env, app_node.get<std::string>("name"s));
+         auto cmd = app_node.get_optional<std::string>("cmd"s);
+         auto image_path = app_node.get_optional<std::string>("image-path"s);
++        ctx.display_name = app_node.get<std::string>("display-name"s, "");
+         auto working_dir = app_node.get_optional<std::string>("working-dir"s);
+         auto elevated = app_node.get_optional<bool>("elevated"s);
+         auto auto_detach = app_node.get_optional<bool>("auto-detach"s);
+--- a/src/process.h
++++ b/src/process.h
+@@ -65,6 +65,7 @@
+     std::string working_dir;
+     std::string output;
+     std::string image_path;
++    std::string display_name;  ///< Optional per-app capture target; empty inherits the client selection.
+     std::string id;
+     bool elevated;
+     bool auto_detach;
+@@ -109,6 +110,8 @@
+     get_app_name(int app_id);
+     std::string
+     get_app_cmd(int app_id);
++    std::string
++    get_app_display_name(int app_id) const;
+     std::string
+     get_last_run_app_name();
+     std::optional<rtsp_stream::synthetic_hdr_config_t>
+--- a/src/display_device/parsed_config.cpp
++++ b/src/display_device/parsed_config.cpp
+@@ -1,4 +1,5 @@
+ // lib includes
++#include <algorithm>
+ #include <boost/algorithm/string.hpp>
+ #include <boost/regex.hpp>
+ #include <charconv>
+@@ -10,6 +11,7 @@
+ #include "src/config.h"
+ #include "src/globals.h"
+ #include "src/logging.h"
++#include "src/platform/common.h"
+ #include "src/rtsp.h"
+ #include "to_string.h"
+ 
+@@ -604,6 +606,18 @@
+       requested_device_exists = true;
+       requested_device_is_vdd = device->second.friendly_name == ZAKO_NAME;
+     }
++#elif defined(__linux__)
++    // Linux capture names come from the active capture backend. The display
++    // configuration API is a stub on Linux and cannot validate these targets.
++    // Use the same backend enumeration as /displays, including connector aliases
++    // and aggregate targets advertised by the backend.
++    for (auto mem_type : { platf::mem_type_e::vaapi, platf::mem_type_e::cuda, platf::mem_type_e::system }) {
++      const auto names = platf::display_names(mem_type);
++      if (std::find(names.begin(), names.end(), intent.device_id) != names.end()) {
++        requested_device_exists = true;
++        break;
++      }
++    }
+ #else
+     requested_device_exists = !find_one_of_the_available_devices(intent.device_id).empty();
+ #endif
+--- a/src/video.cpp
++++ b/src/video.cpp
+@@ -1815,5 +1815,10 @@
+       }
+       if (!found) {
++#ifdef __linux__
++        BOOST_LOG(error) << "Selected display [" << config.display_name << "] is unavailable; refusing to capture another display";
++        return;
++#else
+         BOOST_LOG(warning) << "Client-specified display [" << config.display_name << "] (resolved: " << resolved_display_name << ") not found, using default display";
++#endif
+         target_display_name = display_names[display_p];
+       }
+@@ -2081,5 +2086,10 @@
+               }
+               if (!found) {
++#ifdef __linux__
++                BOOST_LOG(error) << "Selected display [" << config.display_name << "] is unavailable; refusing to capture another display";
++                return;
++#else
+                 BOOST_LOG(warning) << "Client-specified display [" << config.display_name << "] (resolved: " << resolved_display_name << ") not found, using default display";
++#endif
+               }
+             }
+@@ -3768,5 +3778,10 @@
+         }
+         if (!found) {
++#ifdef __linux__
++          BOOST_LOG(error) << "Selected display [" << config.display_name << "] is unavailable; refusing to capture another display";
++          return encode_e::error;
++#else
+           BOOST_LOG(warning) << "Client-specified display [" << config.display_name << "] (resolved: " << resolved_display_name << ") not found, using default display";
++#endif
+         }
+       }

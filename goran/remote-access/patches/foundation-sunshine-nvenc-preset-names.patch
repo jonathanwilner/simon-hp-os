@@ -1,0 +1,22 @@
+--- a/src/config.h
++++ b/src/config.h
+@@ -49,7 +49,7 @@
+     bool vdd_vulkan_hdr_bridge;
+ 
+     struct {
+-      int preset;
++      std::string preset;
+       int multipass;
+       int h264_coder;
+       int aq;
+--- a/src/config.cpp
++++ b/src/config.cpp
+@@ -1226,7 +1226,7 @@
+     bool_f(vars, "nvenc_latency_over_power", video.nv_sunshine_high_power_mode);
+ 
+ #if !defined(__ANDROID__) && !defined(__APPLE__)
+-    video.nv_legacy.preset = video.nv.quality_preset + 11;
++    video.nv_legacy.preset = "p" + std::to_string(video.nv.quality_preset);
+     video.nv_legacy.multipass = video.nv.two_pass == nvenc::nvenc_two_pass::quarter_resolution ? NV_ENC_TWO_PASS_QUARTER_RESOLUTION :
+                                 video.nv.two_pass == nvenc::nvenc_two_pass::full_resolution    ? NV_ENC_TWO_PASS_FULL_RESOLUTION :
+                                                                                                  NV_ENC_MULTI_PASS_DISABLED;

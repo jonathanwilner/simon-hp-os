@@ -27,6 +27,6 @@ in {
   ];
   home.packages = [ suite ];
   # The service waits for Simon's own private enrollment file. No token or
-  # Jonathan endpoint is included in this profile or in the Nix store.
+  # private account state is included in this profile or in the Nix store.
   services.relayClipboard.enable = true;
 }

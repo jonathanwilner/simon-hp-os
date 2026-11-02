@@ -10,34 +10,23 @@ This is Simon's own OneDrive connection. It requires an authorized Microsoft
 public-client application ID and Simon's delegated sign-in. Cloud documents
 remain in OneDrive; edits are not automatically downloaded to the local original.
 
-## Optional Relay enrollment
+## Relay enrollment
 
-The clipboard service stays inactive until Simon creates his own configuration.
-Obtain a Relay service URL and a token for Simon's account from the service owner.
-Create `~/.config/relay/linux.json` with this shape, replacing placeholders:
+Open **Relay** from the app launcher. Choose **Create my Relay account**, or
+**Join an existing account** and paste a setup URL from your other device.
+Relay saves private credentials, starts the clipboard service, and opens your
+personal history. Later launches keep the same account. The account page creates
+setup links for additional devices.
 
-```json
-{
-  "enabled": true,
-  "url": "https://YOUR-RELAY-SERVICE",
-  "device_id": "simon-daytona",
-  "device_name": "Simon Daytona",
-  "token_file": "/home/simon/.config/relay/token",
-  "auto_receive": false
-}
-```
+The first clipboard value is a baseline and is not uploaded. Later clipboard
+copies go to your account. Account and setup links are excluded from history.
+Automatic incoming clipboard replacement remains disabled; explicit deliveries
+remain available.
 
-Save the account token in the separate `token` file, then run:
+Credentials and `linux.json` stay in `~/.config/relay/` with mode `0600`. They are
+runtime data, not flake data. Existing enrollment is preserved. See the
+[Linux Relay guide](../../pkgs/relay-clients/linux/README.md) for details.
 
-```sh
-chmod 700 ~/.config/relay
-chmod 600 ~/.config/relay/linux.json ~/.config/relay/token
-systemctl --user start relay-clipboard.service
-```
-
-The token and endpoint are private runtime configuration, not flake data.
-Enrollment enables sending newly copied clipboard text to the selected account.
-`auto_receive=false` keeps automatic incoming clipboard replacement disabled;
-explicit deliveries remain available. Stop synchronization with
-`systemctl --user stop relay-clipboard.service`, or set `enabled` to `false` and
-remove the configuration file to keep the service inactive on future logins.
+Stop synchronization with `systemctl --user stop relay-clipboard.service`.
+To keep it disabled on later logins, set `enabled` to `false` in the private
+`linux.json` file and stop the service. Opening Relay preserves that disabled state.

@@ -84,3 +84,7 @@ Save work and log out after restoring it. Detailed backup, conflict and rollback
 instructions are in [DESKTOP-UPDATE.md](DESKTOP-UPDATE.md).
 
 Source: https://github.com/jonathanwilner/simon-hp-os
+
+After this update, open **Set Up Remote Access** once and enter Simon's sudo password. This enables the Goran-matching Foundation Sunshine host and SSH. Tailscale is installed with its daemon running, and a fresh machine remains unenrolled. Open `https://localhost:47990` to create Sunshine credentials and pair Moonlight. Existing credentials and settings are preserved. See [remote access](../remote-access/README.md).
+
+Open **Relay** to create your own clipboard account or join an existing account with its setup URL. Relay opens personal history on later launches. The first clipboard value is not uploaded. Account and setup links are excluded from clipboard history.

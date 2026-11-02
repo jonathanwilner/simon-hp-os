@@ -1,0 +1,373 @@
+--- a/src/platform/linux/kmsgrab.cpp
++++ b/src/platform/linux/kmsgrab.cpp
+@@ -26,6 +26,7 @@
+ #include "graphics.h"
+ #include "vaapi.h"
+ #include "wayland.h"
++#include "kms_monitors.h"
+ 
+ using namespace std::literals;
+ namespace fs = std::filesystem;
+@@ -157,6 +158,8 @@
+       platf::touch_port_t viewport;
+       int logical_width { 0 };
+       int logical_height { 0 };
++      bool active { false };
++      std::string name;
+     };
+ 
+     struct card_descriptor_t {
+@@ -609,7 +612,23 @@
+       init(const std::string &display_name, const ::video::config_t &config) {
+         delay = std::chrono::nanoseconds { 1s } / config.framerate;
+ 
+-        int monitor_index = util::from_view(display_name);
++        int monitor_index = -1;
++        if (display_name.empty() || std::all_of(display_name.begin(), display_name.end(), [](unsigned char c) { return c >= '0' && c <= '9'; })) {
++          monitor_index = display_name.empty() ? 0 : util::from_view(display_name);
++        }
++        else {
++          for (const auto &descriptor : card_descriptors) {
++            for (const auto &[_, output] : descriptor.crtc_to_monitor) {
++              if (output.active && output.name == display_name) {
++                monitor_index = output.monitor_index;
++              }
++            }
++          }
++        }
++        if (monitor_index < 0) {
++          BOOST_LOG(error) << "Unknown or inactive KMS connector: " << display_name;
++          return -1;
++        }
+         int monitor = 0;
+ 
+         fs::path card_dir { "/dev/dri"sv };
+@@ -1090,6 +1109,9 @@
+         }
+ 
+         plane_t plane = drmModeGetPlane(card.fd.el, plane_id);
++        if (!plane || !plane->fb_id || plane->crtc_id != crtc_id) {
++          return capture_e::reinit;
++        }
+         frame_timestamp = std::chrono::steady_clock::now();
+ 
+         auto fb = card.fb(plane.get());
+@@ -1314,6 +1336,11 @@
+ 
+       capture_e
+       snapshot(const pull_free_image_cb_t &pull_free_image_cb, std::shared_ptr<platf::img_t> &img_out, std::chrono::milliseconds timeout, bool cursor) {
++        // Each output owns an EGL context. Bind it on the capture thread before
++        // importing its DMA buffer, including when composing several outputs.
++        if (!eglMakeCurrent(display.get(), EGL_NO_SURFACE, EGL_NO_SURFACE, std::get<1>(ctx.el))) {
++          return capture_e::error;
++        }
+         file_t fb_fd[4];
+ 
+         egl::surface_descriptor_t sd;
+@@ -1344,6 +1371,9 @@
+           return platf::capture_e::interrupted;
+         }
+ 
++        if (img_offset_x < 0 || img_offset_y < 0 || img_offset_x + width > w || img_offset_y + height > h) {
++          return capture_e::reinit;
++        }
+         gl::ctx.GetTextureSubImage(rgb->tex[0], 0, img_offset_x, img_offset_y, 0, width, height, 1, GL_BGRA, GL_UNSIGNED_BYTE, img_out->height * img_out->row_pitch, img_out->data);
+ 
+         img_out->frame_timestamp = frame_timestamp;
+@@ -1377,6 +1407,145 @@
+       egl::ctx_t ctx;
+     };
+ 
++    // Combined capture uses the existing RAM readback and hardware upload
++    // encoder. Individual outputs retain their zero-copy VRAM capture path.
++    class display_all_t: public display_ram_t {
++    public:
++      explicit display_all_t(mem_type_e mem_type): display_ram_t(mem_type) {}
++
++      struct output_t {
++        std::unique_ptr<display_ram_t> capture;
++        std::shared_ptr<platf::img_t> image;
++        monitors::rect rect;
++        std::string name;
++      };
++      std::vector<output_t> outputs;
++      monitors::canvas canvas;
++      std::chrono::steady_clock::time_point next_layout_check {};
++
++      int init(const ::video::config_t &config) {
++        std::vector<monitors::rect> rects;
++        const auto wayland_outputs = wl::monitors();
++        for (const auto &descriptor : card_descriptors) {
++          for (const auto &[_, output] : descriptor.crtc_to_monitor) {
++            if (!output.active) {
++              continue;
++            }
++            // Logical geometry is required for a mixed-scale Wayland desktop.
++            // Refuse unknown/rotated geometry instead of returning a wrong view.
++            auto live = std::find_if(wayland_outputs.begin(), wayland_outputs.end(), [&](const auto &candidate) {
++              return candidate->name == output.name;
++            });
++            if (live == wayland_outputs.end() || (*live)->transform != WL_OUTPUT_TRANSFORM_NORMAL || output.logical_width <= 0 || output.logical_height <= 0) {
++              BOOST_LOG(error) << "Combined KMS capture requires unrotated Wayland output geometry for " << output.name;
++              return -1;
++            }
++            output_t child;
++            child.name = output.name;
++            child.rect = {output.viewport.offset_x, output.viewport.offset_y, output.logical_width, output.logical_height};
++            child.capture = std::make_unique<display_ram_t>(mem_type);
++            if (child.capture->init(std::to_string(output.monitor_index), config)) {
++              return -1;
++            }
++            // The RAM path does not implement panel-orientation transforms.
++            if (child.capture->card.get_panel_orientation(child.capture->plane_id) != DRM_MODE_ROTATE_0) {
++              BOOST_LOG(error) << "Combined KMS capture does not support a rotated panel: " << output.name;
++              return -1;
++            }
++            if (child.capture->is_hdr()) {
++              BOOST_LOG(error) << "Combined KMS capture requires SDR outputs: " << output.name;
++              return -1;
++            }
++            child.image = child.capture->alloc_img();
++            eglMakeCurrent(child.capture->display.get(), EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
++            rects.push_back(child.rect);
++            outputs.emplace_back(std::move(child));
++          }
++        }
++        try {
++          canvas = monitors::layout(rects);
++        }
++        catch (const std::exception &exception) {
++          BOOST_LOG(error) << "Invalid combined desktop: " << exception.what();
++          return -1;
++        }
++        width = canvas.width;
++        height = canvas.height;
++        // Input uses the compositor's complete logical desktop coordinate space.
++        offset_x = canvas.x;
++        offset_y = canvas.y;
++        env_width = ::platf::kms::env_width;
++        env_height = ::platf::kms::env_height;
++        input_scale_x = static_cast<float>(canvas.logical_width) / width;
++        input_scale_y = static_cast<float>(canvas.logical_height) / height;
++        delay = std::chrono::nanoseconds {1s} / std::max(1, std::min(config.framerate, 30));
++        BOOST_LOG(info) << "Combined KMS desktop: " << canvas.logical_width << 'x' << canvas.logical_height
++                        << " logical pixels, " << width << 'x' << height << " capture pixels, " << outputs.size() << " active outputs";
++        return 0;
++      }
++
++      bool layout_unchanged() {
++        auto live = wl::monitors();
++        if (live.size() != outputs.size()) {
++          return false;
++        }
++        for (const auto &output : outputs) {
++          auto found = std::find_if(live.begin(), live.end(), [&](const auto &candidate) {
++            return candidate->name == output.name;
++          });
++          if (found == live.end() || (*found)->transform != WL_OUTPUT_TRANSFORM_NORMAL ||
++              (*found)->logical_width != output.rect.width || (*found)->logical_height != output.rect.height ||
++              (*found)->viewport.offset_x != output.rect.x || (*found)->viewport.offset_y != output.rect.y ||
++              (*found)->viewport.width != output.capture->width || (*found)->viewport.height != output.capture->height) {
++            return false;
++          }
++        }
++        return true;
++      }
++
++      capture_e capture(const push_captured_image_cb_t &push, const pull_free_image_cb_t &pull, bool *cursor) override {
++        auto next_frame = std::chrono::steady_clock::now();
++        while (true) {
++          std::this_thread::sleep_until(next_frame);
++          auto now = std::chrono::steady_clock::now();
++          next_frame = std::max(next_frame + delay, now);
++          if (now >= next_layout_check) {
++            if (!layout_unchanged()) {
++              return capture_e::reinit;
++            }
++            next_layout_check = now + 5s;
++          }
++          std::shared_ptr<platf::img_t> image;
++          if (!pull(image)) {
++            return capture_e::interrupted;
++          }
++          std::memset(image->data, 0, image->row_pitch * image->height);
++          for (auto &output : outputs) {
++            auto status = output.capture->snapshot([&](std::shared_ptr<platf::img_t> &frame) {
++              frame = output.image;
++              return true;
++            }, output.image, 1000ms, *cursor);
++            eglMakeCurrent(output.capture->display.get(), EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
++            if (status != capture_e::ok) {
++              return status == capture_e::timeout ? capture_e::reinit : status;
++            }
++            try {
++              monitors::compose(canvas, output.rect, output.image->data, output.image->width, output.image->height,
++                output.image->row_pitch, image->data, image->row_pitch);
++            }
++            catch (const std::exception &exception) {
++              BOOST_LOG(error) << "Combined KMS composition failed: " << exception.what();
++              return capture_e::error;
++            }
++          }
++          image->frame_timestamp = std::chrono::steady_clock::now();
++          if (!push(std::move(image), true)) {
++            return capture_e::ok;
++          }
++        }
++      }
++    };
++
+     class display_vram_t: public display_t {
+     public:
+       display_vram_t(mem_type_e mem_type):
+@@ -1542,6 +1711,13 @@
+ 
+   std::shared_ptr<display_t>
+   kms_display(mem_type_e hwdevice_type, const std::string &display_name, const ::video::config_t &config) {
++    if (display_name == "all") {
++      auto display = std::make_shared<kms::display_all_t>(hwdevice_type);
++      if (display->init(config)) {
++        return nullptr;
++      }
++      return display;
++    }
+     if (hwdevice_type == mem_type_e::vaapi || hwdevice_type == mem_type_e::cuda) {
+       auto disp = std::make_shared<kms::display_vram_t>(hwdevice_type);
+ 
+@@ -1598,6 +1774,7 @@
+       for (auto &card_descriptor : cds) {
+         for (auto &[_, monitor_descriptor] : card_descriptor.crtc_to_monitor) {
+           if (monitor_descriptor.index == index && monitor_descriptor.type == type) {
++            monitor_descriptor.name = monitor->name;
+             monitor_descriptor.viewport.offset_x = monitor->viewport.offset_x;
+             monitor_descriptor.viewport.offset_y = monitor->viewport.offset_y;
+             monitor_descriptor.logical_width = monitor->logical_width > 0 ? monitor->logical_width : monitor_descriptor.viewport.width;
+@@ -1719,6 +1896,7 @@
+             (int) crtc->height,
+           };
+           it->second.monitor_index = count;
++          it->second.active = crtc->mode_valid && crtc->width > 0 && crtc->height > 0;
+         }
+ 
+         kms::env_width = std::max(kms::env_width, (int) (crtc->x + crtc->width));
+@@ -1745,6 +1923,9 @@
+ 
+     for (auto &card_descriptor : cds) {
+       for (auto &[_, monitor_descriptor] : card_descriptor.crtc_to_monitor) {
++        if (!monitor_descriptor.active) {
++          continue;
++        }
+         BOOST_LOG(debug) << "Monitor description"sv;
+         BOOST_LOG(debug) << "Resolution: "sv << monitor_descriptor.viewport.width << 'x' << monitor_descriptor.viewport.height;
+         BOOST_LOG(debug) << "Offset: "sv << monitor_descriptor.viewport.offset_x << 'x' << monitor_descriptor.viewport.offset_y;
+@@ -1759,6 +1940,22 @@
+ 
+     BOOST_LOG(debug) << "Desktop resolution: "sv << kms::env_width << 'x' << kms::env_height;
+ 
++    // Keep numeric identifiers and their ordering for existing clients. Add
++    // stable Wayland connector aliases and one explicit combined desktop.
++    std::size_t active_outputs = 0;
++    for (const auto &descriptor : cds) {
++      for (const auto &[_, output] : descriptor.crtc_to_monitor) {
++        if (output.active) {
++          ++active_outputs;
++          if (!output.name.empty()) {
++            display_names.emplace_back(output.name);
++          }
++        }
++      }
++    }
++    if (active_outputs > 0) {
++      display_names.emplace_back("all");
++    }
+     kms::card_descriptors = std::move(cds);
+ 
+     return display_names;
+--- a/src/platform/linux/wayland.h
++++ b/src/platform/linux/wayland.h
+@@ -123,7 +123,7 @@
+     void
+     wl_geometry(wl_output *wl_output, std::int32_t x, std::int32_t y,
+       std::int32_t physical_width, std::int32_t physical_height, std::int32_t subpixel,
+-      const char *make, const char *model, std::int32_t transform) {}
++      const char *make, const char *model, std::int32_t transform) { this->transform = transform; }
+     void
+     wl_mode(wl_output *wl_output, std::uint32_t flags,
+       std::int32_t width, std::int32_t height, std::int32_t refresh);
+@@ -139,6 +139,7 @@
+ 
+     std::string name;
+     std::string description;
++    std::int32_t transform { 0 };
+ 
+     platf::touch_port_t viewport;
+     std::int32_t logical_width { 0 };
+--- /dev/null
++++ b/src/platform/linux/kms_monitors.h
+@@ -0,0 +1,66 @@
++#pragma once
++
++#include <algorithm>
++#include <cstdint>
++#include <cstring>
++#include <stdexcept>
++#include <vector>
++
++namespace platf::kms::monitors {
++  struct rect {
++    int x, y, width, height;
++  };
++  struct canvas {
++    int x, y, logical_width, logical_height, width, height;
++  };
++
++  // Bound capture dimensions to the H.264 encoder's common 4096-pixel limit.
++  // Preserve logical geometry separately so input remains accurate after scaling.
++  inline canvas layout(const std::vector<rect> &outputs) {
++    if (outputs.empty()) {
++      throw std::invalid_argument("no active outputs");
++    }
++    int left = outputs.front().x, top = outputs.front().y, right = 0, bottom = 0;
++    for (const auto &output : outputs) {
++      if (output.x < 0 || output.y < 0 || output.width <= 0 || output.height <= 0 ||
++          output.x > 32768 || output.y > 32768 || output.width > 32768 || output.height > 32768) {
++        throw std::invalid_argument("unsupported output geometry");
++      }
++      left = std::min(left, output.x);
++      top = std::min(top, output.y);
++      right = std::max(right, output.x + output.width);
++      bottom = std::max(bottom, output.y + output.height);
++    }
++    const int logical_width = right - left, logical_height = bottom - top;
++    const double scale = std::min(1.0, 4096.0 / std::max(logical_width, logical_height));
++    return {left, top, logical_width, logical_height,
++      std::max(2, static_cast<int>(logical_width * scale) & ~1),
++      std::max(2, static_cast<int>(logical_height * scale) & ~1)};
++  }
++
++  // Scale the physical BGRA scanout to its logical desktop rectangle. Adjacent
++  // rectangles use identical edge rounding; gaps remain the cleared background.
++  inline void compose(const canvas &desktop, const rect &output, const std::uint8_t *source,
++    int source_width, int source_height, int source_pitch, std::uint8_t *target, int target_pitch) {
++    if (!source || !target || source_width <= 0 || source_height <= 0 || source_pitch < source_width * 4 ||
++        target_pitch < desktop.width * 4) {
++      throw std::invalid_argument("invalid BGRA buffer");
++    }
++    const int left = static_cast<std::int64_t>(output.x - desktop.x) * desktop.width / desktop.logical_width;
++    const int top = static_cast<std::int64_t>(output.y - desktop.y) * desktop.height / desktop.logical_height;
++    const int right = static_cast<std::int64_t>(output.x + output.width - desktop.x) * desktop.width / desktop.logical_width;
++    const int bottom = static_cast<std::int64_t>(output.y + output.height - desktop.y) * desktop.height / desktop.logical_height;
++    if (left < 0 || top < 0 || right > desktop.width || bottom > desktop.height || right <= left || bottom <= top) {
++      throw std::invalid_argument("output falls outside canvas");
++    }
++    for (int y = top; y < bottom; ++y) {
++      const int sy = static_cast<std::int64_t>(y - top) * source_height / (bottom - top);
++      auto *dst = target + static_cast<std::size_t>(y) * target_pitch + left * 4;
++      const auto *src = source + static_cast<std::size_t>(sy) * source_pitch;
++      for (int x = left; x < right; ++x, dst += 4) {
++        const int sx = static_cast<std::int64_t>(x - left) * source_width / (right - left);
++        std::memcpy(dst, src + sx * 4, 4);
++      }
++    }
++  }
++}

@@ -7,6 +7,12 @@ let
     runtimeInputs = [ pkgs.python3 pkgs.wl-clipboard ];
     text = ''exec python3 ${./relay_agent.py} "$@"'';
   };
+  launcher = pkgs.writeShellApplication {
+    name = "relay";
+    runtimeInputs = [ pkgs.python3 pkgs.zenity pkgs.xdg-utils pkgs.systemd ];
+    text = ''export PYTHONPATH=${./.}
+      exec python3 ${./relay_setup.py} --config ${lib.escapeShellArg cfg.configFile} "$@"'';
+  };
 in {
   options.services.relayClipboard = {
     enable = lib.mkEnableOption "Relay Wayland clipboard synchronization";
@@ -17,7 +23,16 @@ in {
     };
   };
   config = lib.mkIf cfg.enable {
-    home.packages = [ agent ];
+    home.packages = [ agent launcher ];
+    xdg.desktopEntries.Relay = {
+      name = "Relay";
+      genericName = "Clipboard sync";
+      comment = "Set up Relay, connect devices, and open clipboard history";
+      exec = "${launcher}/bin/relay";
+      icon = "edit-paste";
+      terminal = false;
+      categories = [ "Utility" ];
+    };
     systemd.user.services.relay-clipboard = {
       Unit = {
         Description = "Relay Wayland clipboard synchronization";
@@ -27,6 +42,7 @@ in {
       };
       Service = {
         ExecStart = "${agent}/bin/relay-agent --config ${lib.escapeShellArg cfg.configFile}";
+        EnvironmentFile = "-%t/relay-clipboard.env";
         Restart = "on-failure";
         RestartSec = 15;
         UMask = "0077";

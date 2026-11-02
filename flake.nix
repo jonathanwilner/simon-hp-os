@@ -27,6 +27,7 @@
         ];
       };
     in {
+      packages.${system}.foundation-sunshine = import ./goran/remote-access/pkgs/foundation-sunshine.nix { inherit pkgs; };
       homeConfigurations.simon-daytona = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
         extraSpecialArgs = {
@@ -35,6 +36,7 @@
         };
         modules = [
           ./goran/installer/simon-home.nix
+          ./goran/remote-access/simon.nix
           ./goran/installer/simon-apps.nix
           ./goran/installer/simon-update.nix
           ./goran/desktop/microsoft365-webapps.nix

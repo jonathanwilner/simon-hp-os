@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Opt-in Wayland clipboard agent. No clipboard content is logged."""
 import argparse, hashlib, json, pathlib, subprocess, time, urllib.request
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, parse_qs
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     """Never forward native credentials to a login page or another host."""
@@ -56,6 +56,15 @@ class Agent:
             return 0 <= time.time() - value['time'] < 60 and value['hash'] == self.digest(text)
         except (OSError, ValueError, KeyError, TypeError):
             return False
+    def enrollment_secret(self, text):
+        """Never sync account or invitation links, including copies from the web UI."""
+        for word in text.split():
+            parsed = urlsplit(word)
+            if parsed.hostname == "clipboard-api.thewilners.com":
+                keys = set(parse_qs(parsed.fragment)) | set(parse_qs(parsed.query))
+                if keys & {"account", "invite", "token"}:
+                    return True
+        return False
     def tick(self):
         c = self.config
         paused = pathlib.Path(c.get('pause_file', '~/.cache/relay/paused')).expanduser().exists()
@@ -71,7 +80,7 @@ class Agent:
             self.remote_id = (latest['id'], latest['updated_at']) if latest else None
             self.initialized = True
         elif current is not None and self.digest(current) != self.last_hash:
-            if not self.emacs_owned(current):
+            if not self.enrollment_secret(current) and not self.emacs_owned(current):
                 self.api('POST', '/entries', {'text': current, 'device_id': c['device_id'], 'device_name': c['device_name'], 'app': 'Wayland'})
             self.last_hash = self.digest(current)
             # A local copy wins over an older remote entry observed in this poll.

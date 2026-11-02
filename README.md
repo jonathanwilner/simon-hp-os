@@ -43,7 +43,8 @@ in the launcher or `simon-desktop-update`. Save work and log out after activatio
 to load the new compositor. The updater retains the preceding generation.
 
 [Update and rollback guide](goran/installer/DESKTOP-UPDATE.md) ·
-[Office and Relay enrollment](goran/installer/SIMON-APPS.md)
+[Office and Relay enrollment](goran/installer/SIMON-APPS.md) ·
+[Sunshine, SSH and Tailscale setup](goran/remote-access/README.md)
 
 This is a desktop update, not a disk installer. Keep the supported Ubuntu driver
 and native PAM prerequisites from the original Simon installation.

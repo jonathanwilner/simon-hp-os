@@ -1,0 +1,239 @@
+diff --git a/cmake/compile_definitions/common.cmake b/cmake/compile_definitions/common.cmake
+index 655fd244..cc868886 100644
+--- a/cmake/compile_definitions/common.cmake
++++ b/cmake/compile_definitions/common.cmake
+@@ -236,6 +236,14 @@ set(SUNSHINE_TARGET_FILES
+         "${CMAKE_SOURCE_DIR}/src/stat_trackers.cpp"
+         ${PLATFORM_TARGET_FILES})
+ 
++if(NOT WIN32)
++    list(REMOVE_ITEM SUNSHINE_TARGET_FILES
++            "${CMAKE_SOURCE_DIR}/src/display_device/vdd_utils.cpp"
++            "${CMAKE_SOURCE_DIR}/src/display_device/vdd_ioctl.cpp")
++    list(APPEND SUNSHINE_TARGET_FILES
++            "${CMAKE_SOURCE_DIR}/src/display_device/vdd_utils_linux.cpp")
++endif()
++
+ if(NOT SUNSHINE_ASSETS_DIR_DEF)
+     set(SUNSHINE_ASSETS_DIR_DEF "${SUNSHINE_ASSETS_DIR}")
+ endif()
+diff --git a/src/display_device/session.cpp b/src/display_device/session.cpp
+index bceefaa2..a9a48915 100644
+--- a/src/display_device/session.cpp
++++ b/src/display_device/session.cpp
+@@ -10,14 +10,14 @@
+ #include "session.h"
+ #include "src/globals.h"
+ #include "src/platform/common.h"
+-#include "src/platform/windows/display_device/session_listener.h"
+-#include "src/platform/windows/display_device/windows_utils.h"
+ #ifdef _WIN32
++  #include "src/platform/windows/display_device/session_listener.h"
++  #include "src/platform/windows/display_device/windows_utils.h"
+   #include "src/platform/windows/vulkan_hdr_bridge_session.h"
++  #include "vdd_ioctl.h"
+ #endif
+ #include "src/rtsp.h"
+ #include "to_string.h"
+-#include "vdd_ioctl.h"
+ #include "vdd_utils.h"
+ 
+ namespace display_device {
+@@ -136,9 +136,9 @@ namespace display_device {
+   session_t::deinit_t::~deinit_t() {
+ #ifdef _WIN32
+     platf::vulkan_hdr_bridge::shutdown_cleanup();
+-#endif
+     // 清理事件监听器
+     SessionEventListener::deinit();
++#endif
+     
+     // 兜底：退出时如果 VDD 仍存在且 vdd_keep_enabled=false，直接销毁
+     // 使用 nolog 版本，因为析构时 boost::log 可能已被销毁
+@@ -159,12 +159,11 @@ namespace display_device {
+     // Remove a registration left behind by a terminated Sunshine process
+     // before recovering display state or accepting a new stream.
+     platf::vulkan_hdr_bridge::startup_cleanup();
+-#endif
+-    session_t::get().settings.set_filepath(platf::appdata() / "original_display_settings.json");
+-    
+     // 初始化会话事件监听器（用于检测解锁事件）
+     SessionEventListener::init();
+-    
++#endif
++    session_t::get().settings.set_filepath(platf::appdata() / "original_display_settings.json");
++
+     session_t::get().restore_state();
+     return std::make_unique<deinit_t>();
+   }
+@@ -186,7 +185,9 @@ namespace display_device {
+   void
+   session_t::cancel_pending_display_retry() {
+     pending_restore_ = false;
++#ifdef _WIN32
+     SessionEventListener::clear_unlock_task();
++#endif
+     timer->setup_timer(nullptr);
+   }
+ 
+@@ -420,7 +421,11 @@ namespace display_device {
+ 
+     // Parsing is side-effect free. From this point on, parsed_config is the
+     // single source of truth for whether this session needs VDD preparation.
++#ifdef _WIN32
+     const bool rdp_session_active = display_device::w_utils::is_any_rdp_session_active();
++#else
++    const bool rdp_session_active = false;
++#endif
+     const bool is_rdp_blocking_vdd = !is_running_as_system_user && rdp_session_active;
+     const bool use_vdd = parsed_config->use_vdd.value_or(false);
+     const bool should_prepare_vdd = use_vdd && !is_rdp_blocking_vdd;
+@@ -846,6 +851,7 @@ namespace display_device {
+       if (!try_recover_vdd_device(current_client_id, session.client_name, hdr_brightness, device_zako)) {
+         BOOST_LOG(error) << "VDD设备最终初始化失败";
+ 
++#ifdef _WIN32
+         // last-resort：只有 IOCTL 通路彻底死掉才动 adapter，因为
+         // disable_enable_vdd() 必然会留 phantom monitor（清理需要 SetupAPI
+         // 工具函数，留作后续 PR）。
+@@ -856,6 +862,7 @@ namespace display_device {
+         else {
+           BOOST_LOG(warning) << "VDD IOCTL 仍可用，跳过 disable/enable，避免制造 phantom monitor";
+         }
++#endif
+         return vdd_stage_result_e::create_failed;
+       }
+     }
+@@ -1048,6 +1055,7 @@ namespace display_device {
+       // 设置待恢复标志
+       pending_restore_ = true;
+       
++#ifdef _WIN32
+       // 添加恢复任务（自动处理锁屏检查和立即执行）
+       SessionEventListener::add_unlock_task([this, reason]() {
+         // 快速检查是否还需要恢复（最小化锁持有时间）
+@@ -1078,6 +1086,9 @@ namespace display_device {
+           stop_timer_and_clear_vdd_state();
+         }
+       });
++#else
++      start_polling_restore(reason);
++#endif
+     }
+   }
+ 
+diff --git a/src/display_device/vdd_utils.h b/src/display_device/vdd_utils.h
+index 2570cb6a..45dfff4c 100644
+--- a/src/display_device/vdd_utils.h
++++ b/src/display_device/vdd_utils.h
+@@ -11,7 +11,9 @@
+ #include <string_view>
+ #include <thread>
+ #include <vector>
+-#include <windows.h>
++#ifdef _WIN32
++  #include <windows.h>
++#endif
+ 
+ #include <boost/optional.hpp>
+ 
+diff --git a/src/entry_handler.cpp b/src/entry_handler.cpp
+index 3b26c170..5ba5d212 100644
+--- a/src/entry_handler.cpp
++++ b/src/entry_handler.cpp
+@@ -19,7 +19,9 @@
+ #include "network.h"
+ #include "platform/common.h"
+ #include "src/display_device/display_device.h"
+-#include "src/platform/windows/display_device/windows_utils.h"
++#ifdef _WIN32
++  #include "src/platform/windows/display_device/windows_utils.h"
++#endif
+ #include "version.h"
+ 
+ extern "C" {
+diff --git a/src/globals.cpp b/src/globals.cpp
+index 53501da0..5f210d5c 100644
+--- a/src/globals.cpp
++++ b/src/globals.cpp
+@@ -8,10 +8,11 @@ safe::mail_t mail::man;
+ thread_pool_util::ThreadPool task_pool;
+ bool display_cursor = true;
+ 
+-#ifdef _WIN32
+-nvprefs::nvprefs_interface nvprefs_instance;
+ const std::string VDD_NAME = "ZakoHDR";
+ const std::string ZAKO_NAME = "Zako HDR";
+ std::string zako_device_id;
+ bool is_running_as_system_user = false;
++
++#ifdef _WIN32
++nvprefs::nvprefs_interface nvprefs_instance;
+ #endif
+diff --git a/src/globals.h b/src/globals.h
+index c8d610ad..7ff51f40 100644
+--- a/src/globals.h
++++ b/src/globals.h
+@@ -21,15 +21,6 @@ extern thread_pool_util::ThreadPool task_pool;
+  */
+ extern bool display_cursor;
+ 
+-#ifdef _WIN32
+-  // Declare global singleton used for NVIDIA control panel modifications
+-  #include "platform/windows/nvprefs/nvprefs_interface.h"
+-
+-/**
+- * @brief A global singleton used for NVIDIA control panel modifications.
+- */
+-extern nvprefs::nvprefs_interface nvprefs_instance;
+-
+ extern const std::string VDD_NAME;
+ extern const std::string ZAKO_NAME;
+ extern std::string zako_device_id;
+@@ -39,6 +30,16 @@ extern std::string zako_device_id;
+  * @details This is set once at program startup and never changes during runtime.
+  */
+ extern bool is_running_as_system_user;
++
++#ifdef _WIN32
++  // Declare global singleton used for NVIDIA control panel modifications
++  #include "platform/windows/nvprefs/nvprefs_interface.h"
++
++/**
++ * @brief A global singleton used for NVIDIA control panel modifications.
++ */
++extern nvprefs::nvprefs_interface nvprefs_instance;
++
+ #endif
+ 
+ /**
+diff --git a/src/config.cpp b/src/config.cpp
+index ec480b09..43d8103f 100644
+--- a/src/config.cpp
++++ b/src/config.cpp
+@@ -124,16 +124,25 @@ namespace config {
+   #define AMF_VIDEO_ENCODER_QUALITY_PRESET_BALANCED 0
+   #define AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_CONSTANT_QP 0
+   #define AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_CBR 3
++  #define AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_QUALITY_VBR 4
++  #define AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_HIGH_QUALITY_VBR 5
++  #define AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_HIGH_QUALITY_CBR 6
+   #define AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR 2
+   #define AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_LATENCY_CONSTRAINED_VBR 1
+   #define AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CONSTANT_QP 0
+   #define AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CBR 3
++  #define AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_QUALITY_VBR 4
++  #define AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_HIGH_QUALITY_VBR 5
++  #define AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_HIGH_QUALITY_CBR 6
+   #define AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR 2
+   #define AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_LATENCY_CONSTRAINED_VBR 1
+   #define AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP 0
+   #define AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CBR 1
+   #define AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR 2
+   #define AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_LATENCY_CONSTRAINED_VBR 3
++  #define AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_QUALITY_VBR 4
++  #define AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_HIGH_QUALITY_VBR 5
++  #define AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_HIGH_QUALITY_CBR 6
+   #define AMF_VIDEO_ENCODER_AV1_USAGE_TRANSCODING 0
+   #define AMF_VIDEO_ENCODER_AV1_USAGE_LOW_LATENCY 1
+   #define AMF_VIDEO_ENCODER_AV1_USAGE_ULTRA_LOW_LATENCY 2

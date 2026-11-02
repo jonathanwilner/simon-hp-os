@@ -126,6 +126,7 @@ export HOME_MANAGER_BACKUP_EXT="simon-update-$stamp"
 activate_with_rollback "$candidate" "$profile" "$previous" || exit $?
 ln -sfn "$run_dir" "$state/current"
 printf 'Simon desktop updated to %s\nGeneration: %s\n' "$revision" "$candidate"
+printf 'Remote services: open Set Up Remote Access once to enable Sunshine and SSH. Tailscale stays unenrolled.\n'
 printf 'Save work, then log out and select HP-OS (Simon N1X) to load the new compositor.\n'
 printf 'Previous generation and update record: %s\n' "$run_dir"
 

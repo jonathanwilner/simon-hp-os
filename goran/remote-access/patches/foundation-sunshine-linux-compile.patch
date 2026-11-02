@@ -1,0 +1,147 @@
+diff --git a/src/confighttp.cpp b/src/confighttp.cpp
+index 487ed9ec..69733ae1 100644
+--- a/src/confighttp.cpp
++++ b/src/confighttp.cpp
+@@ -34,6 +34,7 @@
+ #include <boost/property_tree/xml_parser.hpp>
+ 
+ #include <boost/algorithm/string.hpp>
++#include <boost/regex.hpp>
+ 
+ #include <boost/filesystem.hpp>
+ #include <nlohmann/json.hpp>
+@@ -1633,10 +1634,12 @@ namespace confighttp {
+     if (!authenticate(response, request)) return;
+ 
+     print_req(request);
++#ifdef _WIN32
+     if (GetConsoleWindow() == NULL) {
+       lifetime::exit_sunshine(ERROR_SHUTDOWN_IN_PROGRESS, true);
+       return;
+     }
++#endif
+     lifetime::exit_sunshine(0, true);
+   }
+ 
+diff --git a/src/platform/linux/vaapi.cpp b/src/platform/linux/vaapi.cpp
+index 69897aad..8c63d6e2 100644
+--- a/src/platform/linux/vaapi.cpp
++++ b/src/platform/linux/vaapi.cpp
+@@ -9,6 +9,7 @@
+ 
+ extern "C" {
+ #include <libavcodec/avcodec.h>
++#include <libavutil/pixdesc.h>
+ #include <va/va.h>
+ #include <va/va_drm.h>
+ #if !VA_CHECK_VERSION(1, 9, 0)
+diff --git a/src/platform/linux/display_device.cpp b/src/platform/linux/display_device.cpp
+index 5dd498ec..3ab6efe0 100644
+--- a/src/platform/linux/display_device.cpp
++++ b/src/platform/linux/display_device.cpp
+@@ -9,12 +9,27 @@ namespace display_device {
+     return {};
+   }
+ 
++  std::string
++  find_one_of_the_available_devices(const std::string &) {
++    return {};
++  }
++
++  std::string
++  find_device_by_friendlyname(const std::string &) {
++    return {};
++  }
++
+   std::string
+   get_display_name(const std::string &value) {
+     // Not implemented, but just passthrough the value
+     return value;
+   }
+ 
++  std::string
++  get_display_friendly_name(const std::string &) {
++    return {};
++  }
++
+   device_display_mode_map_t
+   get_current_display_modes(const std::unordered_set<std::string> &) {
+     // Not implemented
+@@ -91,6 +106,16 @@ namespace display_device {
+     // Not implemented
+   }
+ 
++  void
++  settings_t::capture_audio_sink() {
++    // Not implemented
++  }
++
++  void
++  settings_t::release_audio_sink() {
++    // Not implemented
++  }
++
+   bool
+   settings_t::is_changing_settings_going_to_fail() const {
+     // Not implemented
+@@ -98,7 +123,10 @@ namespace display_device {
+   }
+ 
+   settings_t::apply_result_t
+-  settings_t::apply_config(const parsed_config_t &) {
++  settings_t::apply_config(
++    const parsed_config_t &,
++    const rtsp_stream::launch_session_t &,
++    const boost::optional<active_topology_t> &) {
+     // Not implemented
+     return { apply_result_t::result_e::success };
+   }
+@@ -116,4 +144,31 @@ namespace display_device {
+     // Not implemented
+   }
+ 
++  bool
++  settings_t::has_persistent_data() const {
++    return false;
++  }
++
++  bool
++  settings_t::is_vdd_in_initial_topology() const {
++    return false;
++  }
++
++  void
++  settings_t::remove_vdd_from_initial_topology(const std::string &) {
++    // Not implemented
++  }
++
++  void
++  settings_t::replace_vdd_id(const std::string &, const std::string &) {
++    // Not implemented
++  }
++
+ }  // namespace display_device
++
++namespace platf {
++  std::vector<std::string>
++  adapter_names() {
++    return {};
++  }
++}  // namespace platf
+diff --git a/src/video.cpp b/src/video.cpp
+index ac563455..0d5ce8ee 100644
+--- a/src/video.cpp
++++ b/src/video.cpp
+@@ -27,6 +27,12 @@ extern "C" {
+ #include <libavutil/pixdesc.h>
+ }
+ 
++#ifndef __APPLE__
++extern "C" {
++#include <ffnvcodec/nvEncodeAPI.h>
++}
++#endif
++
+ // lib includes
+ #include "cbs.h"
+ #include "config.h"

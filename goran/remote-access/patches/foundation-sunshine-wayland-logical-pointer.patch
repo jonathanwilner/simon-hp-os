@@ -1,0 +1,195 @@
+diff --git a/src/input.cpp b/src/input.cpp
+index 971131ae..e310e94f 100644
+--- a/src/input.cpp
++++ b/src/input.cpp
+@@ -171,7 +171,7 @@ namespace input {
+         feedback_queue { std::move(feedback_queue) },
+         input_activity_event { std::move(input_activity_event) },
+         mouse_left_button_timeout {},
+-        touch_port { { 0, 0, 0, 0 }, 0, 0, 1.0f },
++        touch_port { { 0, 0, 0, 0 }, 0, 0, 1.0f, 1.0f },
+         accumulated_vscroll_delta {},
+         accumulated_hscroll_delta {} {}
+ 
+@@ -578,8 +578,11 @@ namespace input {
+     x = std::clamp(x, offsetX, (size.first * scalarX) - offsetX);
+     y = std::clamp(y, offsetY, (size.second * scalarY) - offsetY);
+ 
+-    return std::pair { (x - offsetX) * touch_port.scalar_inv, (y - offsetY) * touch_port.scalar_inv };
++    return std::pair {
++      (x - offsetX) * touch_port.scalar_inv_x,
++      (y - offsetY) * touch_port.scalar_inv_y,
++    };
+   }
+ 
+   /**
+    * @brief Multiply a polar coordinate pair by a cartesian scaling factor.
+diff --git a/src/input.h b/src/input.h
+index a20c9c30..c413bfa2 100644
+--- a/src/input.h
++++ b/src/input.h
+@@ -34,7 +34,7 @@ namespace input {
+     // Offset x and y coordinates of the client
+     float client_offsetX, client_offsetY;
+ 
+-    float scalar_inv;
++    float scalar_inv_x, scalar_inv_y;
+ 
+     explicit
+     operator bool() const {
+diff --git a/src/platform/common.h b/src/platform/common.h
+index 81a678d7..897d5447 100644
+--- a/src/platform/common.h
++++ b/src/platform/common.h
+@@ -726,6 +726,8 @@ namespace platf {
+     // Offsets for when streaming a specific monitor. By default, they are 0.
+     int offset_x, offset_y;
+     int env_width, env_height;
++    float input_scale_x { 1.0f };
++    float input_scale_y { 1.0f };
+ 
+     int width, height;
+ 
+diff --git a/src/platform/linux/kmsgrab.cpp b/src/platform/linux/kmsgrab.cpp
+index 8e817b78..8c3bb3a2 100644
+--- a/src/platform/linux/kmsgrab.cpp
++++ b/src/platform/linux/kmsgrab.cpp
+@@ -155,6 +155,8 @@ namespace platf {
+       std::uint32_t monitor_index;
+ 
+       platf::touch_port_t viewport;
++      int logical_width { 0 };
++      int logical_height { 0 };
+     };
+ 
+     struct card_descriptor_t {
+@@ -725,6 +727,14 @@ namespace platf {
+ 
+               offset_x = viewport.offset_x;
+               offset_y = viewport.offset_y;
++
++              const auto logical_width = monitor->second.logical_width > 0 ? monitor->second.logical_width : width;
++              const auto logical_height = monitor->second.logical_height > 0 ? monitor->second.logical_height : height;
++              if (width > 0 && height > 0) {
++                input_scale_x = static_cast<float>(logical_width) / static_cast<float>(width);
++                input_scale_y = static_cast<float>(logical_height) / static_cast<float>(height);
++              }
++              BOOST_LOG(debug) << "KMS absolute input scale: "sv << input_scale_x << 'x' << input_scale_y;
+             }
+ 
+             // This code path shouldn't happen, but it's there just in case.
+@@ -1590,6 +1601,10 @@ namespace platf {
+           if (monitor_descriptor.index == index && monitor_descriptor.type == type) {
+             monitor_descriptor.viewport.offset_x = monitor->viewport.offset_x;
+             monitor_descriptor.viewport.offset_y = monitor->viewport.offset_y;
++            monitor_descriptor.logical_width = monitor->logical_width > 0 ? monitor->logical_width : monitor_descriptor.viewport.width;
++            monitor_descriptor.logical_height = monitor->logical_height > 0 ? monitor->logical_height : monitor_descriptor.viewport.height;
++            BOOST_LOG(debug) << "KMS logical input size: "sv << monitor_descriptor.logical_width << 'x'
++                             << monitor_descriptor.logical_height;
+ 
+             // A sanity check, it's guesswork after all.
+             if (
+@@ -1735,8 +1750,11 @@ namespace platf {
+         BOOST_LOG(debug) << "Resolution: "sv << monitor_descriptor.viewport.width << 'x' << monitor_descriptor.viewport.height;
+         BOOST_LOG(debug) << "Offset: "sv << monitor_descriptor.viewport.offset_x << 'x' << monitor_descriptor.viewport.offset_y;
+ 
+-        kms::env_width = std::max(kms::env_width, (int) (monitor_descriptor.viewport.offset_x + monitor_descriptor.viewport.width));
+-        kms::env_height = std::max(kms::env_height, (int) (monitor_descriptor.viewport.offset_y + monitor_descriptor.viewport.height));
++        const auto logical_width = monitor_descriptor.logical_width > 0 ? monitor_descriptor.logical_width : monitor_descriptor.viewport.width;
++        const auto logical_height = monitor_descriptor.logical_height > 0 ? monitor_descriptor.logical_height : monitor_descriptor.viewport.height;
++        BOOST_LOG(debug) << "Logical input resolution: "sv << logical_width << 'x' << logical_height;
++        kms::env_width = std::max(kms::env_width, (int) (monitor_descriptor.viewport.offset_x + logical_width));
++        kms::env_height = std::max(kms::env_height, (int) (monitor_descriptor.viewport.offset_y + logical_height));
+       }
+     }
+ 
+diff --git a/src/platform/linux/input/inputtino_mouse.cpp b/src/platform/linux/input/inputtino_mouse.cpp
+index 5e26e126..2b36140c 100644
+--- a/src/platform/linux/input/inputtino_mouse.cpp
++++ b/src/platform/linux/input/inputtino_mouse.cpp
+@@ -28,7 +28,7 @@ namespace platf::mouse {
+   void
+   move_abs(input_raw_t *raw, const touch_port_t &touch_port, float x, float y) {
+     if (raw->mouse) {
+-      (*raw->mouse).move_abs(x, y, touch_port.width, touch_port.height);
++      (*raw->mouse).move_abs(x + touch_port.offset_x, y + touch_port.offset_y, touch_port.width, touch_port.height);
+     }
+   }
+ 
+diff --git a/src/platform/linux/wayland.cpp b/src/platform/linux/wayland.cpp
+index a6dba44e..f523c6f0 100644
+--- a/src/platform/linux/wayland.cpp
++++ b/src/platform/linux/wayland.cpp
+@@ -139,6 +139,8 @@ namespace wl {
+ 
+   void
+   monitor_t::xdg_size(zxdg_output_v1 *, std::int32_t width, std::int32_t height) {
++    logical_width = width;
++    logical_height = height;
+     BOOST_LOG(info) << "Logical size: "sv << width << 'x' << height;
+   }
+ 
+diff --git a/src/platform/linux/wayland.h b/src/platform/linux/wayland.h
+index ece9d3bd..f588e8ba 100644
+--- a/src/platform/linux/wayland.h
++++ b/src/platform/linux/wayland.h
+@@ -141,6 +141,8 @@ namespace wl {
+     std::string description;
+ 
+     platf::touch_port_t viewport;
++    std::int32_t logical_width { 0 };
++    std::int32_t logical_height { 0 };
+ 
+     wl_output_listener wl_listener;
+     zxdg_output_v1_listener xdg_listener;
+diff --git a/src/platform/linux/wlgrab.cpp b/src/platform/linux/wlgrab.cpp
+index 4c5946c8..d94b9d67 100644
+--- a/src/platform/linux/wlgrab.cpp
++++ b/src/platform/linux/wlgrab.cpp
+@@ -70,6 +70,10 @@ namespace wl {
+       offset_y = monitor->viewport.offset_y;
+       width = monitor->viewport.width;
+       height = monitor->viewport.height;
++      if (monitor->logical_width > 0 && monitor->logical_height > 0 && width > 0 && height > 0) {
++        input_scale_x = static_cast<float>(monitor->logical_width) / static_cast<float>(width);
++        input_scale_y = static_cast<float>(monitor->logical_height) / static_cast<float>(height);
++      }
+ 
+       this->env_width = ::wl::env_width;
+       this->env_height = ::wl::env_height;
+@@ -78,6 +82,7 @@ namespace wl {
+       BOOST_LOG(debug) << "Offset: "sv << offset_x << 'x' << offset_y;
+       BOOST_LOG(debug) << "Resolution: "sv << width << 'x' << height;
+       BOOST_LOG(debug) << "Desktop Resolution: "sv << env_width << 'x' << env_height;
++      BOOST_LOG(debug) << "Absolute input scale: "sv << input_scale_x << 'x' << input_scale_y;
+ 
+       return 0;
+     }
+@@ -439,8 +444,10 @@ namespace platf {
+     for (int x = 0; x < interface.monitors.size(); ++x) {
+       auto monitor = interface.monitors[x].get();
+ 
+-      wl::env_width = std::max(wl::env_width, (int) (monitor->viewport.offset_x + monitor->viewport.width));
+-      wl::env_height = std::max(wl::env_height, (int) (monitor->viewport.offset_y + monitor->viewport.height));
++      const auto logical_width = monitor->logical_width > 0 ? monitor->logical_width : monitor->viewport.width;
++      const auto logical_height = monitor->logical_height > 0 ? monitor->logical_height : monitor->viewport.height;
++      wl::env_width = std::max(wl::env_width, (int) (monitor->viewport.offset_x + logical_width));
++      wl::env_height = std::max(wl::env_height, (int) (monitor->viewport.offset_y + logical_height));
+ 
+       BOOST_LOG(info) << "Monitor " << x << " is "sv << monitor->name << ": "sv << monitor->description;
+ 
+diff --git a/src/video.cpp b/src/video.cpp
+index ac563455..6efc5a94 100644
+--- a/src/video.cpp
++++ b/src/video.cpp
+@@ -3352,8 +3352,9 @@ namespace video {
+       display->env_height,
+       offsetX,
+       offsetY,
+-      1.0f / scalar,
++      display->input_scale_x / scalar,
++      display->input_scale_y / scalar,
+     };
+   }
+ 
+   std::unique_ptr<platf::encode_device_t>
