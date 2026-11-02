@@ -33,4 +33,3 @@ The override lives at `~/.config/systemd/user/dms.service.d/90-hp-cde-lockscreen
 ## Validation
 
 Run `verify.py` with original `LockScreenContent.qml` files. It checks that all named functions, event handlers and existing component IDs remain unchanged, that the patch is idempotent and that unknown revisions are rejected. The current sources retain 46 handlers in DMS 1.6 and 29 in DMS 1.5. `Pam.qml`, `Lock.qml` and `LockSurface.qml` are unchanged.
-
