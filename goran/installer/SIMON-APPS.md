@@ -5,7 +5,7 @@ Microsoft 365 document handlers, and the optional Relay clipboard service.
 ArtCraft uses the NVIDIA shim already supplied by the N1X Home Manager profile.
 
 Microsoft web links use Simon's own Chrome sign-in. To enable local document
-uploads, follow [personal Office enrollment](../../../pkgs/cloud-office-personal/README.md).
+uploads, follow [personal Office enrollment](../../pkgs/cloud-office-personal/README.md).
 This is Simon's own OneDrive connection. It requires an authorized Microsoft
 public-client application ID and Simon's delegated sign-in. Cloud documents
 remain in OneDrive; edits are not automatically downloaded to the local original.
