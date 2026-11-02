@@ -32,7 +32,7 @@ while (($#)); do
   esac
 done
 [[ ${EUID:-$(id -u)} -ne 0 ]] || fail 'Run from Simon’s own login, without sudo'
-for command in git python3 tmux realpath; do
+for command in git python3 tmux realpath flock; do
   command -v "$command" >/dev/null || fail "Required command missing: $command. Use the existing Simon Ubuntu installation."
 done
 if ! command -v nix >/dev/null; then
@@ -68,6 +68,22 @@ case "$origin" in
   https://github.com/jonathanwilner/simon-hp-os|https://github.com/jonathanwilner/simon-hp-os.git) ;;
   *) fail "Checkout origin must be $public_url; found $origin" ;;
 esac
+# Load the current merge tool from the verified public origin before using any
+# checkout scripts. Old installations may predate migration support. The merge
+# tool preserves dirty files and local commits with permanent recovery refs.
+state="${XDG_STATE_HOME:-$HOME/.local/state}/simon-desktop-update"
+mkdir -p -- "$state"
+exec 9>"$state/update.lock"
+flock -n 9 || fail 'Another Simon desktop update is running'
+git -C "$checkout" fetch origin main
+tools_dir=$(mktemp -d)
+trap 'rm -rf -- "$tools_dir"' EXIT
+git -C "$checkout" show FETCH_HEAD:goran/installer/merge-desktop-update.sh > "$tools_dir/merge-desktop-update.sh" \
+  || fail 'The public branch does not contain the configuration-preserving update tool'
+record="${XDG_STATE_HOME:-$HOME/.local/state}/simon-desktop-update/bootstrap-$(date -u +%Y%m%dT%H%M%SZ)-$$"
+bash "$tools_dir/merge-desktop-update.sh" "$checkout" "$record"
+rm -rf -- "$tools_dir"
+trap - EXIT
 [[ -f "$checkout/goran/installer/update-desktop.sh" ]] || fail 'The public desktop updater is missing'
 if [[ -n "$legacy" ]]; then
   helper="$checkout/goran/installer/migrate-local-config.py"
@@ -80,4 +96,6 @@ fi
 args=(--checkout "$checkout")
 [[ "$build_only" == false ]] || args+=(--build-only)
 [[ "$attach" == false ]] || args+=(--attach)
+flock -u 9
+exec 9>&-
 exec bash "$checkout/goran/installer/update-desktop.sh" "${args[@]}"
