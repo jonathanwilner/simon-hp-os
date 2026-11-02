@@ -46,6 +46,8 @@ Item {
     Component.onCompleted: { validatePreferences(); HarmonyStartState.observe() }
     IpcHandler {
         target: "harmony"
+        function applications(): void { HarmonyStartState.showAll() }
+        function search(): void { HarmonyStartState.toggleSearch() }
         function start(): void { HarmonyStartState.toggle() }
         function settings(): void { root.preferencesOpen = true }
         function gallery(): void { root.galleryOpen = true }
@@ -60,7 +62,7 @@ Item {
             return HarmonyTokens.setPreference(key, parsed)
         }
         function status(): string {
-            return JSON.stringify({applicationCenterOpen: GlobalStates.searchOpen, startOpen: HarmonyStartState.opened, recentFiles: HarmonyStartState.files.length, recentApps: HarmonyStartState.apps.length, family: Config.options.panelFamily, font: HarmonyTokens.fontFamily,
+            return JSON.stringify({searchOpen: GlobalStates.searchOpen && !HarmonyStartState.applicationCenter, applicationCenterOpen: GlobalStates.searchOpen && HarmonyStartState.applicationCenter, startOpen: HarmonyStartState.opened, recentFiles: HarmonyStartState.files.length, recentApps: HarmonyStartState.apps.length, family: Config.options.panelFamily, font: HarmonyTokens.fontFamily,
                 genuineFont: HarmonyTokens.genuineFontAvailable, dark: HarmonyTokens.dark,
                 quality: HarmonyTokens.quality, locale: HarmonyTokens.preferences.locale, notificationCount: Notifications.list.length,
                 audioReady: Audio.ready, configPath: Config.filePath,

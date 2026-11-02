@@ -23,7 +23,7 @@ let
   '';
   shell = upstream.overrideAttrs (old: {
     pname = "hp-os-runtime";
-    patches = (old.patches or []) ++ [ ../patches/inir-harmony.patch ../patches/harmony-style.patch ../patches/harmony-wallpaper-startup.patch ../patches/harmony-desktop-labels.patch ../patches/harmony-portable-icons.patch ../patches/harmony-notification-banners.patch ];
+    patches = (old.patches or []) ++ [ ../patches/inir-harmony.patch ../patches/harmony-style.patch ../patches/harmony-wallpaper-startup.patch ../patches/harmony-desktop-labels.patch ../patches/harmony-portable-icons.patch ../patches/harmony-notification-banners.patch ../patches/harmony-unified-search.patch ];
     postPatch = (old.postPatch or "") + ''
       cp -r ${../overlay}/. .
       chmod -R u+w assets
@@ -126,6 +126,8 @@ in pkgs.stdenvNoCC.mkDerivation {
       --replace-fail '@dolphin@' '${pkgs.kdePackages.dolphin}/bin/dolphin'
     substitute hp-os-files.desktop "$out/share/hp-os/applications/org.kde.dolphin.desktop" \
       --replace-fail '@exec@' "$out/bin/hp-os-files"
+    install -Dm755 hp-os-search "$out/bin/hp-os-search"
+    substituteInPlace "$out/bin/hp-os-search" --replace-fail '@python@' '${pkgs.python3}/bin/python3'
     wrapProgram "$out/bin/hp-os" \
       --set HP_OS_TOUCH_PATCHED "${if touchGestures then "1" else "0"}" \
       --set FONTCONFIG_FILE "${fontsConf}" \

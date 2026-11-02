@@ -52,6 +52,15 @@ class HarmonyContract(unittest.TestCase):
     def read(self, name):
         return (self.runtime / name).read_text()
 
+    def test_separate_taskbar_search(self):
+        dock = self.read('modules/iris/dock/IrisDock.qml')
+        palette = self.read('modules/iris/palette/IrisPalette.qml')
+        self.assertIn('HarmonyStartState.toggleSearch()', dock)
+        self.assertIn('HarmonyStartState.showAll()', dock)
+        self.assertIn('HarmonyStartState.applicationCenter', palette)
+        self.assertIn('HarmonyFileSearch.results', palette)
+        self.assertIn('root.fileResults', palette)
+
     def test_family_preserves_single_iris_host(self):
         root = self.read('shell.qml')
         self.assertIn('"harmony": [', root)

@@ -12,7 +12,7 @@ import qs.modules.harmony.components
 
 PanelWindow {
     id: root
-    visible: GlobalStates.searchOpen
+    visible: GlobalStates.searchOpen && HarmonyStartState.applicationCenter
     screen: GlobalStates.focusedScreen ?? Quickshell.screens[0]
     anchors { top: true; left: true; right: true; bottom: true }
     // The PC Application Center leaves the live dock available below its sheet.

@@ -35,8 +35,9 @@ spawn-at-startup "hp-os" "run"
 binds {
     Mod+Ctrl+V hotkey-overlay-title="Toggle all windows floating/tiled" { spawn "hp-os-toggle-floating-all"; }
     Mod+Return { spawn "foot"; }
-    Mod+Space { spawn "hp-os" "ipc" "overview" "toggle"; }
-    Mod+A { spawn "hp-os" "ipc" "overview" "toggle"; }
+    Mod+Space { spawn "hp-os" "ipc" "harmony" "applications"; }
+    Mod+A { spawn "hp-os" "ipc" "harmony" "applications"; }
+    Mod+S { spawn "hp-os" "ipc" "harmony" "search"; }
     Mod+C { spawn "hp-os" "ipc" "harmony" "controlCenter"; }
     Mod+Comma { spawn "hp-os" "settings"; }
     Mod+L { spawn "hp-os" "ipc" "lock" "activate"; }

@@ -1,3 +1,4 @@
 HarmonyApplicationCenter 1.0 HarmonyApplicationCenter.qml
 singleton HarmonyStartState 1.0 HarmonyStartState.qml
 HarmonyStartMenu 1.0 HarmonyStartMenu.qml
+singleton HarmonyFileSearch 1.0 HarmonyFileSearch.qml

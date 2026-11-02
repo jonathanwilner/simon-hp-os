@@ -10,6 +10,7 @@ import qs.modules.common.functions
 Singleton {
     id: root
     property bool opened: false
+    property bool applicationCenter: false
     property var files: []
     property var apps: []
     property var pendingApps: []
@@ -26,7 +27,13 @@ Singleton {
             } else root.accountDetailsRequested()
         }
     }
-    function showAll() { GlobalStates.searchOpen = true; opened = false }
+    function showAll() { applicationCenter = true; GlobalStates.searchOpen = true; opened = false }
+    function toggleSearch() {
+        const wasSearch = GlobalStates.searchOpen && !applicationCenter
+        GlobalStates.searchOpen = false
+        applicationCenter = false
+        GlobalStates.searchOpen = !wasSearch
+    }
     function lock() { Session.lock(); opened = false }
     function logOut() { Session.logout(); opened = false }
     function toggle() { opened = !opened }
@@ -63,7 +70,7 @@ Singleton {
     }
     Connections {
         target: GlobalStates
-        function onSearchOpenChanged() { if (GlobalStates.searchOpen) root.opened = false }
+        function onSearchOpenChanged() { if (GlobalStates.searchOpen) root.opened = false; else root.applicationCenter = false }
         function onScreenLockedChanged() { if (GlobalStates.screenLocked) root.opened = false }
     }
     Process {

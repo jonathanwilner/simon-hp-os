@@ -93,6 +93,7 @@
           python3 source/tests/test_desktop_defaults.py
           python3 source/tests/test_files_profile.py
           python3 source/tests/test_recents.py
+          python3 source/tests/test_unified_search.py
           HP_OS_UPSTREAM=${inir} python3 source/tests/test_wallpaper_startup.py
           HP_OS_UPSTREAM=${inir} python3 source/tests/test_harmony_contract.py
           touch "$out"
