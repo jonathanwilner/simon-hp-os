@@ -1,0 +1,82 @@
+{
+  "panelFamily": "hpos",
+  "hpos": {
+    "schemaVersion": 1
+  },
+  "appearance": {
+    "typography": {
+      "syncWithSystem": false
+    },
+    "wallpaperTheming": {
+      "autoDarkLightMode": false,
+      "enableAppsAndShell": false,
+      "enableQtApps": false,
+      "enableTerminal": false,
+      "enableVesktop": false,
+      "enableZed": false,
+      "enableVSCode": false,
+      "enableChrome": false,
+      "enableFirefox": false,
+      "enableSpicetify": false,
+      "enableSteam": false,
+      "enablePearDesktop": false,
+      "enableLimusic": false,
+      "enableClaudeCode": false,
+      "enableOpenCode": false,
+      "enableNeovim": false,
+      "enableCava": false
+    },
+    "iconTheme": "HP-OS"
+  },
+  "iris": {
+    "bar": {
+      "position": "bottom",
+      "layout": "right",
+      "notch": false,
+      "composition": "unified",
+      "height": 40,
+      "margin": 20
+    },
+    "dock": {
+      "position": "bottom",
+      "notch": false,
+      "iconSize": 48,
+      "magnification": false,
+      "autoHide": false
+    },
+    "appearance": {
+      "scheme": "auto",
+      "glass": {
+        "mode": "compositor"
+      },
+      "materialForApps": false,
+      "accentForApps": false
+    },
+    "controlCenter": {
+      "opens": "panel"
+    },
+    "modules": {
+      "desktopWidgets": true
+    },
+    "surround": {
+      "enable": false
+    }
+  },
+  "enabledPanels": [
+    "irisBar",
+    "irisBackground",
+    "irisPalette",
+    "irisControlCenter",
+    "irisNotificationPopup",
+    "irisOnScreenDisplay",
+    "irisSessionScreen",
+    "irisLock",
+    "irisPolkit"
+  ],
+  "background": {
+    "wallpaperPath": "__HPOS_WALLPAPER__"
+  },
+  "dock": {
+    "monochromeIcons": false
+  }
+}

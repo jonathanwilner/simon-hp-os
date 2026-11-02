@@ -39,7 +39,7 @@ and native PAM prerequisites from the original Simon installation.
   web launchers and document handlers, BlueBubbles and optional Relay clipboard.
 - Central desktop and user Flatpak updates, status display and rollback records.
 - Separate taskbar Search and Application Center. Search opens with Super+S.
-  See the [search guide](vendor/hp-os/docs/SEARCH.md) for supported providers.
+  See the [search guide](vendor/HP-OSShell/docs/SEARCH.md) for supported providers.
 
 Office, BlueBubbles, Relay and browser accounts remain the user's own. Office
 local-file uploads and Relay require the enrollment documented above. Appearance
@@ -72,7 +72,7 @@ bash goran/installer/update-desktop.sh --build-only
 ## Notices
 
 HP-OS code retains its GNU GPLv3 license, original authorship and
-[NOTICE](vendor/hp-os/NOTICE). Third-party applications, icons and artwork retain
+[NOTICE](vendor/HP-OSShell/NOTICE). Third-party applications, icons and artwork retain
 their own licenses and notices. This independent Linux desktop is not a Huawei product.
 
 **HarmonyOS Sans is bundled unmodified.** Its font files, license and required

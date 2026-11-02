@@ -1,0 +1,3 @@
+module qs.modules.hpos.settings
+HposPreferences 1.0 HposPreferences.qml
+HposGallery 1.0 HposGallery.qml

@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+set -euo pipefail
+runtime="${HP_OS_RUNTIME:-@runtime@}"
+packaging="${HP_OS_PACKAGING:-@packaging@}"
+if [[ ! -d "$packaging" ]]; then packaging="$(cd -- "$(dirname -- "$0")" && pwd)"; fi
+python3 "$packaging/migrate-brand.py"
+config="${INIR_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/hp-os}"
+export INIR_CONFIG_DIR="$config"
+export INIR_STATE_DIR="${INIR_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/hp-os}"
+export INIR_CACHE_DIR="${INIR_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/hp-os}"
+export INIR_RUNTIME_DIR="$runtime"
+export INIR_SYSTEM_RUNTIME_DIR="$runtime"
+export INIR_FALLBACK_SYSTEM_RUNTIME_DIR="$runtime"
+export QS_DISABLE_CRASH_HANDLER=1
+export PATH="$(dirname -- "$0"):$PATH"
+export INIR_NIRI_CONFIG_DIR="${INIR_NIRI_CONFIG_DIR:-$config/niri}"
+command="${1:-run}"
+[[ $# -eq 0 ]] || shift
+case "$command" in
+  doctor)
+    exec python3 "$packaging/doctor.py" "$@"
+    ;;
+  sync-bindings)
+    exec python3 "$packaging/sync-niri-bindings.py" \
+      --source "${XDG_CONFIG_HOME:-$HOME/.config}/niri/config.kdl" \
+      --target "$INIR_NIRI_CONFIG_DIR/config.kdl" \
+      --baseline "$packaging/niri.kdl" "$@"
+    ;;
+  session)
+    if [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
+      echo 'Start this session from a login manager or a free TTY; a Wayland session is already active.' >&2
+      exit 1
+    fi
+    mkdir -p "$INIR_NIRI_CONFIG_DIR/config.d"
+    if [[ ! -e "$INIR_NIRI_CONFIG_DIR/config.kdl" ]]; then
+      (umask 077; set -o noclobber; cat "$packaging/niri.kdl" > "$INIR_NIRI_CONFIG_DIR/config.kdl")
+    fi
+    python3 "$packaging/migrate-niri-input.py" "$INIR_NIRI_CONFIG_DIR/config.kdl"
+    if [[ ! -e "$INIR_NIRI_CONFIG_DIR/config.d/50-startup.kdl" ]]; then
+      (umask 077; set -o noclobber; printf '// HP-OS user startup entries\n' > "$INIR_NIRI_CONFIG_DIR/config.d/50-startup.kdl")
+    fi
+    if command -v touch-support >/dev/null; then
+      touch_flags=()
+      [[ "${HP_OS_TOUCH_PATCHED:-0}" != 1 ]] || touch_flags+=(--patched)
+      touch-support gestures "${touch_flags[@]}" > "$INIR_NIRI_CONFIG_DIR/config.d/60-touch.kdl.tmp"
+      mv "$INIR_NIRI_CONFIG_DIR/config.d/60-touch.kdl.tmp" "$INIR_NIRI_CONFIG_DIR/config.d/60-touch.kdl"
+      if ! grep -q 'include "config.d/60-touch.kdl"' "$INIR_NIRI_CONFIG_DIR/config.kdl"; then
+        printf '\ninclude "config.d/60-touch.kdl"\n' >> "$INIR_NIRI_CONFIG_DIR/config.kdl"
+      fi
+      niri validate --config "$INIR_NIRI_CONFIG_DIR/config.kdl"
+    elif [[ "${HP_OS_TOUCH_PATCHED:-0}" == 1 ]]; then
+      echo "Patched HP-OS requires the packaged touch-support command." >&2
+      exit 1
+    fi
+    "$0" sync-bindings || echo "HP-OS kept its last valid bindings; sync failed." >&2
+    export XDG_CURRENT_DESKTOP=HP-OS:niri
+    export XDG_SESSION_DESKTOP=hp-os
+    export XDG_SESSION_TYPE=wayland
+    export HP_OS_OWNED_SESSION=1
+    # Do not use niri --session: it imports environment into the per-user
+    # systemd manager and starts shared graphical-session targets. Those may
+    # own DMS in another session. HP-OS starts only its explicit KDL children
+    # and D-Bus-activated services on this private bus.
+    unset NIRI_SOCKET WAYLAND_SOCKET
+    # Prefer the host config: the packaged default includes it and combining
+    # both adds duplicate listeners which break strict D-Bus GUID handshakes.
+    dbus_session_config=/etc/dbus-1/session.conf
+    if [[ ! -f "$dbus_session_config" ]]; then
+      dbus_session_config="@dbusSessionConfig@"
+      # Source/staged installations use the distribution's standard location.
+      [[ -f "$dbus_session_config" ]] || dbus_session_config=/usr/share/dbus-1/session.conf
+    fi
+    exec python3 "$packaging/session-supervisor.py" dbus-run-session --config-file="$dbus_session_config" -- niri --config "$INIR_NIRI_CONFIG_DIR/config.kdl"
+    ;;
+  run)
+    if ! command -v qs >/dev/null; then echo 'Quickshell (qs) is required.' >&2; exit 1; fi
+    if [[ ! -f "$runtime/shell.qml" ]]; then echo "Missing HP-OS runtime: $runtime" >&2; exit 1; fi
+    # Niri has now assigned WAYLAND_DISPLAY. Publish it only to the private
+    # session bus so portal activation can reach this compositor. Deliberately
+    # omit --systemd, which would alter the shared per-user service manager.
+    if [[ "${HP_OS_OWNED_SESSION:-0}" == 1 ]]; then
+      activation_vars=(WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE XDG_RUNTIME_DIR NIRI_SOCKET)
+      [[ -z "${DISPLAY:-}" ]] || activation_vars+=(DISPLAY)
+      dbus-update-activation-environment "${activation_vars[@]}"
+    fi
+    # Never replace another desktop's notification server.
+    if command -v gdbus >/dev/null && gdbus call --session --dest org.freedesktop.DBus --object-path /org/freedesktop/DBus --method org.freedesktop.DBus.NameHasOwner org.freedesktop.Notifications 2>/dev/null | grep -q true; then
+      echo 'A notification server is already running. Start HP-OS in its own session.' >&2
+      exit 1
+    fi
+    mkdir -p "$config" "$INIR_STATE_DIR/user" "$INIR_CACHE_DIR"
+    python3 "$packaging/initialize-config.py" "$packaging/default-config.json" "$config/config.json" "$runtime/assets/hpos-wallpaper.png"
+    python3 "$packaging/write-version.py" "$config"
+    # Qt has no desktop-provided icon theme on some standalone Linux sessions.
+    # Scope the configured theme to Quickshell, preserving an explicit override.
+    export QS_ICON_THEME="${QS_ICON_THEME:-$(python3 -c 'import json,sys; theme = json.load(open(sys.argv[1])).get("appearance", {}).get("iconTheme") or "HP-OS"; print("HP-OS" if theme == "Papirus" else theme)' "$config/config.json")}"
+    if [[ "${HP_OS_OWNED_SESSION:-0}" == 1 ]] && command -v touch-support >/dev/null; then
+      touch-support session-start &
+      touch-support rotation-run &
+    fi
+    exec qs -n -p "$runtime" "$@"
+    ;;
+  ipc)
+    exec qs ipc -p "$runtime" call "$@"
+    ;;
+  settings)
+    exec qs ipc -p "$runtime" call settings toggle
+    ;;
+  stop)
+    exec qs kill -p "$runtime"
+    ;;
+  restart)
+    qs kill -p "$runtime"
+    # Wait only for the selected runtime; never control an iNiR systemd unit.
+    for attempt in {1..30}; do
+      if ! qs ipc -p "$runtime" show >/dev/null 2>&1; then break; fi
+      sleep 0.1
+    done
+    exec "$0" run "$@"
+    ;;
+  logs)
+    exec qs log -p "$runtime" "$@"
+    ;;
+  *)
+    echo 'Usage: hp-os [run|session|sync-bindings|doctor|ipc TARGET FUNCTION [ARGS...]|settings|restart|stop|logs]' >&2
+    exit 2
+    ;;
+esac

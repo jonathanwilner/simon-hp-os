@@ -220,11 +220,11 @@
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "path": "./vendor/hp-os",
+        "path": "./vendor/HP-OSShell",
         "type": "path"
       },
       "original": {
-        "path": "./vendor/hp-os",
+        "path": "./vendor/HP-OSShell",
         "type": "path"
       },
       "parent": []

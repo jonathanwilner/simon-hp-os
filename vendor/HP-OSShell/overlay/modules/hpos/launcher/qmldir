@@ -1,0 +1,4 @@
+HposApplicationCenter 1.0 HposApplicationCenter.qml
+singleton HposStartState 1.0 HposStartState.qml
+HposStartMenu 1.0 HposStartMenu.qml
+singleton HposFileSearch 1.0 HposFileSearch.qml

@@ -1,0 +1,14 @@
+module qs.modules.hpos.components
+HposButton 1.0 HposButton.qml
+HposCard 1.0 HposCard.qml
+HposDialog 1.0 HposDialog.qml
+HposIconButton 1.0 HposIconButton.qml
+HposMaterial 1.0 HposMaterial.qml
+HposMenu 1.0 HposMenu.qml
+HposPanel 1.0 HposPanel.qml
+HposPopup 1.0 HposPopup.qml
+HposSegmentedControl 1.0 HposSegmentedControl.qml
+HposSlider 1.0 HposSlider.qml
+HposSurface 1.0 HposSurface.qml
+HposText 1.0 HposText.qml
+HposToggle 1.0 HposToggle.qml

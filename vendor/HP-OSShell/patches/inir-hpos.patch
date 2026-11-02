@@ -1,0 +1,1730 @@
+--- a/GlobalStates.qml
++++ b/GlobalStates.qml
+@@ -68,7 +68,7 @@
+     property bool osdMediaOpen: false
+     property string osdMediaAction: "play" // "play", "pause", "next", "previous"
+     signal osdMediaActionTriggered(string action)
+-    readonly property bool userMediaFeedback: Config.options?.panelFamily === "iris"
++    readonly property bool userMediaFeedback: Config.isIrisFamily
+         || (Config.options?.osd?.mediaEnabled ?? true)
+ 
+     function showMediaAction(action: string): void {
+@@ -121,7 +121,7 @@
+         if (isWaffle) {
+             Quickshell.execDetached([Quickshell.shellPath("scripts/inir"),
+                 "waffle-settings-window"])
+-        } else if (Config.options?.panelFamily === "iris" || (Config.options?.settingsUi?.overlayMode ?? false)) {
++        } else if (Config.isIrisFamily || (Config.options?.settingsUi?.overlayMode ?? false)) {
+             root.settingsOverlayRequestedPage = index
+             root.settingsOverlayRequestedSection = requestedSection
+             if (root.settingsOverlayOpen) root.settingsRaiseRequest++
+@@ -141,7 +141,7 @@
+         if (isWaffle) {
+             Quickshell.execDetached([Quickshell.shellPath("scripts/inir"),
+                 "waffle-settings-window"])
+-        } else if (Config.options?.panelFamily === "iris" || (Config.options?.settingsUi?.overlayMode ?? false)) {
++        } else if (Config.isIrisFamily || (Config.options?.settingsUi?.overlayMode ?? false)) {
+             if (root.settingsOverlayOpen) root.settingsRaiseRequest++
+             root.settingsOverlayOpen = true
+         } else {
+@@ -156,7 +156,7 @@
+         if (isWaffle) {
+             Quickshell.execDetached([Quickshell.shellPath("scripts/inir"),
+                 "waffle-settings-window", "--toggle"])
+-        } else if (Config.options?.panelFamily === "iris" || (Config.options?.settingsUi?.overlayMode ?? false)) {
++        } else if (Config.isIrisFamily || (Config.options?.settingsUi?.overlayMode ?? false)) {
+             if (root.settingsOverlayOpen && root.settingsWindowBehind) root.settingsRaiseRequest++
+             else root.settingsOverlayOpen = !root.settingsOverlayOpen
+         } else {
+@@ -564,7 +564,7 @@
+ 
+     readonly property string overviewPresentationOutput:
+         root.resolveOutputName(root.overviewTargetOutput, [])
+-    readonly property var sidebarScreenList: (Config.options?.panelFamily ?? "ii") === "iris"
++    readonly property var sidebarScreenList: Config.isIrisFamily
+         ? [] : (Config.options?.sidebar?.screenList ?? [])
+     readonly property string sidebarLeftPresentationOutput:
+         root.resolveOutputName(root.sidebarLeftTargetOutput,
+@@ -655,7 +655,7 @@
+     function toggleTaskView(outputName): void { root.toggleOrbit(outputName) }
+ 
+     function openSidebarLeft(outputName): void {
+-        if (Config.options?.panelFamily === "iris" && !(Config.options?.iris?.sidebars?.left?.enable ?? true)) return
++        if (Config.isIrisFamily && !(Config.options?.iris?.sidebars?.left?.enable ?? true)) return
+         sidebarLeftTargetOutput = root.resolveOutputName(outputName,
+             root.sidebarScreenList)
+         sidebarLeftOpen = true
+@@ -675,7 +675,7 @@
+     }
+ 
+     function openSidebarRight(outputName): void {
+-        if (Config.options?.panelFamily === "iris" && !(Config.options?.iris?.sidebars?.right?.enable ?? true)) return
++        if (Config.isIrisFamily && !(Config.options?.iris?.sidebars?.right?.enable ?? true)) return
+         sidebarRightTargetOutput = root.resolveOutputName(outputName,
+             root.sidebarScreenList)
+         sidebarRightOpen = true
+--- a/modules/background/Background.qml
++++ b/modules/background/Background.qml
+@@ -113,7 +113,7 @@
+         }
+ 
+         function widgetSearch(query: string): string {
+-            if ((Config.options?.panelFamily ?? "ii") !== "iris")
++            if (!Config.isIrisFamily)
+                 return "the widget search is part of the iRiS widget bar"
+             if (query === "close") {
+                 GlobalStates.widgetSearchOpen = false
+@@ -562,7 +562,7 @@
+         readonly property var workSafetyOptions: Config.options?.workSafety ?? {}
+         readonly property var workSafetyEnableOptions: workSafetyOptions.enable ?? {}
+         readonly property var workSafetyTriggerOptions: workSafetyOptions.triggerCondition ?? {}
+-        readonly property var lockBlurOptions: Config.options?.panelFamily === "iris" ? ({}) : (Config.options?.lock?.blur ?? {})
++        readonly property var lockBlurOptions: Config.isIrisFamily ? ({}) : (Config.options?.lock?.blur ?? {})
+         readonly property var desktopFreeWorkArea: ShellLayoutController.desktopWorkArea(
+             screen?.name ?? "", screen?.width ?? 0, screen?.height ?? 0)
+         readonly property var desktopItemsWorkArea: ShellLayoutController.desktopZoneWorkArea(
+@@ -883,7 +883,7 @@
+             && !afterglowHandoff.running
+         // iRiS Afterglow grades whatever is drawn here (still, transition, preview, video, GIF), so the picture is drawn
+         // here, not by awww; leaving it, the picture stays drawn here until awww shows it.
+-        readonly property bool afterglowWallpaperActive: (Config.options?.panelFamily ?? "ii") === "iris"
++        readonly property bool afterglowWallpaperActive: Config.isIrisFamily
+             && String(Config.options?.iris?.appearance?.texture ?? "solid") === "afterglow"
+             && (Config.options?.iris?.appearance?.afterglow?.wallpaper ?? true)
+             && bgRoot.wallpaperPathRaw.length > 0
+@@ -1917,7 +1917,7 @@
+                     if (desktopItemContextMenu.active) desktopItemContextMenu.close()
+                     desktopMenuAnchor.x = mouse.x
+                     desktopMenuAnchor.y = mouse.y
+-                    if ((Config.options?.panelFamily ?? "ii") === "iris") irisDesktopMenu.requestOpen()
++                    if (Config.isIrisFamily) irisDesktopMenu.requestOpen()
+                     else desktopContextMenu.requestOpen()
+                 }
+             }
+@@ -1986,7 +1986,7 @@
+             Connections {
+                 target: GlobalStates
+                 function onIrisDesktopMenuRequested(outputName: string, x: real, y: real): void {
+-                    if (outputName !== bgRoot.screenName || (Config.options?.panelFamily ?? "ii") !== "iris") return
++                    if (outputName !== bgRoot.screenName || !Config.isIrisFamily) return
+                     desktopMenuAnchor.x = x
+                     desktopMenuAnchor.y = y
+                     irisDesktopMenu.requestOpen()
+@@ -2788,7 +2788,7 @@
+                             + (editGridOverlay.safeWidth - width) / 2)
+                         // iRiS: the Dock steps aside while editing and the toolbar takes the
+                         // edge opposite the Island, so it never lands on the Island.
+-                        readonly property bool irisTopEdge: (Config.options?.panelFamily ?? "ii") === "iris"
++                        readonly property bool irisTopEdge: Config.isIrisFamily
+                             && editGridOverlay.workArea?.insets?.barEdge === "bottom"
+                         attachedTopEdge: irisTopEdge
+                         y: editControlsBar.iris ? (irisTopEdge ? IrisFrame.band : parent.height - height - IrisFrame.band)
+@@ -3139,7 +3139,7 @@
+                 }
+ 
+                 FadeLoader {
+-                    shown: bgRoot._widgetEnabled("controls", false) && (Config.options?.panelFamily ?? "ii") === "iris"
++                    shown: bgRoot._widgetEnabled("controls", false) && Config.isIrisFamily
+                     z: item?.desktopStackZ ?? 0
+                     containmentMask: GlobalStates.widgetEditMode ? _hitMaskControls : null
+                     WidgetInputMask { id: _hitMaskControls; loader: parent }
+@@ -3155,7 +3155,7 @@
+                 }
+ 
+                 FadeLoader {
+-                    shown: bgRoot._widgetEnabled("screenTime", false) && (Config.options?.panelFamily ?? "ii") === "iris"
++                    shown: bgRoot._widgetEnabled("screenTime", false) && Config.isIrisFamily
+                     z: item?.desktopStackZ ?? 0
+                     containmentMask: GlobalStates.widgetEditMode ? _hitMaskScreenTime : null
+                     WidgetInputMask { id: _hitMaskScreenTime; loader: parent }
+--- a/modules/background/widgets/AbstractBackgroundWidget.qml
++++ b/modules/background/widgets/AbstractBackgroundWidget.qml
+@@ -19,7 +19,7 @@
+     id: root
+ 
+     required property string configEntryName
+-    readonly property bool widgetIrisFamily: (Config.options?.panelFamily ?? "ii") === "iris"
++    readonly property bool widgetIrisFamily: Config.isIrisFamily
+     readonly property bool widgetIris: root.widgetIrisFamily && root.irisDesign === "iris"
+     required property int screenWidth
+     required property int screenHeight
+@@ -2216,8 +2216,8 @@
+     readonly property var designChoices: {
+         const list = []
+         const family = Config.options?.panelFamily ?? "ii"
+-        if (family !== "iris" && family !== "ii") return list
+-        if (family === "iris" && root.irisFace !== null) list.push({ value: "iris", icon: "auto_awesome", label: Translation.tr("iRiS") })
++        if (!Config.isIrisFamily && family !== "ii") return list
++        if (Config.isIrisFamily && root.irisFace !== null) list.push({ value: "iris", icon: "auto_awesome", label: Translation.tr("iRiS") })
+         if (family === "ii" || !root.irisOnly) list.push({ value: "material", icon: "widgets", label: Translation.tr("Material") })
+         if (DesktopWidgetDesign.supports(root.configEntryName)) {
+             list.push({ value: "instrument", icon: "avg_pace", label: Translation.tr("iNstrument") })
+--- a/modules/background/widgets/DesktopEditToolbar.qml
++++ b/modules/background/widgets/DesktopEditToolbar.qml
+@@ -67,7 +67,7 @@
+         { key: "screenTime", icon: "hourglass_bottom", label: "Screen Time", defaultOn: false, irisOnly: true }
+     ]
+ 
+-    readonly property bool iris: (Config.options?.panelFamily ?? "ii") === "iris"
++    readonly property bool iris: Config.isIrisFamily
+     readonly property real d: root.iris ? IrisStyle.density : 1
+     readonly property real irisSlot: Math.round(30 * root.d)
+     readonly property real controlHeight: Math.round(38 * root.d)
+--- a/modules/background/widgets/DesktopWidgetDesign.qml
++++ b/modules/background/widgets/DesktopWidgetDesign.qml
+@@ -17,7 +17,7 @@
+         const own = String(Config.options?.iris?.widgets?.design ?? "iris")
+         return root.irisDesigns.includes(own) ? own : "iris"
+     }
+-    readonly property string current: root.family === "iris" ? root.irisGlobal
++    readonly property string current: Config.isIrisFamily ? root.irisGlobal
+         : root.shared === "individual" ? "material" : root.shared
+     readonly property var choices: [
+         { label: "Individual", value: "individual", icon: "widgets" },
+@@ -53,7 +53,7 @@
+ 
+     // What one widget draws: `face` is the iRiS face, `design` the overlay on the Material widget.
+     function resolve(widget: string, ownIris: string, ownShared: string, hasFace: bool): var {
+-        if (root.family === "iris") {
++        if (Config.isIrisFamily) {
+             const design = root.irisDesigns.includes(ownIris) ? ownIris : root.irisGlobal
+             const overlaid = ["instrument", "readout"].includes(design)
+             if (overlaid && !root.supports(widget) && hasFace) return { face: true, design: "individual" }
+@@ -64,7 +64,7 @@
+     }
+ 
+     // Per-widget exceptions: the look one widget chose for itself, which a design change clears.
+-    readonly property var exceptionKeys: root.family === "iris" ? ["iris.design"] : ["design"]
++    readonly property var exceptionKeys: Config.isIrisFamily ? ["iris.design"] : ["design"]
+     function _own(value): bool {
+         return value !== undefined && value !== null && String(value) !== "auto" && String(value) !== ""
+     }
+@@ -112,14 +112,14 @@
+     }
+ 
+     function apply(design: string): string {
+-        const name = design === "individual" && root.family === "iris" ? "material" : design
++        const name = design === "individual" && Config.isIrisFamily ? "material" : design
+         if (!["iris", "material", "individual", "instrument", "readout"].includes(name))
+             return "Choose iris, material, individual, instrument or readout"
+-        if (name === "iris" && root.family !== "iris") return "iRiS faces need the iRiS family"
++        if (name === "iris" && !Config.isIrisFamily) return "iRiS faces need the iRiS family"
+         const cleared = root.exceptions
+         const updates = root._clearExceptions(cleared)
+         const undo = cleared.slice()
+-        const iris = root.family === "iris"
++        const iris = Config.isIrisFamily
+         const key = iris ? "iris.widgets.design" : "background.widgets.design"
+         const before = iris ? String(Config.options?.iris?.widgets?.design ?? "iris") : root.shared
+         undo.push({ output: "", widget: "", key: key, value: before })
+--- a/modules/background/widgets/OrganicEdgeWidget.qml
++++ b/modules/background/widgets/OrganicEdgeWidget.qml
+@@ -31,7 +31,7 @@
+     readonly property string idleMode: String(root.value("idleMode"))
+     readonly property real restPresence: root.number("restPresence", 0, 100) / 100
+     readonly property bool renderAllowed: configuredEnabled && outputAllowed
+-        && !(Config.options?.panelFamily === "iris" && (Config.options?.iris?.surround?.enable ?? false)
++        && !(Config.isIrisFamily && (Config.options?.iris?.surround?.enable ?? false)
+             && String(Config.options?.iris?.surround?.music ?? "widget") === "frame")
+         && !GlobalStates.screenLocked && !GameMode.visualizersSuppressed
+         && !Appearance.gameModeMinimal && WidgetPowerManager.widgetsActiveForOutput(root.screenName)
+--- a/modules/background/widgets/WidgetChoiceButton.qml
++++ b/modules/background/widgets/WidgetChoiceButton.qml
+@@ -10,7 +10,7 @@
+     id: root
+     // iRiS: quiet translucent choices on black, the accent marks the selected one
+     // (the same pairing as the edit toolbar's committing action).
+-    readonly property bool iris: (Config.options?.panelFamily ?? "ii") === "iris"
++    readonly property bool iris: Config.isIrisFamily
+     implicitHeight: 32
+ 
+     // Override the inherited family-aware bindings only while iRiS owns this
+--- a/modules/background/widgets/WidgetEditAction.qml
++++ b/modules/background/widgets/WidgetEditAction.qml
+@@ -24,7 +24,7 @@
+     readonly property bool showLabel: !compact && label.length > 0
+     // iRiS draws edit controls in the Island's material: quiet translucent
+     // states on black, the accent reserved for the one committing action.
+-    readonly property bool iris: (Config.options?.panelFamily ?? "ii") === "iris"
++    readonly property bool iris: Config.isIrisFamily
+     // iRiS widget rail: each widget is an app-icon-shaped tile in its category
+     // tint, lit when the widget is on; the fill carries the state, nothing else does.
+     property color tileTint: "transparent"
+--- a/modules/background/widgets/WidgetIdentityMark.qml
++++ b/modules/background/widgets/WidgetIdentityMark.qml
+@@ -14,7 +14,7 @@
+     property string glyph: "widgets"
+     property color tint: IrisStyle.accent
+ 
+-    readonly property bool iris: (Config.options?.panelFamily ?? "ii") === "iris"
++    readonly property bool iris: Config.isIrisFamily
+     readonly property real d: root.iris ? IrisStyle.density : 1
+ 
+     implicitWidth: Math.round(28 * root.d)
+--- a/modules/background/widgets/WidgetLibraryCard.qml
++++ b/modules/background/widgets/WidgetLibraryCard.qml
+@@ -17,7 +17,7 @@
+     required property string symbol
+     property bool active: false
+     property bool selected: false
+-    readonly property bool iris: (Config.options?.panelFamily ?? "ii") === "iris"
++    readonly property bool iris: Config.isIrisFamily
+ 
+     signal addRequested()
+     signal editRequested()
+--- a/modules/background/widgets/WidgetManagerPanel.qml
++++ b/modules/background/widgets/WidgetManagerPanel.qml
+@@ -23,7 +23,7 @@
+ 
+     // iRiS dresses the manager in the Island material; other families keep their
+     // layer tokens untouched.
+-    readonly property bool iris: (Config.options?.panelFamily ?? "ii") === "iris"
++    readonly property bool iris: Config.isIrisFamily
+     readonly property color ink: root.iris ? IrisStyle.text : Appearance.colors.colOnLayer1
+     readonly property color accentInk: root.iris ? IrisStyle.accent : Appearance.colors.colPrimary
+     readonly property color dangerInk: root.iris ? IrisStyle.danger : Appearance.colors.colError
+@@ -55,7 +55,7 @@
+         { key: "userCard", icon: "account_circle", label: "User card", defaultEnabled: false },
+         { key: "controls", icon: "toggle_on", label: "Controls", defaultEnabled: false, irisOnly: true },
+         { key: "screenTime", icon: "hourglass_bottom", label: "Screen Time", defaultEnabled: false, irisOnly: true }
+-    ].filter(item => !item.irisOnly || (Config.options?.panelFamily ?? "ii") === "iris")
++    ].filter(item => !item.irisOnly || Config.isIrisFamily)
+ 
+     function _setFilter(value: string): void {
+         const next = ["all", "active", "locked", "custom"].includes(value) ? value : "all"
+--- a/modules/background/widgets/WidgetPlacementControls.qml
++++ b/modules/background/widgets/WidgetPlacementControls.qml
+@@ -16,7 +16,7 @@
+     required property var widget
+     property bool wide: false
+ 
+-    readonly property bool iris: (Config.options?.panelFamily ?? "ii") === "iris"
++    readonly property bool iris: Config.isIrisFamily
+     readonly property real d: root.iris ? IrisStyle.density : 1
+     readonly property var zoneGlyphs: ({ topLeft: "north_west", topCenter: "north", topRight: "north_east",
+         centerLeft: "west", center: "filter_center_focus", centerRight: "east",
+--- a/modules/background/widgets/WidgetQuickChoice.qml
++++ b/modules/background/widgets/WidgetQuickChoice.qml
+@@ -20,7 +20,7 @@
+     property string tooltip: ""
+     signal clicked()
+ 
+-    readonly property bool iris: (Config.options?.panelFamily ?? "ii") === "iris"
++    readonly property bool iris: Config.isIrisFamily
+     readonly property real d: root.iris ? IrisStyle.density : 1
+     property real sidePadding: Math.round(12 * root.d)
+     readonly property color ink: root.iris
+--- a/modules/background/widgets/WidgetQuickChoices.qml
++++ b/modules/background/widgets/WidgetQuickChoices.qml
+@@ -19,7 +19,7 @@
+     property int maxColumns: 3
+     signal picked(var value, var entry)
+ 
+-    readonly property bool iris: (Config.options?.panelFamily ?? "ii") === "iris"
++    readonly property bool iris: Config.isIrisFamily
+     readonly property real gap: Math.round(4 * (root.iris ? IrisStyle.density : 1))
+     readonly property var entries: Array.from(root.model ?? []).filter(entry => entry && entry.visible !== false)
+     readonly property int columns: {
+--- a/modules/background/widgets/WidgetQuickControlsLayout.qml
++++ b/modules/background/widgets/WidgetQuickControlsLayout.qml
+@@ -23,7 +23,7 @@
+     property real regularWidth: 360
+     signal closeRequested()
+ 
+-    readonly property bool iris: (Config.options?.panelFamily ?? "ii") === "iris"
++    readonly property bool iris: Config.isIrisFamily
+     readonly property real d: root.iris ? IrisStyle.density : 1
+     readonly property bool dense: availableHeight < 760
+     readonly property bool wideDense: dense && availableWidth >= 480
+--- a/modules/background/widgets/WidgetQuickSection.qml
++++ b/modules/background/widgets/WidgetQuickSection.qml
+@@ -15,7 +15,7 @@
+     property string detail: ""
+     default property alias content: body.data
+ 
+-    readonly property bool iris: (Config.options?.panelFamily ?? "ii") === "iris"
++    readonly property bool iris: Config.isIrisFamily
+     readonly property real d: root.iris ? IrisStyle.density : 1
+ 
+     Layout.fillWidth: true
+--- a/modules/background/widgets/WidgetQuickSlider.qml
++++ b/modules/background/widgets/WidgetQuickSlider.qml
+@@ -23,7 +23,7 @@
+     signal moved(real value)
+     signal committed(real value)
+ 
+-    readonly property bool iris: (Config.options?.panelFamily ?? "ii") === "iris"
++    readonly property bool iris: Config.isIrisFamily
+     readonly property real d: root.iris ? IrisStyle.density : 1
+     readonly property real span: Math.max(0.0001, root.to - root.from)
+     property real live: NaN
+--- a/modules/background/widgets/WidgetQuickToggle.qml
++++ b/modules/background/widgets/WidgetQuickToggle.qml
+@@ -18,7 +18,7 @@
+     property bool checked: false
+     signal toggled()
+ 
+-    readonly property bool iris: (Config.options?.panelFamily ?? "ii") === "iris"
++    readonly property bool iris: Config.isIrisFamily
+     readonly property real d: root.iris ? IrisStyle.density : 1
+ 
+     opacity: root.enabled ? 1 : 0.45
+--- a/modules/background/widgets/WidgetSurface.qml
++++ b/modules/background/widgets/WidgetSurface.qml
+@@ -60,7 +60,7 @@
+     // otherwise blur twice as wide) and the layer is smoothed on upscale.
+     readonly property real _blurScale: 0.5
+ 
+-    property bool irisPresentation: (Config.options?.panelFamily ?? "ii") === "iris"
++    property bool irisPresentation: Config.isIrisFamily
+     readonly property bool _iris: root.irisPresentation
+     readonly property string _surfaceDialect: root._iris ? "iris" : (Config.options?.background?.widgets?.style ?? "panel") === "island"
+         ? "island" : Appearance.globalStyle
+--- a/modules/background/widgets/clock/ClockWidget.qml
++++ b/modules/background/widgets/clock/ClockWidget.qml
+@@ -170,7 +170,7 @@
+     readonly property bool textClockStyle: root.clockStyle === "digital"
+         || root.clockStyle === "androidStacked"
+     property bool adaptDigitalToWallpaper: root._readConfigKey("digital.adaptToWallpaper") ?? true
+-    readonly property bool shellLocked: GlobalStates.screenLocked && Config.options?.panelFamily !== "iris"
++    readonly property bool shellLocked: GlobalStates.screenLocked && !Config.isIrisFamily
+     property bool forceCenter: (root.shellLocked && (Config.options?.lock?.centerClock ?? false))
+     property bool wallpaperSafetyTriggered: false
+     property bool debugRegionActive: false
+--- a/modules/closeConfirm/CloseConfirm.qml
++++ b/modules/closeConfirm/CloseConfirm.qml
+@@ -149,7 +149,7 @@
+                 // initialize required properties and fails to Loader.Error, leaving
+                 // this keyboard-exclusive fullscreen window with no way out.
+                 sourceComponent: Config.options?.panelFamily === "waffle" ? waffleContent
+-                    : Config.options?.panelFamily === "iris" ? irisContent : iiContent
++                    : Config.isIrisFamily ? irisContent : iiContent
+                 onLoaded: if (item) item.forceActiveFocus()
+ 
+                 Component {
+--- a/modules/common/Appearance.qml
++++ b/modules/common/Appearance.qml
+@@ -1880,9 +1880,14 @@
+ 
+     syntaxHighlightingTheme: root.m3colors.darkmode ? "Monokai" : "ayu Light"
+ 
++    readonly property bool effectiveDarkMode: Config.options?.panelFamily === "hpos"
++        ? (Config.options?.hpos?.appearance === "dark" || (Config.options?.hpos?.appearance !== "light" && root.m3colors.darkmode))
++        : root.m3colors.darkmode
++
+     // Toggle dark mode - switches between light and dark variants of current theme
+     function toggleDarkMode(): void {
+-        const newMode = !root.m3colors.darkmode
++        const newMode = !root.effectiveDarkMode
++        if (Config.options?.panelFamily === "hpos") { MaterialThemeLoader.setDarkMode(newMode); return }
+         if (ThemeService.isAutoTheme) {
+             // The same path as every other switch: mode passed explicitly, iRiS scheme kept in step.
+             MaterialThemeLoader.setDarkMode(newMode)
+--- a/modules/common/Config.qml
++++ b/modules/common/Config.qml
+@@ -7,6 +7,8 @@
+ Singleton {
+     id: root
+     property string filePath: Directories.shellConfigPath
++    // HP-OS uses the complete iRiS backend and panel lifecycle.
++    readonly property bool isIrisFamily: ["iris", "hpos"].includes(options?.panelFamily ?? "ii")
+     property alias options: configOptionsJsonAdapter
+     property bool ready: false
+     property int revision: 0
+@@ -695,12 +697,28 @@
+         JsonAdapter {
+             id: configOptionsJsonAdapter
+ 
++            property JsonObject hpos: JsonObject {
++                property int schemaVersion: 1
++                property JsonObject controlCenter: JsonObject {
++                    property list<string> actions: ["focus", "darkMode", "nightLight", "profiles", "mic", "idle", "snip", "lock", "settings", "session"]
++                }
++                property string appearance: "auto"
++                property bool applicationCenter: true
++                property string weatherProvider: "disabled"
++                property string quality: "balanced"
++                property bool reducedMotion: false
++                property bool reducedTransparency: false
++                property string locale: "auto"
++                property string fontFamily: "HarmonyOS Sans SC"
++                property real materialIntensity: 1.0
++            }
++
+             // Panel system
+             property list<string> enabledPanels: ["iiBar", "iiBackground", "iiBackdrop", "iiCheatsheet", "iiControlPanel", "iiDock", "iiLock", "iiMediaControls", "iiNotificationPopup", "iiOnScreenDisplay", "iiOnScreenKeyboard", "iiOverlay", "iiOverview", "iiPolkit", "iiRegionSelector", "iiScreenCorners", "iiSessionScreen", "iiSidebarLeft", "iiSidebarRight", "iiTilingOverlay", "iiVerticalBar", "iiWallpaperSelector", "iiWallpaperLauncher", "iiCoverflowSelector", "iiClipboard", "iiShellUpdate", "iiDashboard", "iiMascotCompanion"]
+             property list<string> knownPanels: [] // Tracks panels the user has seen; used to distinguish "user disabled" from "new in update"
+             property string panelFamily: "ii" // "ii", "waffle", or "iris"
+             property bool familyTransitionAnimation: true // Show animated overlay when switching families
+-            property list<string> familyCycle: ["ii", "waffle", "iris"] // Families the switch shortcut (panelFamily cycle) walks through
++            property list<string> familyCycle: ["ii", "waffle", "iris", "hpos"] // Families the switch shortcut (panelFamily cycle) walks through
+ 
+             property JsonObject policies: JsonObject {
+                 property int ai: 0 // 0: No | 1: Yes | 2: Local
+--- a/modules/common/Directories.qml
++++ b/modules/common/Directories.qml
+@@ -14,9 +14,9 @@
+     // XDG Dirs, with "file://"
+     readonly property string home: StandardPaths.standardLocations(StandardPaths.HomeLocation)[0]
+     readonly property string config: StandardPaths.standardLocations(StandardPaths.ConfigLocation)[0]
+-    readonly property string state: StandardPaths.standardLocations(StandardPaths.StateLocation)[0]
+-    readonly property string cache: StandardPaths.standardLocations(StandardPaths.CacheLocation)[0]
+-    readonly property string genericCache: StandardPaths.standardLocations(StandardPaths.GenericCacheLocation)[0]
++    readonly property string state: (Quickshell.env("INIR_STATE_DIR") ? "file://" + Quickshell.env("INIR_STATE_DIR") : StandardPaths.standardLocations(StandardPaths.StateLocation)[0])
++    readonly property string cache: (Quickshell.env("INIR_CACHE_DIR") ? "file://" + Quickshell.env("INIR_CACHE_DIR") : StandardPaths.standardLocations(StandardPaths.CacheLocation)[0])
++    readonly property string genericCache: (Quickshell.env("INIR_CACHE_DIR") ? "file://" + Quickshell.env("INIR_CACHE_DIR") : StandardPaths.standardLocations(StandardPaths.GenericCacheLocation)[0])
+     readonly property string documents: StandardPaths.standardLocations(StandardPaths.DocumentsLocation)[0]
+     readonly property string downloads: StandardPaths.standardLocations(StandardPaths.DownloadLocation)[0]
+     readonly property string pictures: StandardPaths.standardLocations(StandardPaths.PicturesLocation)[0]
+@@ -93,7 +93,7 @@
+     property string booruDownloads: Config.options?.sidebar?.booru?.downloadPath?.sfw || Directories.wallpapersPath
+     property string booruDownloadsNsfw: Config.options?.sidebar?.booru?.downloadPath?.nsfw || `${Directories.wallpapersPath}/🌶️`
+     property string latexOutput: `${Directories.cachePath}/media/latex`
+-    property string shellConfig: `${Directories.configPath}/illogical-impulse`
++    property string shellConfig: Quickshell.env("INIR_CONFIG_DIR") || `${Directories.configPath}/illogical-impulse`
+     property string shellConfigName: "config.json"
+     property string shellConfigPath: `${Directories.shellConfig}/${Directories.shellConfigName}`
+     property string updateLogPath: `${Directories.stateUserPath}/update.log`
+--- a/modules/common/models/quickToggles/DarkModeToggle.qml
++++ b/modules/common/models/quickToggles/DarkModeToggle.qml
+@@ -8,13 +8,13 @@
+ 
+ QuickToggleModel {
+     name: Translation.tr("Dark Mode")
+-    statusText: Appearance.m3colors.darkmode ? Translation.tr("Dark") : Translation.tr("Light")
++    statusText: Appearance.effectiveDarkMode ? Translation.tr("Dark") : Translation.tr("Light")
+ 
+-    toggled: Appearance.m3colors.darkmode
++    toggled: Appearance.effectiveDarkMode
+     icon: "contrast"
+     
+     mainAction: () => {
+-        MaterialThemeLoader.setDarkMode(!Appearance.m3colors.darkmode)
++        MaterialThemeLoader.setDarkMode(!Appearance.effectiveDarkMode)
+     }
+ 
+     tooltipText: Translation.tr("Dark Mode")
+--- a/modules/common/models/quickToggles/HotspotToggle.qml
++++ b/modules/common/models/quickToggles/HotspotToggle.qml
+@@ -113,7 +113,7 @@
+             if (exitCode !== 0) {
+                 const errMsg = (startErrCollector.text?.trim() ?? "")
+                 Quickshell.execDetached([
+-                    "/usr/bin/notify-send",
++                    Config.options?.panelFamily === "hpos" ? "notify-send" : "/usr/bin/notify-send",
+                     Translation.tr("Hotspot"),
+                     errMsg.length > 0
+                         ? errMsg
+@@ -139,7 +139,7 @@
+             if (exitCode !== 0) {
+                 const errMsg = (stopErrCollector.text?.trim() ?? "")
+                 Quickshell.execDetached([
+-                    "/usr/bin/notify-send",
++                    Config.options?.panelFamily === "hpos" ? "notify-send" : "/usr/bin/notify-send",
+                     Translation.tr("Hotspot"),
+                     errMsg.length > 0
+                         ? errMsg
+--- a/modules/common/models/quickToggles/NightLightToggle.qml
++++ b/modules/common/models/quickToggles/NightLightToggle.qml
+@@ -9,6 +9,7 @@
+ QuickToggleModel {
+     property bool auto: Config.options?.light?.night?.automatic ?? false
+ 
++    available: !(Config.options?.panelFamily === "hpos" && Quickshell.env("INIR_SAFE_PREVIEW") === "1")
+     name: Translation.tr("Night Light")
+     statusText: (auto ? Translation.tr("Auto, ") : "") + (toggled ? Translation.tr("Active") : Translation.tr("Inactive"))
+ 
+--- a/modules/common/widgets/StyledScrollBar.qml
++++ b/modules/common/widgets/StyledScrollBar.qml
+@@ -17,7 +17,7 @@
+         color: Appearance.colors.colOnSurfaceVariant
+         
+         // iRiS shows it only under the pointer: a bar flashing on every wheel turn fights its pages.
+-        readonly property bool shows: Config.options?.panelFamily === "iris" ? (root.hovered || root.pressed) : root.active
++        readonly property bool shows: Config.isIrisFamily ? (root.hovered || root.pressed) : root.active
+         opacity: root.policy === ScrollBar.AlwaysOn || (shows && root.size < 1.0) ? 0.5 : 0
+         Behavior on opacity {
+             NumberAnimation {
+--- a/modules/common/widgets/WallpaperCrossfader.qml
++++ b/modules/common/widgets/WallpaperCrossfader.qml
+@@ -248,9 +248,18 @@
+     }
+ 
+     function _slotSourceSize(slotIndex: int): size {
+-        if (_transitioning && internal.transitionFromIndex === slotIndex)
+-            return _transitionSourceSizeSnapshot
+-        return root.sourceSize
++        const requested = _transitioning && internal.transitionFromIndex === slotIndex
++            ? _transitionSourceSizeSnapshot : root.sourceSize
++        if (Config.options?.panelFamily !== "hpos") return requested
++        // SVG rasterization can apply the window DPR after sourceSize. Callers
++        // already supply physical dimensions. Bound both slots, including the
++        // outgoing transition snapshot, before Qt allocates the decoded image.
++        const dpr = Math.max(1, Number(root.Window.window?.devicePixelRatio) || 1)
++        const width = Math.max(1, Number(requested.width) || root.width || 1)
++        const height = Math.max(1, Number(requested.height) || root.height || 1)
++        const limit = Math.min(1, 4096 / (width * dpr), 4096 / (height * dpr),
++            Math.sqrt((3840 * 2160) / (width * height * dpr * dpr)))
++        return Qt.size(Math.max(1, Math.floor(width * limit)), Math.max(1, Math.floor(height * limit)))
+     }
+ 
+     QtObject {
+--- a/modules/ii/overlay/OverlayLook.qml
++++ b/modules/ii/overlay/OverlayLook.qml
+@@ -9,7 +9,7 @@
+ Singleton {
+     id: root
+ 
+-    readonly property bool iris: (Config.options?.panelFamily ?? "ii") === "iris"
++    readonly property bool iris: Config.isIrisFamily
+ 
+     readonly property color colOnLayer0: root.iris ? IrisStyle.text : Appearance.colors.colOnLayer0
+     readonly property color colOnLayer1: root.iris ? IrisStyle.text : Appearance.colors.colOnLayer1
+--- a/modules/iris/bar/IrisIsland.qml
++++ b/modules/iris/bar/IrisIsland.qml
+@@ -11,6 +11,7 @@
+ import qs
+ import qs.services
+ import qs.modules.common
++import qs.modules.hpos.controlcenter
+ import qs.modules.common.functions
+ import qs.modules.common.widgets
+ import qs.modules.mediaControls.components
+@@ -2414,12 +2415,22 @@
+                         name: "controls"
+                         Loader {
+                             id: controlsLoader
++                            function focusHarmony(): void {
++                                if (Config.options?.panelFamily === "hpos" && controlsPage.current && item) item.focusInitial()
++                            }
++                            onLoaded: Qt.callLater(focusHarmony)
++                            Connections {
++                                target: controlsPage
++                                function onCurrentChanged() { if (controlsPage.current) Qt.callLater(controlsLoader.focusHarmony) }
++                            }
+                             Layout.fillWidth: true
+                             Layout.preferredHeight: item?.implicitHeight ?? 0
+                             active: controlsPage.resident
+                             asynchronous: !controlsPage.current
+                             visible: active
+-                            sourceComponent: IrisQuickPanel { width: controlsLoader.width; targetScreen: root.targetScreen }
++                            sourceComponent: Config.options?.panelFamily === "hpos" ? hposControls : irisControls
++                            Component { id: hposControls; HposControlCenter { width: controlsLoader.width; targetScreen: root.targetScreen } }
++                            Component { id: irisControls; IrisQuickPanel { width: controlsLoader.width; targetScreen: root.targetScreen } }
+                         }
+                     }
+                     Page {
+--- a/modules/iris/components/IrisBluetoothList.qml
++++ b/modules/iris/components/IrisBluetoothList.qml
+@@ -11,20 +11,22 @@
+ ColumnLayout {
+     id: root
+ 
++    readonly property bool adapterEnabled: Config.options?.panelFamily === "hpos"
++        ? Bluetooth.defaultAdapter?.state === BluetoothAdapterState.Enabled : BluetoothStatus.enabled
+     readonly property real d: IrisStyle.density
+     readonly property var devices: (Bluetooth.defaultAdapter?.devices?.values ?? [])
+         .filter(device => device && (device.paired || device.connected || device.trusted))
+     spacing: 2 * root.d
+ 
+     IrisText {
+-        visible: !BluetoothStatus.enabled
++        visible: !root.adapterEnabled
+         Layout.fillWidth: true
+         Layout.margins: 10 * root.d
+         text: Translation.tr("Bluetooth is off")
+         role: IrisText.Meta
+     }
+     IrisText {
+-        visible: BluetoothStatus.enabled && root.devices.length === 0
++        visible: root.adapterEnabled && root.devices.length === 0
+         Layout.fillWidth: true
+         Layout.margins: 10 * root.d
+         text: Translation.tr("No paired devices")
+@@ -32,10 +34,12 @@
+     }
+ 
+     Repeater {
+-        model: BluetoothStatus.enabled ? root.devices : []
++        model: root.adapterEnabled ? root.devices : []
+         IrisButton {
+             id: deviceRow
+             required property BluetoothDevice modelData
++            Accessible.name: Config.options?.panelFamily === "hpos" ? (deviceRow.modelData.name || deviceRow.modelData.address || Translation.tr("Bluetooth")) : deviceRow.text
++            Accessible.checked: Config.options?.panelFamily === "hpos" ? deviceRow.modelData.connected : deviceRow.selected
+             Layout.fillWidth: true
+             quiet: true
+             implicitHeight: Math.round(40 * root.d)
+--- a/modules/iris/components/IrisCapsuleSlider.qml
++++ b/modules/iris/components/IrisCapsuleSlider.qml
+@@ -2,6 +2,7 @@
+ 
+ import QtQuick
+ import qs
++import qs.modules.common
+ import qs.modules.common.functions
+ import qs.modules.common.widgets
+ import qs.modules.iris.style
+@@ -14,6 +15,7 @@
+     property bool muted: false
+     property bool vertical: false
+     property color fillColor: IrisStyle.fillStrong
++    property color filledForeground: IrisStyle.surface
+     property bool readout: false
+     property real cornerCap: IrisStyle.radiusSheet
+     signal moved(real value)
+@@ -57,7 +59,7 @@
+                 height: track.height
+                 radius: root.corner
+                 color: root.muted ? IrisStyle.textTertiary : root.fillColor
+-                Readout { ink: IrisStyle.surface }
++                Readout { ink: root.filledForeground }
+             }
+         }
+ 
+@@ -68,7 +70,7 @@
+             fill: 1
+             iconSize: Math.round((root.vertical ? 19 : 20) * IrisStyle.density)
+             readonly property bool overFill: !root.muted && fillClip.length >= root.pocket * 0.72
+-            color: overFill ? IrisStyle.surface : IrisStyle.text
++            color: overFill ? root.filledForeground : IrisStyle.text
+             Behavior on color { ColorAnimation { duration: IrisStyle.duration(110); easing.type: IrisStyle.feedbackEasing } }
+         }
+     }
+@@ -107,7 +109,11 @@
+         property real wheelAccumulator: 0
+         IrisWheelIntent { id: wheelIntent; hovered: pointer.containsMouse }
+         onWheel: wheel => {
+-            if (!wheelIntent.take(wheel)) return
++            // A delivered wheel event is pointer intent even when layer-shell hover is stale.
++            // Preserve the overflow scroll guard until motion settles or the pointer moves.
++            const hposIntent = Config.options?.panelFamily === "hpos"
++                && (!wheelIntent.scroller || wheelIntent.moved || wheelIntent.settled)
++            if (!hposIntent && !wheelIntent.take(wheel)) return
+             const delta = (wheel.angleDelta.y || wheel.angleDelta.x) || (wheel.pixelDelta.y || wheel.pixelDelta.x) * 4
+             pointer.wheelAccumulator += delta
+             const steps = Math.trunc(pointer.wheelAccumulator / 120)
+--- a/modules/iris/components/IrisDeviceList.qml
++++ b/modules/iris/components/IrisDeviceList.qml
+@@ -40,7 +40,9 @@
+                     id: deviceRow
+                     required property var modelData
+                     readonly property bool input: deviceGroup.modelData.input
+-                    readonly property bool current: (deviceRow.input ? Audio.source?.id : Audio.defaultSink?.id) === modelData.id
++                    readonly property bool current: (deviceRow.input ? Audio.source?.id : (Config.options?.panelFamily === "hpos" ? Audio.rawSink?.id : Audio.defaultSink?.id)) === modelData.id
++                    Accessible.name: Config.options?.panelFamily === "hpos" ? Audio.friendlyDeviceName(deviceRow.modelData) : deviceRow.text
++                    Accessible.checked: Config.options?.panelFamily === "hpos" ? deviceRow.current : deviceRow.selected
+                     Layout.fillWidth: true
+                     quiet: true
+                     implicitHeight: Math.round(36 * root.d)
+--- a/modules/iris/components/IrisDisplayList.qml
++++ b/modules/iris/components/IrisDisplayList.qml
+@@ -94,6 +94,7 @@
+             ? Translation.tr("From %1 to %2").arg(Config.options?.light?.night?.from ?? "19:00").arg(Config.options?.light?.night?.to ?? "06:30")
+             : Translation.tr("Until you turn it off")
+         on: night.toggled
++        available: night.available
+         tint: IrisStyle.identity.orange
+         onToggled: night.mainAction()
+     }
+--- a/modules/iris/components/IrisNetworkList.qml
++++ b/modules/iris/components/IrisNetworkList.qml
+@@ -50,6 +50,8 @@
+ 
+             IrisButton {
+                 id: networkRow
++                Accessible.name: Config.options?.panelFamily === "hpos" ? (networkEntry.modelData.ssid || networkEntry.modelData.bssid || Translation.tr("Wi-Fi")) : networkRow.text
++                Accessible.checked: Config.options?.panelFamily === "hpos" ? Boolean(networkEntry.modelData.active) : networkRow.selected
+                 Layout.fillWidth: true
+                 quiet: true
+                 implicitHeight: Math.round(40 * root.d)
+--- a/modules/iris/components/IrisSystemList.qml
++++ b/modules/iris/components/IrisSystemList.qml
+@@ -17,6 +17,7 @@
+     readonly property real d: IrisStyle.density
+     spacing: 2 * root.d
+ 
++    readonly property bool dndEnabled: Config.options?.panelFamily === "hpos" ? Notifications.silent : focus.toggled
+     NotificationToggle { id: focus }
+     GameModeToggle { id: game }
+     IdleInhibitorToggle { id: awake }
+@@ -24,8 +25,8 @@
+     IrisControlRow {
+         glyph: "do_not_disturb_on"
+         label: Translation.tr("Do Not Disturb")
+-        detail: focus.toggled ? Translation.tr("Banners wait in Today") : Translation.tr("Banners come in")
+-        on: focus.toggled
++        detail: root.dndEnabled ? Translation.tr("Banners wait in Today") : Translation.tr("Banners come in")
++        on: root.dndEnabled
+         tint: IrisStyle.identity.indigo
+         onToggled: focus.mainAction()
+     }
+--- a/modules/iris/control/IrisControlCenter.qml
++++ b/modules/iris/control/IrisControlCenter.qml
+@@ -7,6 +7,7 @@
+ import qs
+ import qs.services
+ import qs.modules.common
++import qs.modules.hpos.controlcenter
+ import qs.modules.common.widgets
+ import qs.modules.iris.frame
+ import qs.modules.iris.style
+@@ -34,13 +35,13 @@
+         const rect = panel.bodyRect
+         if (rect.width <= 1 || rect.height <= 1) return []
+         const joinOrigin = IrisStyle.cardJoins
+-        const joinRise = root.fromPiece && joinOrigin && String(root.origin?.fieldId ?? "").length > 0
++        const joinRise = root.fromPiece && joinOrigin && String(root.positionOrigin?.fieldId ?? "").length > 0
+             ? IrisStyle.ramp(panel.progress, 0.08, 0.3) : 0
+         const shapes = [{ x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+             radius: rect.radius, paints: true,
+             fuse: root.fromPiece ? Math.round(IrisStyle.fuseDeep * joinRise) : IrisStyle.fuseDeep,
+             id: "control-center", glass: IrisStyle.surfaceGlass("controlCenter"),
+-            joins: root.fromPiece ? (joinRise > 0 ? String(root.origin?.fieldId ?? "") : "")
++            joins: root.fromPiece ? (joinRise > 0 ? String(root.positionOrigin?.fieldId ?? "") : "")
+                 : root.islandBody ? "island" : "" }]
+         return shapes
+     }
+@@ -49,11 +50,35 @@
+     visible: root.present
+     readonly property real edgeGap: IrisFrame.islandVisualDepth + 8 * IrisStyle.density
+     property var origin: GlobalStates.irisMorphOrigin
+-    onMorphOpenChanged: if (root.morphOpen) root.origin = Qt.binding(() => GlobalStates.irisMorphOrigin)
+-        else root.origin = root.origin
+-    readonly property bool fromPiece: root.origin?.owner === "stage" && String(root.origin?.fieldId ?? "").length > 0
+-    readonly property var placementOrigin: root.fromPiece && root.origin
+-        ? Object.assign({}, root.origin, { obstacle: null }) : root.origin
++    property real originViewportWidth: width
++    property real originViewportHeight: height
++    readonly property bool hposFamily: Config.options?.panelFamily === "hpos"
++    // Keep a click-time anchor attached to its nearest output edge on resize.
++    function reanchorOrigin(source, oldWidth, oldHeight, newWidth, newHeight) {
++        if (!source || oldWidth <= 0 || oldHeight <= 0) return source
++        const moveX = source.x + source.width / 2 >= oldWidth / 2 ? newWidth - oldWidth : 0
++        const moveY = source.y + source.height / 2 >= oldHeight / 2 ? newHeight - oldHeight : 0
++        return Object.assign({}, source, {
++            x: Math.max(0, Math.min(Math.max(0, newWidth - source.width), source.x + moveX)),
++            y: Math.max(0, Math.min(Math.max(0, newHeight - source.height), source.y + moveY)),
++            obstacle: null
++        })
++    }
++    readonly property var positionOrigin: root.hposFamily
++        ? root.reanchorOrigin(root.origin, root.originViewportWidth, root.originViewportHeight, root.width, root.height)
++        : root.origin
++    onWidthChanged: if (root.hposFamily) root.engaged = false
++    onHeightChanged: if (root.hposFamily) root.engaged = false
++    onMorphOpenChanged: {
++        if (root.morphOpen) {
++            root.originViewportWidth = root.width
++            root.originViewportHeight = root.height
++            root.origin = root.hposFamily ? GlobalStates.irisMorphOrigin : Qt.binding(() => GlobalStates.irisMorphOrigin)
++        } else root.origin = root.origin
++    }
++    readonly property bool fromPiece: root.positionOrigin?.owner === "stage" && String(root.positionOrigin?.fieldId ?? "").length > 0
++    readonly property var placementOrigin: root.fromPiece && root.positionOrigin
++        ? Object.assign({}, root.positionOrigin, { obstacle: null }) : root.positionOrigin
+     readonly property var avoidRects: {
+         const out = []
+         if (root.islandBody && root.islandBody.width > 0 && root.islandBody.height > 0)
+@@ -114,9 +139,9 @@
+         contentReady: contents.contentHeight > 0
+         radius: root.placement && !IrisStyle.cardJoins
+             ? IrisFrame.nestRadius({ x: root.placement.x, y: root.placement.y, width: panel.width, height: panel.height },
+-                root.baseRadius, root.origin?.obstacle ?? root.origin, Number(root.origin?.nestFuse ?? IrisStyle.fuse), root.width, root.height)
++                root.baseRadius, root.positionOrigin?.obstacle ?? root.positionOrigin, Number(root.positionOrigin?.nestFuse ?? IrisStyle.fuse), root.width, root.height)
+             : root.baseRadius
+-        origin: root.fromPiece ? root.origin : null
++        origin: root.fromPiece ? root.positionOrigin : null
+         onClosed: if (GlobalStates.irisMorphOwner === "stage" && !GlobalStates.settingsOverlayOpen) GlobalStates.irisMorphOwner = ""
+         light: IrisStyle.surfaceLight("controlCenter", IrisStyle.wallpaperLight)
+         lightFrom: root.placement ? (root.placement.sideways ? (root.placement.towardsLeft ? "right" : "left") : (root.placement.towardsUp ? "bottom" : "top"))
+@@ -125,14 +150,14 @@
+             : root.islandSide && root.islandBody ? (root.islandEdge === "left"
+                 ? root.islandBody.x + root.islandBody.width - IrisStyle.weld
+                 : root.islandBody.x - width + IrisStyle.weld)
+-            : root.origin
++            : root.positionOrigin
+             ? Math.max(root.edgeLeft, Math.min(root.width - width - root.edgeRight,
+-                root.origin.x + root.origin.width / 2 - width / 2))
++                root.positionOrigin.x + root.positionOrigin.width / 2 - width / 2))
+             : (root.width - width) / 2
+         y: root.placement ? root.placement.y
+             : root.holding ? Math.max(12, Math.min(root.heldTop, root.height - height - root.edgeGap))
+             : root.islandSide ? Math.round(Math.max(IrisFrame.safeInset("top") + root.edge, Math.min(root.height - height - IrisFrame.safeInset("bottom") - root.edge,
+-                (root.origin ? root.origin.y + root.origin.height / 2 : (root.islandBody ? root.islandBody.y + root.islandBody.height / 2 : root.height / 2)) - height / 2)))
++                (root.positionOrigin ? root.positionOrigin.y + root.positionOrigin.height / 2 : (root.islandBody ? root.islandBody.y + root.islandBody.height / 2 : root.height / 2)) - height / 2)))
+             : root.barBottom ? (root.islandBody ? root.islandBody.y - height + IrisStyle.weld
+                 : root.height - height - root.edgeGap - IrisFrame.band)
+             : (root.islandBody ? root.islandBody.y + root.islandBody.height - IrisStyle.weld
+@@ -171,10 +196,20 @@
+ 
+             Loader {
+                 id: quickPanel
++                function focusHarmony(): void {
++                    if (Config.options?.panelFamily === "hpos" && root.morphOpen && item) item.focusInitial()
++                }
++                onLoaded: Qt.callLater(focusHarmony)
++                Connections {
++                    target: root
++                    function onMorphOpenChanged() { if (root.morphOpen) Qt.callLater(quickPanel.focusHarmony) }
++                }
+                 anchors.left: parent.left
+                 anchors.right: parent.right
+                 anchors.top: parent.top
+-                sourceComponent: IrisQuickPanel { targetScreen: root.screenData }
++                sourceComponent: Config.options?.panelFamily === "hpos" ? hposControls : irisControls
++                Component { id: hposControls; HposControlCenter { targetScreen: root.screenData } }
++                Component { id: irisControls; IrisQuickPanel { targetScreen: root.screenData } }
+             }
+         }
+     }
+--- a/modules/iris/palette/IrisPalette.qml
++++ b/modules/iris/palette/IrisPalette.qml
+@@ -24,7 +24,8 @@
+     id: root
+ 
+     property var screen: null
+-    readonly property bool here: (root.screen?.name ?? "") === (GlobalStates.focusedScreen?.name ?? "")
++    readonly property bool hposApplicationCenter: Config.options?.panelFamily === "hpos" && (Config.options?.hpos?.applicationCenter ?? true)
++    readonly property bool here: !root.hposApplicationCenter && (root.screen?.name ?? "") === (GlobalStates.focusedScreen?.name ?? "")
+     readonly property bool present: root.here && (GlobalStates.searchOpen || (content.item?.progress ?? 0) > 0)
+     readonly property bool armed: root.here && GlobalStates.searchOpen && (content.item?.armed ?? false)
+ 
+--- a/modules/iris/settings/IrisOptions.qml
++++ b/modules/iris/settings/IrisOptions.qml
+@@ -27,6 +27,7 @@
+     }
+     // An icon row is keyed by its piece inside one shared list, not by its own path.
+     function currentValue(spec: var): var {
++        if (Config.options?.panelFamily === "hpos" && spec.path === "iris.appearance.scheme") return Config.options.hpos.appearance
+         if (spec.widgetDesign) return DesktopWidgetDesign.current
+         if (spec.niri) return IrisNiri.value(spec)
+         if (spec.kind === "niriMotion") return NiriAnimationPresets.activeId
+@@ -42,6 +43,10 @@
+         return Config.getNestedValue(spec.path, spec.fallback)
+     }
+     function commit(spec: var, next: var): void {
++        if (Config.options?.panelFamily === "hpos" && spec.path === "iris.appearance.scheme") {
++            if (["auto", "light", "dark"].includes(next)) Config.setNestedValue("hpos.appearance", next)
++            return
++        }
+         // A family switch goes through the shell's transition, never a bare config write.
+         if (spec.path === "panelFamily") Quickshell.execDetached([Quickshell.shellPath("scripts/inir"), "panelFamily", "set", String(next)])
+         else if (spec.widgetDesign) DesktopWidgetDesign.apply(String(next))
+@@ -78,6 +83,7 @@
+     }
+     // A leading "!" negates either form, so a row can hide on one value of a choice.
+     function choicesOf(spec: var): var {
++        if (Config.options?.panelFamily === "hpos" && spec.path === "iris.appearance.scheme") return (spec.choices ?? []).filter(choice => choice.value !== "ink")
+         if (spec.niri === "display") return IrisNiri.displayChoices(spec.key)
+         if (spec.choicesFrom === "cursors") return IrisNiri.cursorThemes.map(name => ({ label: name.replace(/[_-]/g, " "), value: name }))
+         if (spec.choicesFrom === "irisModules") return (CustomWidgets.widgets ?? [])
+@@ -828,7 +834,10 @@
+         { section: "general", group: "Settings window", label: "Opens as", description: "Over the desktop previews every change on the screen behind it. A window sits with your apps: Niri sizes, maximizes and moves it like any other.", path: "iris.appearance.settingsHost", kind: "choice", fallback: "overlay", choices: [{ label: "Over the desktop", value: "overlay", glyph: "layers" }, { label: "Window", value: "window", glyph: "web_asset" }], keywords: ["settings", "window", "overlay", "floating", "tile", "maximize"] },
+         { section: "general", group: "Settings window", label: "Layout", description: "Sidebar lists every area beside the page. Rail keeps only their marks, for more room. Home opens on every area at once; each opens full width.", path: "iris.appearance.settingsLayout", kind: "choice", fallback: "sidebar", choices: [{ label: "Sidebar", value: "sidebar", glyph: "view_sidebar" }, { label: "Rail", value: "rail", glyph: "view_week" }, { label: "Home", value: "home", glyph: "grid_view" }], keywords: ["settings", "navigation", "sidebar", "rail", "grid", "home", "layout"] },
+         { section: "general", group: "Performance", label: "Low power", description: "Turns glass, blur and heavy wallpaper effects off everywhere.", path: "performance.lowPower", kind: "switch", fallback: false, keywords: ["performance", "battery", "effects", "glass", "blur", "rendimiento"] },
+-        { section: "general", group: "Shell family", label: "Family", description: "The whole shell's look. Each family keeps its own settings, so you can come back.", path: "panelFamily", kind: "choice", fallback: "iris", choices: [{label:"iRiS",value:"iris",glyph:"visibility"},{label:"Material",value:"ii",glyph:"dashboard"},{label:"Windows 11",value:"waffle",glyph:"window"}], keywords: ["family", "material", "waffle", "windows", "ii", "switch", "familia"] },
++
++        { section: "general", group: "HP-OS", label: "Weather provider", description: "Open-Meteo receives manually configured coordinates. Set latitude and longitude in weather settings, then enable weather. Automatic geolocation is disabled for HP-OS.", path: "hpos.weatherProvider", kind: "choice", fallback: "disabled", showIf: () => Config.options.panelFamily === "hpos", choices: [{label:"Disabled",value:"disabled"},{label:"Open-Meteo",value:"open-meteo"}] },
++        { section: "general", group: "HP-OS", label: "HP-OS preferences", description: "Typography, materials, accessibility and component gallery.", kind: "action", button: "Open", showIf: () => Config.options.panelFamily === "hpos", run: () => Quickshell.execDetached([Quickshell.shellPath("scripts/inir"), "hpos", "settings"]) },
++        { section: "general", group: "Shell family", label: "Family", description: "The whole shell's look. Each family keeps its own settings, so you can come back.", path: "panelFamily", kind: "choice", fallback: "iris", choices: [{label:"HP-OS",value:"hpos",glyph:"desktop_windows"},{label:"iRiS",value:"iris",glyph:"visibility"},{label:"Material",value:"ii",glyph:"dashboard"},{label:"Windows 11",value:"waffle",glyph:"window"}], keywords: ["family", "material", "waffle", "windows", "ii", "switch", "familia"] },
+         { section: "general", group: "Shell family", label: "Switch shortcut goes through", description: "The families the switch keybind steps through, in the order you turn them on.", path: "familyCycle", kind: "pieces", fallback: ["ii", "waffle", "iris"], choices: [{label:"iRiS",value:"iris"},{label:"Material",value:"ii"},{label:"Windows 11",value:"waffle"}], keywords: ["family", "cycle", "shortcut", "keybind", "switch"] },
+         { section: "general", group: "Shell family", label: "Animated switch", description: "A short transition while the families swap, instead of a cut.", path: "familyTransitionAnimation", kind: "switch", fallback: true, keywords: ["family", "transition", "animation"] },
+ 
+--- a/modules/iris/style/IrisAppsSync.qml
++++ b/modules/iris/style/IrisAppsSync.qml
+@@ -16,7 +16,7 @@
+     // from iris-seeds.json (IrisWashi), not the paper handed over here, so it wears the person's choices like any other.
+     readonly property bool wanted: ThemeService.irisMaterialApps && ThemeService.isAutoTheme
+     readonly property string seed: root.wanted ? root.hex(IrisStyle.appsSurface) : ""
+-    readonly property bool accentWanted: ThemeService.panelFamily === "iris" && ThemeService.isAutoTheme && IrisStyle.appsShareAccent
++    readonly property bool accentWanted: Config.isIrisFamily && ThemeService.isAutoTheme && IrisStyle.appsShareAccent
+     readonly property string accent: root.accentWanted ? root.hex(IrisStyle.appsAccent) : ""
+     // The palette's own app roles (IrisWashi): with them the apps wear the shell's paper, ink and accent exactly.
+     readonly property string roles: root.wanted ? JSON.stringify(IrisStyle.washi?.apps ?? ({})) : "{}"
+@@ -38,6 +38,7 @@
+         onTriggered: root.push()
+     }
+     function push(): void {
++        if (Quickshell.env("INIR_SAFE_PREVIEW") === "1") return
+         if (!root.loaded || !root.ready || root.key === root.applied) return
+         root.applied = root.key
+         const body = JSON.stringify({ seed: root.seed, accent: root.accent, roles: JSON.parse(root.roles) })
+--- a/modules/iris/style/IrisMood.qml
++++ b/modules/iris/style/IrisMood.qml
+@@ -11,7 +11,7 @@
+ 
+     readonly property real strength: Math.max(0, Math.min(1, Number(Config.options?.iris?.appearance?.adaptive ?? 0) / 100))
+     readonly property bool active: root.strength > 0 && root.colors.length > 0
+-    readonly property bool wanted: Config.options?.panelFamily === "iris"
++    readonly property bool wanted: Config.isIrisFamily
+     readonly property bool sampled: root.wanted && root.colors.length > 0
+ 
+     readonly property string path: String(Wallpapers.effectiveWallpaperPath ?? "")
+--- a/modules/lock/Lock.qml
++++ b/modules/lock/Lock.qml
+@@ -20,6 +20,9 @@
+     readonly property bool _lockActivating: lockActivateDelay.running
+     readonly property string _niriSocket: Quickshell.env("NIRI_SOCKET")
+     readonly property string _lockRecoveryPath: {
++        // HP-OS uses its dedicated state directory; preserve socket matching below.
++        if (Config.options?.panelFamily === "hpos")
++            return Directories.state.replace(/^file:\/\//, "") + "/session-lock.state"
+         const runtimeDir = Quickshell.env("XDG_RUNTIME_DIR")
+         return runtimeDir.length > 0 ? runtimeDir + "/inir-session-lock.state" : ""
+     }
+@@ -213,7 +216,7 @@
+         ? (Config.options?.panelFamily === "waffle")
+         : root._cachedUseWaffleLock
+     readonly property bool useIrisLock: Config.ready && !GlobalStates.screenLocked
+-        ? (Config.options?.panelFamily === "iris")
++        ? (Config.isIrisFamily)
+         : root._cachedUseIrisLock
+     
+     // Cache the last known value to prevent switching during lock
+@@ -234,7 +237,7 @@
+         // Initialize cache.
+         if (Config.ready) {
+             root._cachedUseWaffleLock = Config.options?.panelFamily === "waffle"
+-            root._cachedUseIrisLock = Config.options?.panelFamily === "iris"
++            root._cachedUseIrisLock = Config.isIrisFamily
+         }
+         root.initIfReady()
+     }
+--- a/modules/regionSelector/RegionSelection.qml
++++ b/modules/regionSelector/RegionSelection.qml
+@@ -54,7 +54,7 @@
+         return configured
+     }
+ 
+-    readonly property bool useIris: Config.options?.panelFamily === "iris"
++    readonly property bool useIris: Config.isIrisFamily
+     // The toolbar rests against a screen edge the shell may already own.
+     readonly property var shellInsets: ShellLayoutController.desktopInsets(root.screen?.name ?? "")
+ 
+--- a/modules/settings/DesktopWidgetsConfig.qml
++++ b/modules/settings/DesktopWidgetsConfig.qml
+@@ -18,8 +18,8 @@
+     settingsPageIndex: 14
+     settingsPageName: Translation.tr("Widgets")
+ 
+-    property bool isIiActive: ["ii", "iris"].includes(Config.options?.panelFamily ?? "ii")
+-    readonly property bool irisActive: (Config.options?.panelFamily ?? "ii") === "iris"
++    property bool isIiActive: ["ii", "iris", "hpos"].includes(Config.options?.panelFamily ?? "ii")
++    readonly property bool irisActive: Config.isIrisFamily
+     function openIrisWidgets(): void {
+         const page = SettingsPageRegistry.pages.findIndex(entry => entry.key === "iris")
+         if (page >= 0) GlobalStates.openSettingsPage(page, "desktop/widgets")
+--- a/modules/settings/GeneralConfig.qml
++++ b/modules/settings/GeneralConfig.qml
+@@ -1143,7 +1143,7 @@
+             ContentSubsection {
+                 readonly property string look: Config.options?.lock?.loginScreen ?? "auto"
+                 visible: MaterialThemeLoader.loginScreenInstalled
+-                    && (look === "iris" || (look === "auto" && (Config.options?.panelFamily ?? "ii") === "iris"))
++                    && (look === "iris" || (look === "auto" && Config.isIrisFamily))
+                 title: Translation.tr("Login style")
+                 tooltip: Translation.tr("Cover shows your picture sharp, Frame hangs it in a mat, Lens cuts the time out of it.")
+ 
+--- a/modules/settings/IrisConfig.qml
++++ b/modules/settings/IrisConfig.qml
+@@ -11,7 +11,7 @@
+     settingsPageIndex: 28
+     settingsPageName: "iRiS"
+     property string activeSection: "design"
+-    readonly property bool familyActive: (Config.options?.panelFamily ?? "ii") === "iris"
++    readonly property bool familyActive: Config.isIrisFamily
+     // User modules live on the Island's Desktop page. They are stored in the
+     // established module lists; any list counts as "on".
+     readonly property var slotOptions: [
+--- a/modules/settings/ModulesConfig.qml
++++ b/modules/settings/ModulesConfig.qml
+@@ -302,7 +302,8 @@
+                     model: [
+                         { value: "ii", label: "Material", icon: "dashboard" },
+                         { value: "waffle", label: "Windows 11", icon: "window" },
+-                        { value: "iris", label: "iRiS", icon: "visibility" }
++                        { value: "iris", label: "iRiS", icon: "visibility" },
++                        { value: "hpos", label: "HP-OS", icon: "desktop_windows" }
+                     ]
+                     FilterChip {
+                         required property var modelData
+--- a/modules/settings/SettingsOverlay.qml
++++ b/modules/settings/SettingsOverlay.qml
+@@ -67,7 +67,7 @@
+ 
+     function getFamilySettingsPageIndex(family: string): int {
+         const componentName = family === "waffle" ? "WaffleConfig.qml"
+-            : family === "iris" ? "IrisConfig.qml" : ""
++            : Config.isIrisFamily ? "IrisConfig.qml" : ""
+         if (!componentName.length) return -1
+         for (var i = 0; i < overlayPages.length; i++) {
+             var componentPath = String(overlayPages[i].component || "");
+--- a/modules/sidebarRight/quickToggles/androidStyle/AndroidDarkModeToggle.qml
++++ b/modules/sidebarRight/quickToggles/androidStyle/AndroidDarkModeToggle.qml
+@@ -8,13 +8,13 @@
+     id: root
+ 
+     name: Translation.tr("Dark Mode")
+-    statusText: Appearance.m3colors.darkmode ? Translation.tr("Dark") : Translation.tr("Light")
++    statusText: Appearance.effectiveDarkMode ? Translation.tr("Dark") : Translation.tr("Light")
+ 
+-    toggled: Appearance.m3colors.darkmode
++    toggled: Appearance.effectiveDarkMode
+     buttonIcon: "contrast"
+     
+     mainAction: () => {
+-        MaterialThemeLoader.setDarkMode(!Appearance.m3colors.darkmode)
++        MaterialThemeLoader.setDarkMode(!Appearance.effectiveDarkMode)
+     }
+ 
+     StyledToolTip {
+--- a/modules/waffle/settings/pages/WAboutPage.qml
++++ b/modules/waffle/settings/pages/WAboutPage.qml
+@@ -215,7 +215,7 @@
+         WSettingsRow {
+             label: Translation.tr("Panel family")
+             description: Config.options?.panelFamily === "waffle" ? "Waffle (Windows 11)"
+-                : Config.options?.panelFamily === "iris" ? "iRiS" : "ii (Material)"
++                : Config.isIrisFamily ? "iRiS" : "ii (Material)"
+             icon: "app-generic"
+         }
+     }
+--- a/modules/waffle/settings/pages/WInterfacePage.qml
++++ b/modules/waffle/settings/pages/WInterfacePage.qml
+@@ -823,7 +823,7 @@
+         WSettingsDropdown {
+             readonly property string look: Config.options?.lock?.loginScreen ?? "auto"
+             visible: MaterialThemeLoader.loginScreenInstalled
+-                && (look === "iris" || (look === "auto" && (Config.options?.panelFamily ?? "ii") === "iris"))
++                && (look === "iris" || (look === "auto" && Config.isIrisFamily))
+             label: Translation.tr("Login style")
+             icon: "image"
+             description: Translation.tr("Cover shows your picture sharp, Frame hangs it in a mat, Lens cuts the time out of it.")
+--- a/scripts/lib/config-path.sh
++++ b/scripts/lib/config-path.sh
+@@ -18,6 +18,10 @@
+ INIR_CONFIG_DIR_OLD="${XDG_CONFIG_HOME}/illogical-impulse"
+ 
+ inir_config_dir() {
++    if [[ -n "${INIR_CONFIG_DIR:-}" ]]; then
++        printf '%s\n' "$INIR_CONFIG_DIR"
++        return
++    fi
+     # Legacy symlink -> new (post-migration steady state)
+     if [[ -L "$INIR_CONFIG_DIR_OLD" && -d "$INIR_CONFIG_DIR_NEW" ]]; then
+         printf '%s\n' "$INIR_CONFIG_DIR_NEW"
+--- a/scripts/lib/ipc-registry.sh
++++ b/scripts/lib/ipc-registry.sh
+@@ -6,6 +6,7 @@
+ # Targets: 73
+ 
+ declare -gA IPC_TARGET_DESC=(
++  [hpos]="HP-OS preferences and component gallery."
+   [ai]="Shared multi-provider AI service. It supports Gemini, OpenAI-compatible chat and Responses APIs, Mistral and Anthropic; live provider catalogs are normalized into capability-aware model records. Catalog visibility is separate from execution readiness, so public model lists remain browseable without pretending an API key exists. OpenCode Zen and Go resolve their current model lists and per-model API routes dynamically. Normal shell tools use typed actions and approval cards, while arbitrary commands are isolated in Advanced mode."
+   [altSwitcher]="Alt+Tab window switcher. Works across workspaces, unlike some other implementations we won't name."
+   [appCatalog]="App catalog service. Browse, search, and install curated applications."
+@@ -82,6 +83,7 @@
+ )
+ 
+ declare -gA IPC_TARGET_FAMILY=(
++  [hpos]="hpos"
+   [ai]="shared"
+   [altSwitcher]="shared"
+   [appCatalog]="shared"
+@@ -158,6 +160,7 @@
+ )
+ 
+ declare -gA IPC_TARGET_FUNCTIONS=(
++  [hpos]="settings gallery close"
+   [ai]="ensureInitialized diagnose refreshCatalog catalog providers run runGet"
+   [altSwitcher]="opens open close toggle next previous"
+   [appCatalog]="refresh search install list"
+--- a/scripts/niri-config.py
++++ b/scripts/niri-config.py
+@@ -60,6 +60,8 @@
+ 
+ def get_niri_config_dir():
+     """Resolve the Niri config directory."""
++    if os.environ.get("INIR_NIRI_CONFIG_DIR"):
++        return Path(os.environ["INIR_NIRI_CONFIG_DIR"])
+     xdg = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
+     return Path(xdg) / "niri"
+ 
+--- a/services/Autostart.qml
++++ b/services/Autostart.qml
+@@ -52,7 +52,7 @@
+         try {
+             const home = Directories.homePath ?? ""
+             if (home.length === 0) return ""
+-            return `${home}/.config/niri/config.d/50-startup.kdl`
++            return (Quickshell.env("INIR_NIRI_CONFIG_DIR") || `${home}/.config/niri`) + "/config.d/50-startup.kdl"
+         } catch (e) {
+             return ""
+         }
+@@ -261,6 +261,7 @@
+     }
+ 
+     function _write(): void {
++        if (Quickshell.env("INIR_SAFE_PREVIEW") === "1") { root.status = "preview-read-only"; return }
+         if (!isNiri || startupFilePath.length === 0) {
+             root.status = isNiri ? "missing" : "notniri"
+             return
+@@ -268,7 +269,7 @@
+         const text = _serialize()
+         // Ensure the directory exists (defensive — the file ships with iNiR).
+         Quickshell.execDetached(["/usr/bin/mkdir", "-p",
+-            (Directories.homePath ?? "") + "/.config/niri/config.d"])
++            (Quickshell.env("INIR_NIRI_CONFIG_DIR") || (Directories.homePath ?? "") + "/.config/niri") + "/config.d"])
+         startupFileView.path = Qt.resolvedUrl(startupFilePath)
+         startupFileView.setText(text)
+         _log("[Autostart] Wrote", root.entries.length, "entries to", startupFilePath)
+--- a/services/DesktopWidgetStacks.qml
++++ b/services/DesktopWidgetStacks.qml
+@@ -32,7 +32,7 @@
+     readonly property int defaultInterval: 20
+     readonly property string prefix: "stack:"
+ 
+-    readonly property bool live: (Config.options?.panelFamily ?? "ii") === "iris"
++    readonly property bool live: Config.isIrisFamily
+         && !["material", "instrument", "readout"].includes(String(Config.options?.iris?.widgets?.design ?? "iris"))
+ 
+     readonly property var stacks: {
+--- a/services/FontSyncService.qml
++++ b/services/FontSyncService.qml
+@@ -21,7 +21,7 @@
+ 
+     // Track the current font from config
+     readonly property string family: Config.options?.panelFamily ?? "ii"
+-    readonly property string mainFont: root.family === "iris"
++    readonly property string mainFont: Config.isIrisFamily
+         ? (String(Config.options?.iris?.appearance?.fontFamily ?? "") || "Inter")
+         : root.family === "waffle" ? (Config.options?.waffles?.theming?.font?.family ?? "Noto Sans")
+         : (Config.options?.appearance?.typography?.mainFont ?? "Roboto Flex")
+@@ -35,7 +35,7 @@
+     readonly property string gtkFontString: `${mainFont} ${fontSize}`
+ 
+     // Enable/disable sync (user preference)
+-    readonly property bool syncEnabled: Config.options?.appearance?.typography?.syncWithSystem ?? true
++    readonly property bool syncEnabled: Quickshell.env("INIR_SAFE_PREVIEW") !== "1" && (Config.options?.appearance?.typography?.syncWithSystem ?? true)
+ 
+     // Debounce timer to avoid rapid updates
+     property bool _pendingSync: false
+--- a/services/GlobalActions.qml
++++ b/services/GlobalActions.qml
+@@ -1023,7 +1023,7 @@
+         let result = []
+         if (cfg?.enableSystem ?? true)     result = result.concat(_systemActions)
+         if (cfg?.enableAppearance ?? true) result = result.concat(_appearanceActions)
+-        if ((cfg?.enableAppearance ?? true) && Config.options?.panelFamily === "iris") result = result.concat(_irisActions)
++        if ((cfg?.enableAppearance ?? true) && Config.isIrisFamily) result = result.concat(_irisActions)
+         if (cfg?.enableTools ?? true)      result = result.concat(_toolActions)
+         if (cfg?.enableMedia ?? true)      result = result.concat(_mediaActions)
+         if (cfg?.enableSettings ?? true)   result = result.concat(_settingsActions)
+--- a/services/Hyprsunset.qml
++++ b/services/Hyprsunset.qml
+@@ -100,6 +100,7 @@
+     function load() { } // Dummy to force init
+ 
+     function _doEnable() {
++        if (Quickshell.env("INIR_SAFE_PREVIEW") === "1") return;
+         if (CompositorService.isNiri) {
+             Quickshell.execDetached([
+                 "/usr/bin/bash", "-c",
+@@ -118,6 +119,7 @@
+     }
+ 
+     function enable() {
++        if (Quickshell.env("INIR_SAFE_PREVIEW") === "1") return;
+         root.active = true;
+         if (CompositorService.isNiri) {
+             // Kill first, then start after kill completes
+@@ -128,6 +130,7 @@
+     }
+ 
+     function disable() {
++        if (Quickshell.env("INIR_SAFE_PREVIEW") === "1") return;
+         root.active = false;
+         if (CompositorService.isNiri) {
+             wlsunsetKillProc.running = true;
+@@ -137,6 +140,7 @@
+     }
+ 
+     function fetchState() {
++        if (Quickshell.env("INIR_SAFE_PREVIEW") === "1") return;
+         if (CompositorService.isNiri) {
+             niriFetchProc.running = true;
+         } else {
+@@ -157,7 +161,7 @@
+ 
+     Process {
+         id: fetchProc
+-        running: !CompositorService.isNiri
++        running: Quickshell.env("INIR_SAFE_PREVIEW") !== "1" && !CompositorService.isNiri
+         command: ["/usr/bin/bash", "-c", "hyprctl hyprsunset temperature"]
+         stdout: StdioCollector {
+             id: stateCollector
+@@ -191,7 +195,7 @@
+ 
+     Process {
+         id: niriFetchProc
+-        running: CompositorService.isNiri
++        running: Quickshell.env("INIR_SAFE_PREVIEW") !== "1" && CompositorService.isNiri
+         command: ["/usr/bin/bash", "-c",
+             `if [ -S "${Quickshell.env("XDG_RUNTIME_DIR") || ""}/systemd/private" ] &&
+                 [ -x /usr/bin/systemctl ] && [ -x /usr/bin/timeout ] &&
+@@ -206,6 +210,7 @@
+     }
+ 
+     function toggle(active = undefined) {
++        if (Quickshell.env("INIR_SAFE_PREVIEW") === "1") return;
+         if (root.manualActive === undefined) {
+             root.manualActive = root.active;
+             root.manualActiveHour = root.clockHour;
+@@ -227,6 +232,7 @@
+         enabled: !!(Config.options?.light?.night)
+         
+         function onColorTemperatureChanged() {
++            if (Quickshell.env("INIR_SAFE_PREVIEW") === "1") return;
+             if (!root.active) return;
+             const temp = Config.options?.light?.night?.colorTemperature ?? root.colorTemperature;
+             
+--- a/services/Idle.qml
++++ b/services/Idle.qml
+@@ -63,6 +63,7 @@
+     }
+ 
+     function _startSwayidle() {
++        if (Quickshell.env("INIR_SAFE_PREVIEW") === "1") return
+         if (inhibit) return
+ 
+         const cmd = ["/usr/bin/swayidle", "-w"]
+--- a/services/MaterialThemeLoader.qml
++++ b/services/MaterialThemeLoader.qml
+@@ -45,6 +45,12 @@
+ 
+     // Toggle dark/light mode by running switchwall.sh with --mode and scheduling a reload.
+     function setDarkMode(dark: bool): void {
++        if (Config.options?.panelFamily === "hpos") Config.setNestedValue("hpos.appearance", dark ? "dark" : "light")
++        if (Quickshell.env("INIR_SAFE_PREVIEW") === "1") {
++            Config.setNestedValue("appearance.customTheme.darkmode", dark)
++            Appearance.m3colors.darkmode = dark
++            return
++        }
+         Config.setNestedValue("appearance.customTheme.darkmode", dark)
+         // A switch by hand is the last word: the wallpaper's brightness would decide again on the very next regeneration
+         // (the seed of the new mode starts one) and undo it. The Settings switch shows it off; the person turns it back on.
+@@ -52,7 +58,7 @@
+             Config.setNestedValue("appearance.wallpaperTheming.autoDarkLightMode", false)
+         // A scheme iRiS was told to keep is the mode: leaving it behind would put the shell and the apps in different ones on the next regeneration.
+         const scheme = String(Config.options?.iris?.appearance?.scheme ?? "auto")
+-        if ((Config.options?.panelFamily ?? "ii") === "iris" && scheme !== "auto")
++        if (Config.isIrisFamily && scheme !== "auto")
+             Config.setNestedValue("iris.appearance.scheme", dark ? "dark" : scheme === "ink" ? "ink" : "light")
+         darkModeProc.command = [
+             "/usr/bin/bash",
+@@ -302,7 +308,7 @@
+     function _styleAppPaletteOverlay(): var {
+         // iRiS hands its own surface to the generator (IrisAppsSync): the Material style's layers
+         // are another family's, and overwrote the apps' ramp with them (#242122 over iRiS's #221f20).
+-        if ((Config.options?.panelFamily ?? "ii") === "iris") return null
++        if (Config.isIrisFamily) return null
+         const c = Appearance.colors
+         if (!c) return null
+ 
+@@ -458,7 +464,7 @@
+         function status(): string {
+             if (!root.loginScreenInstalled) return "not installed"
+             const look = String(Config.options?.lock?.loginScreen ?? "auto")
+-            const iris = look === "iris" || (look === "auto" && (Config.options?.panelFamily ?? "ii") === "iris")
++            const iris = look === "iris" || (look === "auto" && Config.isIrisFamily)
+             const shown = iris ? "iris, " + String(Config.options?.lock?.loginStyle ?? "lens") : "classic"
+             return look === "auto" ? "auto (" + shown + ")" : shown
+         }
+--- a/services/Network.qml
++++ b/services/Network.qml
+@@ -6,6 +6,7 @@
+ import Quickshell
+ import Quickshell.Io
+ import QtQuick
++import qs.modules.common
+ import qs.modules.common.functions
+ import qs.services
+ import qs.services.network
+@@ -18,6 +19,14 @@
+ 
+     property bool wifi: true
+     property bool ethernet: false
++
++    // Derived from the existing nmcli device snapshot, refreshed by its monitor.
++    property bool wifiAvailable: false
++    property bool wifiCapabilityKnown: false
++    function updateWifiCapability(lines, exitCode): void {
++        root.wifiCapabilityKnown = exitCode === 0
++        root.wifiAvailable = root.wifiCapabilityKnown && lines.some(line => line.startsWith("wifi:") && line.slice(5).trim() !== "unmanaged")
++    }
+ 
+     property bool wifiEnabled: false
+     property bool wifiScanning: false
+@@ -223,6 +232,8 @@
+             return;
+         root.networkChanged();
+         updateConnectionType.startCheck();
++        // Populate the active AP without a radio scan, including startup and link changes.
++        if (Config.options?.panelFamily === "hpos") root.refreshActiveNetworkDetails();
+         wifiStatusProcess.running = true
+         updateNetworkName.running = true;
+         updateNetworkStrength.running = true;
+@@ -233,7 +244,10 @@
+     Component.onCompleted: {
+         // Kill any orphaned nmcli monitor processes from previous shell instances,
+         // then start the fresh subscriber once cleanup finishes.
+-        _cleanupStale.running = true;
++        if (Config.options?.panelFamily === "hpos" || Quickshell.env("INIR_SAFE_PREVIEW") === "1")
++            subscriber.running = true;
++        else
++            _cleanupStale.running = true;
+         // Prime initial state once; subsequent updates come from nmcli monitor.
+         Qt.callLater(() => root.update())
+     }
+@@ -286,6 +300,7 @@
+             if (root.simulatedLink.length > 0)
+                 return;
+             const lines = updateConnectionType.buffer.trim().split('\n');
++            root.updateWifiCapability(lines, exitCode);
+             const connectivity = (lines.pop() ?? "").trim()
+             let hasEthernet = false;
+             let hasWifi = false;
+--- a/services/NiriAnimationPresets.qml
++++ b/services/NiriAnimationPresets.qml
+@@ -48,6 +48,7 @@
+     }
+ 
+     function apply(id: string): bool {
++        if (Quickshell.env("INIR_SAFE_PREVIEW") === "1") return false
+         if (!CompositorService.isNiri || applying) return false
+         if (loaded && !presets.some(p => p.id === id)) return false
+         wanted = true
+--- a/services/Notifications.qml
++++ b/services/Notifications.qml
+@@ -402,7 +402,7 @@
+ 
+         // 3) Defaults by urgency (use enum comparison, not fragile toString).
+         // iRiS banners have their own, shorter, duration for low and normal.
+-        if (Config.options?.panelFamily === "iris" && notification.urgency !== NotificationUrgency.Critical)
++        if (Config.isIrisFamily && notification.urgency !== NotificationUrgency.Critical)
+             return Math.max(1000, Number(Config.options?.iris?.notifications?.duration ?? 4000));
+         if (notification.urgency === NotificationUrgency.Low) {
+             return Config.options?.notifications?.timeoutLow ?? 5000;
+--- a/services/ThemeService.qml
++++ b/services/ThemeService.qml
+@@ -18,15 +18,15 @@
+     readonly property string currentTheme: Config.options?.appearance?.theme ?? "auto"
+     readonly property bool isAutoTheme: currentTheme === "auto"
+     readonly property bool isStandaloneSettingsWindow: (Quickshell.env("INIR_STANDALONE_WINDOW") ?? "") === "1"
+-    readonly property bool defaultApplyExternal: !isStandaloneSettingsWindow
++    readonly property bool defaultApplyExternal: !isStandaloneSettingsWindow && Quickshell.env("INIR_SAFE_PREVIEW") !== "1"
+     readonly property bool vesktopEnabled: (Config.options?.appearance?.wallpaperTheming?.enableVesktop ?? true) !== false
+     readonly property var wallpaperThemingCfg: Config.options?.appearance?.wallpaperTheming ?? null
+     readonly property var terminalAdjCfg: wallpaperThemingCfg?.terminalColorAdjustments ?? null
+     readonly property string panelFamily: Config.options?.panelFamily ?? "ii"
+     readonly property bool waffleUsesMainWallpaper: Config.options?.waffles?.background?.useMainWallpaper ?? true
+     // What iRiS asks of the system's mode and of the apps' surfaces: both are read by switchwall.sh, so a change regenerates.
+-    readonly property string irisSchemeChoice: panelFamily === "iris" ? String(Config.options?.iris?.appearance?.scheme ?? "auto") : "auto"
+-    readonly property bool irisMaterialApps: panelFamily === "iris" && (Config.options?.iris?.appearance?.materialForApps ?? true)
++    readonly property string irisSchemeChoice: Config.isIrisFamily ? String(Config.options?.iris?.appearance?.scheme ?? "auto") : "auto"
++    readonly property bool irisMaterialApps: Config.isIrisFamily && (Config.options?.iris?.appearance?.materialForApps ?? true)
+     property string appsSurfaceSeed: ""
+     // A scheme the person picks is also their saved preference, so Auto keeps what they last saw instead of an older toggle.
+     onIrisSchemeChoiceChanged: {
+@@ -74,6 +74,7 @@
+     }
+ 
+     function setTheme(themeId, applyExternal = true): void {
++        if (Quickshell.env("INIR_SAFE_PREVIEW") === "1") applyExternal = false
+         root._log("[ThemeService] setTheme called with:", themeId);
+         Config.setNestedValue(["appearance", "theme"], themeId)
+         
+@@ -170,13 +171,13 @@
+             const wanted = String(mode ?? "").trim().toLowerCase()
+             if (wanted === "toggle") { Appearance.toggleDarkMode(); return "toggled" }
+             if (!["dark", "light"].includes(wanted)) return "Unknown mode: dark, light or toggle"
+-            if (root.isAutoTheme) MaterialThemeLoader.setDarkMode(wanted === "dark")
++            if (Config.options?.panelFamily === "hpos" || root.isAutoTheme) MaterialThemeLoader.setDarkMode(wanted === "dark")
+             else if (Appearance.m3colors.darkmode !== (wanted === "dark")) Appearance.toggleDarkMode()
+             return wanted
+         }
+         function get(): string {
+             return JSON.stringify({
+-                mode: Appearance.m3colors.darkmode ? "dark" : "light",
++                mode: Appearance.effectiveDarkMode ? "dark" : "light",
+                 colourTheme: root.currentTheme,
+                 saved: (Config.options?.appearance?.customTheme?.darkmode ?? true) ? "dark" : "light",
+                 fromWallpaper: wallpaperThemingCfg?.autoDarkLightMode ?? false,
+@@ -196,6 +197,7 @@
+     }
+ 
+     function applyCurrentTheme(applyExternal = defaultApplyExternal): void {
++        if (Quickshell.env("INIR_SAFE_PREVIEW") === "1") applyExternal = false
+         root._log("[ThemeService] applyCurrentTheme called, currentTheme:", currentTheme, "isAutoTheme:", isAutoTheme);
+         if (isAutoTheme) {
+             root._log("[ThemeService] Delegating to MaterialThemeLoader");
+--- a/services/Weather.qml
++++ b/services/Weather.qml
+@@ -11,7 +11,10 @@
+ Singleton {
+     id: root
+ 
+-    readonly property bool enabled: Config.options?.bar?.weather?.enable ?? false
++    readonly property bool hposFamily: Config.options?.panelFamily === "hpos"
++    readonly property bool providerConfigured: !hposFamily || (Config.options?.hpos?.weatherProvider === "open-meteo" && hasManualCoords)
++    readonly property bool enabled: (Config.options?.bar?.weather?.enable ?? false) && providerConfigured && Quickshell.env("INIR_SAFE_PREVIEW") !== "1"
++    readonly property string unavailableReason: hposFamily && !providerConfigured ? "Configure Open-Meteo and manual coordinates in Settings before enabling weather." : ""
+     readonly property int fetchInterval: (Config.options?.bar?.weather?.fetchInterval ?? 10) * 60 * 1000
+     readonly property bool useUSCS: Config.options?.bar?.weather?.useUSCS ?? false
+     readonly property bool hideLocation: Config.options?.waffles?.widgetsPanel?.weatherHideLocation ?? false
+@@ -37,7 +40,7 @@
+         sunset: "--:--",
+         windDir: "N",
+         wCode: "113",
+-        description: "",
++        description: root.unavailableReason,
+         city: "City",
+         wind: "0 km/h",
+         precip: "0 mm",
+@@ -413,6 +416,7 @@
+     }
+ 
+     function fetchWeatherFallback(): void {
++        if (!root.enabled) return;
+         const lat = root.location.lat
+         const lon = root.location.lon
+         if ((lat === 0 && lon === 0) || openMeteoFetcher.running) {
+@@ -443,6 +447,7 @@
+     // Air quality — separate Open-Meteo endpoint. Best-effort: requires
+     // coordinates, never blocks weather, never feeds the weather retry loop.
+     function fetchAirQuality(): void {
++        if (!root.enabled) return;
+         const lat = root.location.lat
+         const lon = root.location.lon
+         if ((lat === 0 && lon === 0) || airQualityFetcher.running) return
+@@ -484,6 +489,12 @@
+ 
+     // Resolve location: manual coords > manual city > GPS > IP auto-detect
+     function resolveLocation(): void {
++        if (!root.enabled) return;
++        if (root.hposFamily) {
++            root.location = { valid: true, lat: root.configLat, lon: root.configLon, name: root.configCity || "Manual location" };
++            root.fetchWeather();
++            return;
++        }
+         if (!Network.online) return;
+         if (gpsLocator.running || ipLocator.running || fallbackLocator.running
+                 || forwardGeocoder.running || reverseGeocoder.running || fetcher.running) {
+@@ -532,6 +543,7 @@
+ 
+     // Step 1: Get location from IP (primary method)
+     function getLocation(): void {
++        if (root.hposFamily || !root.enabled) return;
+         if (ipLocator.running) return;
+         console.info("[Weather] Getting location from IP...");
+         ipLocator.running = true;
+@@ -539,6 +551,8 @@
+ 
+     // Step 2: Fetch weather using coordinates (precise) or city name (fallback)
+     function fetchWeather(): void {
++        if (!root.enabled) return;
++        if (root.hposFamily) { root.fetchWeatherFallback(); return; }
+         if (!root.location.valid || fetcher.running) return;
+ 
+         // Skip primary provider (wttr.in) if it has failed repeatedly — go straight to Open-Meteo
+--- a/services/deferred/NiriKeybinds.qml
++++ b/services/deferred/NiriKeybinds.qml
+@@ -271,7 +271,7 @@
+     // ── File watchers ─────────────────────────────────────────────────────
+     FileView {
+         id: configWatcher
+-        path: Quickshell.env("HOME") + "/.config/niri/config.kdl"
++        path: (Quickshell.env("INIR_NIRI_CONFIG_DIR") || Quickshell.env("HOME") + "/.config/niri") + "/config.kdl"
+         watchChanges: true
+ 
+         onFileChanged: {
+@@ -281,7 +281,7 @@
+ 
+     FileView {
+         id: bindsWatcher
+-        path: Quickshell.env("HOME") + "/.config/niri/config.d/70-binds.kdl"
++        path: (Quickshell.env("INIR_NIRI_CONFIG_DIR") || Quickshell.env("HOME") + "/.config/niri") + "/config.d/70-binds.kdl"
+         watchChanges: true
+ 
+         onFileChanged: reloadDebounce.restart()
+--- a/settings.qml
++++ b/settings.qml
+@@ -125,7 +125,7 @@
+     // Static section/option index — shared with the overlay via SettingsPageRegistry.
+     function getFamilySettingsPageIndex(family: string) {
+         const componentName = family === "waffle" ? "WaffleConfig.qml"
+-            : family === "iris" ? "IrisConfig.qml" : ""
++            : Config.isIrisFamily ? "IrisConfig.qml" : ""
+         if (!componentName.length) return -1
+         for (var i = 0; i < pages.length; i++) {
+             if ((pages[i].component || "").indexOf(componentName) >= 0)
+--- a/shell.qml
++++ b/shell.qml
+@@ -32,7 +32,7 @@
+     }
+ 
+     // Force singleton instantiation — startup-critical only
+-    property var _idleService: Idle
++    property var _idleService: Quickshell.env("INIR_SAFE_PREVIEW") === "1" ? null : Idle
+     property var _powerProfilePersistence: PowerProfilePersistence
+     property var _devNavigationService: DevNavigation
+     property var _shellEditSessionService: ShellEditSession
+@@ -71,7 +71,7 @@
+         const family = Config.options?.panelFamily ?? "ii"
+         root._gameModeService = GameMode
+         root._fontSyncService = FontSyncService
+-        if (family !== "iris") {
++        if (!Config.isIrisFamily) {
+             root._windowPreviewService = WindowPreviewService
+             root._weatherService = Weather
+             root._voiceSearchService = VoiceSearch
+@@ -84,7 +84,7 @@
+         root._shellUpdatesService = ShellUpdates
+         root._autostartService = Autostart
+         root._niriAnimationPresetsService = NiriAnimationPresets
+-        if (family !== "iris") {
++        if (!Config.isIrisFamily) {
+             root._calendarSyncService = CalendarSync
+             root._todoService = Todo
+             root._notepadService = Notepad
+@@ -120,7 +120,7 @@
+         // Tier 0: startup-critical singletons (no delay)
+         root._log("[Boot] Tier 0: startup-critical singletons");
+         FirstRunExperience.load();
+-        ConflictKiller.load();
++        if (Quickshell.env("INIR_SAFE_PREVIEW") !== "1") ConflictKiller.load();
+         // Force MemoryPressureService instantiation for IPC (#164)
+         void MemoryPressureService.enabled;
+         // Same reason: GlobalActions owns the `globalActions` IPC target and is
+@@ -174,7 +174,7 @@
+         onTriggered: {
+             root._log("[Boot] T+" + (Date.now() - root._bootCompletedAt) + "ms: Tier 3 (display/interaction)");
+             root._ensureDeferredFamilyServices();
+-            Hyprsunset.load();
++            if (Quickshell.env("INIR_SAFE_PREVIEW") !== "1") Hyprsunset.load();
+             GlobalStates.deferredPanelsReady = true;
+             root._ensureScreenTimeService();
+             // Boot greeting: show once per session (singleton preserves bootGreetingDone across hot-reload)
+@@ -527,7 +527,7 @@
+     IpcHandler {
+         target: "taskview"
+         function _isWaffle(): bool { return (Config.options?.panelFamily ?? "ii") === "waffle" }
+-        function _isIris(): bool { return (Config.options?.panelFamily ?? "ii") === "iris" }
++        function _isIris(): bool { return Config.isIrisFamily }
+         // iRiS: Orbit when it is on, Spotlight (what task view opened before Orbit) when it is off.
+         function _irisOrbit(): bool { return Config.options?.iris?.orbit?.enable ?? false }
+         function toggle(): void {
+@@ -550,7 +550,7 @@
+     IpcHandler {
+         target: "orbit"
+         // iRiS has its own Orbit (a Place in the chassis, one layout, no Studio); the rest of the verbs are ii's.
+-        function _isIris(): bool { return (Config.options?.panelFamily ?? "ii") === "iris" }
++        function _isIris(): bool { return Config.isIrisFamily }
+         function toggle(): void {
+             if (_isIris()) { GlobalStates.irisOrbitOpen = !GlobalStates.irisOrbitOpen; return }
+             if (CompositorService.isNiri) GlobalStates.toggleOrbit("")
+@@ -673,20 +673,20 @@
+     // overlayStyle picks the chrome; sibling loaders keep only the selected
+     // presentation alive. Any unrecognised style falls back to the nav rail.
+     LazyLoader {
+-        active: Config.ready && (Config.options?.panelFamily ?? "ii") !== "iris" && (Config.options?.settingsUi?.overlayMode ?? false)
++        active: Config.ready && !Config.isIrisFamily && (Config.options?.settingsUi?.overlayMode ?? false)
+             && (Config.options?.settingsUi?.overlayStyle ?? "rail") !== "focus"
+             && (Config.options?.settingsUi?.overlayStyle ?? "rail") !== "editorial"
+         component: SettingsOverlay {}
+     }
+ 
+     LazyLoader {
+-        active: Config.ready && (Config.options?.panelFamily ?? "ii") !== "iris" && (Config.options?.settingsUi?.overlayMode ?? false)
++        active: Config.ready && !Config.isIrisFamily && (Config.options?.settingsUi?.overlayMode ?? false)
+             && (Config.options?.settingsUi?.overlayStyle ?? "rail") === "focus"
+         component: SettingsFocus {}
+     }
+ 
+     LazyLoader {
+-        active: Config.ready && (Config.options?.panelFamily ?? "ii") !== "iris" && (Config.options?.settingsUi?.overlayMode ?? false)
++        active: Config.ready && !Config.isIrisFamily && (Config.options?.settingsUi?.overlayMode ?? false)
+             && (Config.options?.settingsUi?.overlayStyle ?? "rail") === "editorial"
+         component: SettingsEditorial {}
+     }
+@@ -768,7 +768,7 @@
+     IpcHandler {
+         target: "clipboard"
+         function _isWaffle(): bool { return (Config.options?.panelFamily ?? "ii") === "waffle" }
+-        function _isIris(): bool { return (Config.options?.panelFamily ?? "ii") === "iris" }
++        function _isIris(): bool { return Config.isIrisFamily }
+         function _openIrisClipboard(): void {
+             LauncherSearch.ensurePrefix(Config.options?.search?.prefix?.clipboard ?? ";")
+             GlobalStates.searchOpen = true
+@@ -797,7 +797,7 @@
+         target: "overview"
+         function _usesPalette(): bool {
+             const family = Config.options?.panelFamily ?? "ii"
+-            return family === "waffle" || family === "iris"
++            return family === "waffle" || Config.isIrisFamily
+         }
+         function _usePillLauncher(): bool {
+             return (Config.options?.panelFamily ?? "ii") === "ii"
+@@ -881,8 +881,8 @@
+     }
+ 
+     LazyLoader {
+-        loading: Config.ready && !root._familyPanelsSuspended && (Config.options?.panelFamily ?? "ii") === "iris"
+-        activeAsync: Config.ready && !root._familyPanelsSuspended && (Config.options?.panelFamily ?? "ii") === "iris"
++        loading: Config.ready && !root._familyPanelsSuspended && Config.isIrisFamily
++        activeAsync: Config.ready && !root._familyPanelsSuspended && Config.isIrisFamily
+         source: "modules/iris/critical/ShellIrisCriticalPanels.qml"
+     }
+ 
+@@ -890,10 +890,18 @@
+         readonly property bool enabled: Config.ready
+             && GlobalStates.deferredPanelsReady
+             && !root._familyPanelsSuspended
+-            && (Config.options?.panelFamily ?? "ii") === "iris"
++            && Config.isIrisFamily
+         loading: enabled
+         activeAsync: enabled
+         source: "ShellIrisPanels.qml"
++    }
++
++    // HP-OS adds preferences and its gallery; the existing iRiS hosts above
++    // remain the only owners of the bar, dock, controls and notification server.
++    LazyLoader {
++        activeAsync: Config.ready && GlobalStates.deferredPanelsReady
++            && !root._familyPanelsSuspended && Config.options.panelFamily === "hpos"
++        source: "modules/hpos/HposPanels.qml"
+     }
+ 
+     // Close confirmation dialog (always loaded, handles IPC)
+@@ -906,7 +914,7 @@
+     // AltSwitcher controller selection lives above the family loaders. Waffle
+     // receives the lightweight shared router; ii receives either that controller
+     // or the full visual tree according to its no-visual setting.
+-    property list<string> families: ["ii", "waffle", "iris"]
++    property list<string> families: ["ii", "waffle", "iris", "hpos"]
+     property var panelFamilies: ({
+         "ii": [
+             "iiBar", "iiBackground", "iiBackdrop", "iiBootGreeting", "iiCheatsheet", "iiControlPanel", "iiDock", "iiLock",
+@@ -925,6 +933,11 @@
+             "iiRegionSelector", "iiScreenCorners", "iiWallpaperSelector", "iiWallpaperLauncher", "iiCoverflowSelector", "iiClipboard",
+             "iiShellUpdate", "iiMascotCompanion"
+         ],
++        "hpos": [
++            "irisBar", "irisBackground", "irisPalette", "irisControlCenter",
++            "irisNotificationPopup", "irisOnScreenDisplay", "irisSessionScreen",
++            "irisLock", "irisPolkit"
++        ],
+         "iris": [
+             "irisBar", "irisBackground", "irisPalette", "irisControlCenter",
+             "irisNotificationPopup", "irisOnScreenDisplay", "irisSessionScreen",
