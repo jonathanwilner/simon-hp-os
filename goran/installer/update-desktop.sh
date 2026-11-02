@@ -7,7 +7,7 @@ usage() {
 Usage: simon-desktop-update [--checkout PATH] [--build-only] [--no-pull] [--attach]
        simon-desktop-update --status | --status-window
 
-Pull main, build the locked Simon flake in nom-tmux,
+Merge published main with preserved local changes, build the locked Simon flake in nom-tmux,
 and activate it as simon. --build-only never activates; --no-pull is allowed
 only with --build-only for validating a committed integration branch.
 USAGE
@@ -63,7 +63,6 @@ fi
 checkout=$(realpath "$checkout")
 cd "$checkout"
 [[ -f flake.nix && -f flake.lock && -f goran/installer/simon-home.nix ]] || fail 'Not a Simon desktop checkout'
-[[ -z $(git status --porcelain) ]] || fail 'Checkout has local changes; commit or preserve them before updating'
 if [[ "$build_only" == false ]]; then
   [[ $(id -un) == simon && "$HOME" == /home/simon ]] || fail 'Activate only from Simon’s own login session, without sudo'
   [[ "${XDG_RUNTIME_DIR:-}" == "/run/user/$(id -u)" ]] || fail 'Use a real Simon login session'
@@ -74,11 +73,6 @@ if [[ "$build_only" == false ]]; then
   [[ -r /usr/lib/aarch64-linux-gnu/libpam.so.0 ]] || fail 'Ubuntu native PAM is unavailable'
 fi
 if [[ "$worker" == false ]]; then
-  if [[ "$pull" == true ]]; then
-    [[ $(git branch --show-current) == main ]] || fail 'Switch to branch main first'
-    git pull --ff-only origin main
-    [[ $(git rev-parse HEAD) == $(git rev-parse refs/remotes/origin/main) ]] || fail 'Local commits differ from the published update branch'
-  fi
   args=(--worker --checkout "$checkout")
   [[ "$build_only" == false ]] || args+=(--build-only)
   [[ "$pull" == true ]] || args+=(--no-pull)
@@ -97,19 +91,25 @@ state="${XDG_STATE_HOME:-$HOME/.local/state}/simon-desktop-update"
 mkdir -p "$state"
 exec 9>"$state/update.lock"
 flock -n 9 || fail 'Another Simon desktop update is running'
-revision=$(git rev-parse HEAD)
 # Git flakes include tracked files only. Evaluation checks the full import tree.
 git ls-files --error-unmatch flake.nix flake.lock goran/installer/simon-home.nix \
   goran/installer/update-desktop.sh >/dev/null || fail 'Required desktop sources are not tracked in Git'
-stamp=$(date -u +%Y%m%dT%H%M%SZ)
+stamp=$(date -u +%Y%m%dT%H%M%SZ)-$$
 run_dir="$state/$stamp"
 mkdir -p "$run_dir"
+if [[ "$pull" == true ]]; then
+  bash "$checkout/goran/installer/merge-desktop-update.sh" "$checkout" "$run_dir/recovery"
+fi
+[[ -z $(git status --porcelain) ]] || fail 'Build-only source must be committed; normal updates preserve and commit local edits automatically'
+revision=$(git rev-parse HEAD)
+# shellcheck source=desktop-update-guards.sh
+source "$checkout/goran/installer/desktop-update-guards.sh"
 printf '%s\n' "$revision" > "$run_dir/source-revision"
 nix build .#homeConfigurations.simon-daytona.activationPackage \
   --no-update-lock-file --out-link "$run_dir/candidate"
 candidate=$(readlink -f "$run_dir/candidate")
 [[ -x "$candidate/activate" ]] || fail 'Built output has no Home Manager activation script'
-[[ "$revision" == $(git rev-parse HEAD) && -z $(git status --porcelain) ]] || fail 'Source changed during the build; rebuild before activation'
+require_stable_checkout "$revision" || exit 1
 if [[ "$build_only" == true ]]; then
   printf 'Built Simon desktop %s\nGeneration: %s\nNo profile activated.\n' "$revision" "$candidate"
   exit 0
@@ -121,17 +121,7 @@ if [[ -n "$previous" && -x "$previous/activate" ]]; then
   printf '%s\n' "$previous" > "$run_dir/previous-generation"
 fi
 export HOME_MANAGER_BACKUP_EXT="simon-update-$stamp"
-if "$candidate/activate" && [[ $(readlink -f "$profile") == "$candidate" ]]; then
-  echo 'Activation completed and the Home Manager profile matches the candidate.'
-else
-  result=$?
-  echo "Activation failed with exit $result; logs and candidate retained at $run_dir" >&2
-  if [[ -n "$previous" && -x "$previous/activate" ]]; then
-    echo 'Reactivating the previous Home Manager generation.' >&2
-    "$previous/activate" || echo "Automatic rollback failed. Run $previous/activate from Simon’s console." >&2
-  fi
-  exit "$result"
-fi
+activate_with_rollback "$candidate" "$profile" "$previous" || exit $?
 ln -sfn "$run_dir" "$state/current"
 printf 'Simon desktop updated to %s\nGeneration: %s\n' "$revision" "$candidate"
 printf 'Save work, then log out and select HP-OS (Simon N1X) to load the new compositor.\n'

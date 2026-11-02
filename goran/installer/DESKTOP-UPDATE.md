@@ -24,11 +24,35 @@ cd ~/src/simon-hp-os
 bash goran/installer/update-desktop.sh
 ```
 
-If the checkout already exists, preserve local changes, switch it to
-`main`, and run the last command. The updater requires a clean
-checkout and refuses unpublished local commits. It pulls with `--ff-only`, checks
-that the required flake sources are tracked in Git, builds the locked desktop, and activates it only after
-a successful build. It refuses activation under any account other than `simon`.
+If the checkout already exists, run the last command there. The updater fetches
+public `main` and merges it into the current local branch. Local commits remain
+in that branch. The updater preserves uncommitted tracked and untracked files in
+a recovery stash, restores them, and records them in a local commit before the
+merge. These local commits and recovery records are never pushed to GitHub.
+Ignored files stay in place and are not included in the recovery snapshot.
+
+Each update records the original revision, published revision, recovery branch
+and optional original stash under its `recovery/` directory. Recovery refs and
+stashes remain available until Simon chooses to remove them. The updater builds
+the merged locked desktop and activates only after a successful build. It refuses
+activation under any account other than `simon`.
+
+A merge conflict stops the update before build or activation. Git keeps the
+conflicting files in the checkout for review. Resolve those files, run
+`git add <resolved-files>` and `git commit`, then rerun the updater. To cancel the
+merge, run `git merge --abort`; this restores the local configuration, including
+the local commit containing previously uncommitted edits. The retained stash can
+restore the original staged and unstaged form in a separate recovery checkout:
+
+```sh
+# Replace RECORD with the printed update recovery directory.
+git worktree add -b simon-recovered ../simon-recovered "$(cat RECORD/original-revision)"
+git -C ../simon-recovered stash apply --index "$(cat RECORD/original-stash)"
+```
+
+Use the stash recovery command only when `original-stash` exists. The working
+checkout remains available even when the build or activation fails. Future updates
+merge into the retained local history, so accepted customizations remain present.
 
 The first update requires `nix`, Git, `tmux`, and `nom` on PATH. The existing
 profile normally provides them. The repository's `pkgs/nom-dashboard/nom-tmux.sh`
@@ -72,7 +96,7 @@ The command uses `~/src/simon-hp-os`. To use another checkout, set
 `SIMON_DESKTOP_CHECKOUT=/absolute/path` before calling it. The script also accepts
 `--checkout PATH`.
 
-Use the published lock file. Do not run `nix flake update` as the normal update
+The published lock file is merged with any intentional local edits. Do not run `nix flake update` as the normal update
 step: several reviewed dependencies use explicit revisions in `flake.nix`.
 Maintainers publish updated source and lock files together on the update branch.
 
@@ -91,6 +115,7 @@ For a committed integration branch that has not been promoted yet:
 bash goran/installer/update-desktop.sh --build-only --no-pull
 ```
 
+The `--no-pull` path requires a clean committed checkout and changes no Git history.
 The build-only path accepts another account. It never runs the activation script.
 
 ## Rollback and records

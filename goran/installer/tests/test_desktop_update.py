@@ -1,6 +1,7 @@
 """Exercise update safety and the build-only path without touching a live profile."""
 from pathlib import Path
 import os
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -16,6 +17,7 @@ class DesktopUpdateTest(unittest.TestCase):
         self.repo = self.root / 'repo'
         (self.repo / 'goran/installer').mkdir(parents=True)
         (self.repo / 'goran/installer/simon-home.nix').touch()
+        shutil.copyfile(SCRIPT.parent / 'desktop-update-guards.sh', self.repo / 'goran/installer/desktop-update-guards.sh')
         (self.repo / 'flake.nix').touch()
         (self.repo / 'flake.lock').touch()
         self.bin = self.root / 'bin'
@@ -74,7 +76,7 @@ exit 2''')
         self.env['TEST_DIRTY'] = ' M flake.nix'
         result = self.run_update('--worker', '--build-only', '--no-pull')
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn('local changes', result.stderr)
+        self.assertIn('must be committed', result.stderr)
 
     def test_no_pull_cannot_activate(self):
         result = self.run_update('--no-pull')
