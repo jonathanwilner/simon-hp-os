@@ -38,6 +38,8 @@ and native PAM prerequisites from the original Simon installation.
 - Ghostty 1.4 with the N1X presentation fix, seven ArtCraft apps, Microsoft 365
   web launchers and document handlers, BlueBubbles and optional Relay clipboard.
 - Central desktop and user Flatpak updates, status display and rollback records.
+- Separate taskbar Search and Application Center. Search opens with Super+S.
+  See the [search guide](vendor/hp-os/docs/SEARCH.md) for supported providers.
 
 Office, BlueBubbles, Relay and browser accounts remain the user's own. Office
 local-file uploads and Relay require the enrollment documented above. Appearance
