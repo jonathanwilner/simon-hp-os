@@ -120,6 +120,8 @@ if [[ -n "$previous" && -x "$previous/activate" ]]; then
   nix-store --add-root "$run_dir/previous" --indirect --realise "$previous" >/dev/null
   printf '%s\n' "$previous" > "$run_dir/previous-generation"
 fi
+python3 "$checkout/goran/installer/snapshot-managed-files.py" "$HOME" "$candidate/home-files" "$run_dir/live-config"
+require_stable_checkout "$revision" || exit 1
 export HOME_MANAGER_BACKUP_EXT="simon-update-$stamp"
 activate_with_rollback "$candidate" "$profile" "$previous" || exit $?
 ln -sfn "$run_dir" "$state/current"

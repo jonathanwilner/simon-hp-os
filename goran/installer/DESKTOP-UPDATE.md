@@ -118,6 +118,26 @@ bash goran/installer/update-desktop.sh --build-only --no-pull
 The `--no-pull` path requires a clean committed checkout and changes no Git history.
 The build-only path accepts another account. It never runs the activation script.
 
+## Live configuration files
+
+Before activation, the updater snapshots existing destinations managed by the
+candidate Home Manager `home-files` tree into the update record's private
+`live-config/live-files.tar`. This includes regular configuration files that
+`force = true` would overwrite without the usual Home Manager backup. The adjacent
+`manifest.json` lists each saved path. The archive is readable only by Simon.
+
+Git customizations are merged automatically. Live GTK, Niri and other generated
+configuration files are archived for review and recovery; the updater does not
+merge their formats automatically. Unrelated home files are left untouched.
+Symlinks and symlinked parent directories are recorded as links. Their external
+target data is not copied. A managed directory replaced as a single link is
+archived without following symlinks. Snapshots stop activation if they exceed
+10000 entries or 256 MiB, or encounter an unsupported special file.
+
+To review a snapshot, use `tar -tvf RECORD/live-config/live-files.tar`. Restore
+selected regular files into a separate empty directory first and compare them
+with the new configuration. Keep the snapshot until the updated desktop is verified.
+
 ## Rollback and records
 
 The updater keeps candidate and previous-generation garbage-collector roots,
