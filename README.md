@@ -12,12 +12,23 @@ This is a modified downstream integration, with its own HP-OS configuration.
 Use the existing Simon Ubuntu installation with NVIDIA driver **615.78.08**,
 Nix, Git, Python and tmux. Run these commands as `simon`, without sudo:
 
+Download and run the single updater tool:
+
 ```sh
-mkdir -p ~/src
-git clone https://github.com/jonathanwilner/simon-hp-os.git ~/src/simon-hp-os
-cd ~/src/simon-hp-os
-bash goran/installer/update-desktop.sh
+curl --fail --location --output /tmp/update-hp-os.sh \
+  https://raw.githubusercontent.com/jonathanwilner/simon-hp-os/main/update-hp-os.sh
+bash /tmp/update-hp-os.sh --attach
 ```
+
+The tool creates `~/src/simon-hp-os` from public HTTPS source. It detects an old
+`~/src/nixos-amd` checkout only when that repository contains Simon's profile.
+Local configuration changes are migrated before updating. The old checkout
+remains unchanged. Conflicts or an unknown baseline stop the update for review.
+For another old checkout, use `--from /path/to/old-checkout`. If needed, specify
+its known clean baseline with `--legacy-base COMMIT`. `--build-only` builds the
+candidate without activation; `--no-attach` leaves the tracked task running in
+tmux. Use `--checkout PATH` to select the public checkout location.
+
 
 No private GitHub membership, SSH deploy key or Tailscale connection is needed
 to fetch this configuration. Subsequent updates use **Update Applications**
