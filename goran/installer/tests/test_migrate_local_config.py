@@ -79,6 +79,35 @@ class MigrationTests(unittest.TestCase):
         self.assertEqual(migration.mapped('goran/desktop/harmonyos-theme/themes/harmonyos.json'), 'goran/desktop/hp-os-theme/themes/hp-os.json')
         self.assertEqual(migration.mapped('HarmonyShell/foo.qml'), 'vendor/HP-OSShell/foo.qml')
 
+    def test_shell_renamed_component_three_way_merge(self):
+        old = 'HarmonyShell/overlay/modules/harmony/design/HarmonyTokens.qml'
+        new = 'vendor/HP-OSShell/overlay/modules/hpos/design/HposTokens.qml'
+        self.write(self.old, old, 'size: 10\n// spacer\n// spacer2\ncolor: "red"\n')
+        self.git(self.old, 'add', '.')
+        self.git(self.old, 'commit', '-qm', 'legacy shell base')
+        self.base = self.git(self.old, 'rev-parse', 'HEAD').strip()
+        self.write(self.old, old, 'size: 12\n// spacer\n// spacer2\ncolor: "red"\n')
+        self.write(self.new, new, 'size: 10\n// spacer\n// spacer2\ncolor: "blue"\n')
+        self.git(self.new, 'add', '.')
+        self.git(self.new, 'commit', '-qm', 'public renamed shell')
+        report = self.run_merge()
+        self.assertTrue(report['applied'])
+        self.assertEqual((self.new/new).read_text(), 'size: 12\n// spacer\n// spacer2\ncolor: "blue"\n')
+        self.assertEqual(report['merged'][0]['to'], new)
+
+    def test_shell_known_renames_preserve_font_provenance(self):
+        cases = {
+            'overlay/assets/harmony-app-center.svg': 'overlay/assets/hpos-app-center.svg',
+            'packaging/files/harmony-files.qss': 'packaging/files/hpos-files.qss',
+            'packaging/fonts/harmony-fonts.py': 'packaging/fonts/hpos-fonts.py',
+            'patches/harmony-style.patch': 'patches/hpos-style.patch',
+            'patches/inir-harmony.patch': 'patches/inir-hpos.patch',
+            'tests/test_harmony_contract.py': 'tests/test_hpos_contract.py',
+            'packaging/fonts/HarmonyOS_Sans.ttf': 'packaging/fonts/HarmonyOS_Sans.ttf',
+        }
+        for old, new in cases.items():
+            self.assertEqual(migration.mapped('HarmonyShell/' + old), 'vendor/HP-OSShell/' + new)
+
     def test_secret_in_relevant_file_blocks(self):
         self.write(self.old, 'goran/desktop/niri.nix', '-----BEGIN OPENSSH PRIVATE KEY-----\n')
         self.assertFalse(self.run_merge()['applied'])

@@ -21,6 +21,18 @@ def git(repo, *args, check=True):
 def mapped(path):
     if path.startswith(('HarmonyShell/', 'HP-OSShell/')):
         path = 'vendor/HP-OSShell/' + path.split('/', 1)[1]
+    if path.startswith('vendor/HP-OSShell/'):
+        # These are shell-owned paths renamed by the HP-OS source migration.
+        # Preserve third-party HarmonyOS font names and provenance identifiers.
+        path = path.replace('/overlay/modules/harmony/', '/overlay/modules/hpos/')
+        if '/overlay/modules/hpos/' in path:
+            path = re.sub(r'/Harmony([A-Za-z]+)\.qml$', r'/Hpos\1.qml', path)
+        path = path.replace('/overlay/assets/harmony-', '/overlay/assets/hpos-')
+        path = path.replace('/packaging/files/harmony-files.qss', '/packaging/files/hpos-files.qss')
+        path = path.replace('/packaging/fonts/harmony-fonts.py', '/packaging/fonts/hpos-fonts.py')
+        path = path.replace('/patches/harmony-', '/patches/hpos-')
+        path = path.replace('/patches/inir-harmony.patch', '/patches/inir-hpos.patch')
+        path = path.replace('/tests/test_harmony_contract.py', '/tests/test_hpos_contract.py')
     path = path.replace('harmonyos-theme', 'hp-os-theme')
     path = path.replace('cosmic-harmony-theme', 'cosmic-hp-os-theme')
     path = path.replace('/harmonyos.nix', '/hp-os-theme.nix')
