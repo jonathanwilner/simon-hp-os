@@ -12,7 +12,14 @@ This is a modified downstream integration, with its own HP-OS configuration.
 Use the existing Simon Ubuntu installation with NVIDIA driver **615.78.08**,
 Nix, Git, Python and tmux. Run these commands as `simon`, without sudo:
 
-Download and run the single updater tool:
+Download the updater and its instructions from **https://files.thewilners.com/s/hp-os**.
+Extract the ZIP, open a terminal in the extracted `simon-hp-os-updater` folder,
+and run `bash update-hp-os.sh --attach`.
+
+See the [step-by-step guide](goran/installer/SIMON-QUICK-START.md) for preserving
+local changes, conflict recovery and verification.
+
+Alternatively, download and run the single updater tool directly:
 
 ```sh
 curl --fail --location --output /tmp/update-hp-os.sh \
