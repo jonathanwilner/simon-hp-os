@@ -26,6 +26,7 @@ let
     patches = (old.patches or []) ++ [ ../patches/inir-harmony.patch ../patches/harmony-style.patch ../patches/harmony-wallpaper-startup.patch ../patches/harmony-desktop-labels.patch ../patches/harmony-portable-icons.patch ../patches/harmony-notification-banners.patch ];
     postPatch = (old.postPatch or "") + ''
       cp -r ${../overlay}/. .
+      chmod -R u+w assets
       mkdir -p assets/larp
       cp ${glow} assets/larp/hmglow.png
       cp ${assistantArtwork} assets/larp/hp-os.png
