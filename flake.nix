@@ -40,6 +40,7 @@
           ./goran/desktop/microsoft365-webapps.nix
           ./goran/desktop/cosmic-niri.nix
           ./goran/desktop/hp-os.nix
+          ./goran/desktop/search-qwen.nix
           ./goran/desktop/niri.nix
           ./goran/desktop/launchers.nix
           ./goran/desktop/dms.nix
