@@ -1,0 +1,33 @@
+--- a/services/FirstRunExperience.qml
++++ b/services/FirstRunExperience.qml
+@@ -15,7 +15,18 @@
+     property string defaultWallpaperPath: ""
+     property bool _pendingFirstRun: false
+ 
++    Connections {
++        target: Config
++        function onReadyChanged(): void {
++            if (Config.ready)
++                root.load()
++        }
++    }
++
+     function load() {
++        // Tier 0 calls load before configuration has necessarily finished loading.
++        if (!Config.ready)
++            return
+         if (checkFirstRunProc.running || listWallpapersProc.running)
+             return;
+ 
+@@ -30,7 +41,11 @@
+     }
+ 
+     function handleFirstRun(): void {
++        // Harmony already provides its desktop defaults and wallpaper.
++        // Keep first-run bookkeeping, without opening the upstream family wizard.
++        if (Config.options?.panelFamily === "harmony")
++            return
+         if (root.defaultWallpaperPath.length > 0)
+             Quickshell.execDetached([Directories.wallpaperSwitchScriptPath, root.defaultWallpaperPath])
+         Quickshell.execDetached([Quickshell.shellPath("scripts/inir"), "welcome"])
+     }

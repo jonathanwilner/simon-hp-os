@@ -1,0 +1,39 @@
+[
+  {
+    "file": "256x256/ms-access.svg",
+    "url": "https://res.cdn.office.net/files/fabric-cdn-prod_20221201.001/assets/brand-icons/product/svg/access_48x1.svg",
+    "sha256": "42176d1939f39bf2a549de922dea8987fb54d4c5c7974aa2a557b7f5db55ba01"
+  },
+  {
+    "file": "256x256/ms-excel.svg",
+    "url": "https://res.cdn.office.net/files/fabric-cdn-prod_20221201.001/assets/brand-icons/product/svg/excel_48x1.svg",
+    "sha256": "da91a550409ab355e664188a00135bc93603e5a8f53df3eeed8abc2ab3db8d71"
+  },
+  {
+    "file": "256x256/ms-onenote.svg",
+    "url": "https://res.cdn.office.net/files/fabric-cdn-prod_20221201.001/assets/brand-icons/product/svg/onenote_48x1.svg",
+    "sha256": "b2a79855b547ff47cd23640fb8b6cb625713ca0880e74654f018d2b88f96a3ec"
+  },
+  {
+    "file": "256x256/ms-outlook.svg",
+    "url": "https://res.cdn.office.net/files/fabric-cdn-prod_20221201.001/assets/brand-icons/product/svg/outlook_48x1.svg",
+    "sha256": "0884e0478f7e073163febe67eaff20be97ae38373b0866c9668f81c2f6bd26c2"
+  },
+  {
+    "file": "256x256/ms-powerpoint.svg",
+    "url": "https://res.cdn.office.net/files/fabric-cdn-prod_20221201.001/assets/brand-icons/product/svg/powerpoint_48x1.svg",
+    "sha256": "708fa79febaf25786d84a4bd6a39c8a7345e1e927399f88761db11dab5441f84"
+  },
+  {
+    "file": "256x256/ms-word.svg",
+    "url": "https://res.cdn.office.net/files/fabric-cdn-prod_20221201.001/assets/brand-icons/product/svg/word_48x1.svg",
+    "sha256": "fef9d7fc114f0c5d55e6d50c6d8d3fc40ed69f1122d9adf1780dfa57ad40af79"
+  },
+  {
+    "file": "256x256/ms-publisher.png",
+    "source": "Monaco: C:\\Program Files\\Microsoft Office\\root\\Office16\\MSPUB.EXE, icon resource 0 extracted at 256x256 without editing",
+    "version": "16.0.20527.20088",
+    "executable_sha256": "bde9fab571349cdfdf54a9a77677d385458c213ccacf27a5c9f8b4924a2d90ed",
+    "sha256": "5cff33c07572d3e3a722721b3cd86cc34e7f78532fad8a6f017c2f27eb518f8e"
+  }
+]

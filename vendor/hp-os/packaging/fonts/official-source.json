@@ -1,0 +1,573 @@
+{
+  "url": "https://alliance-communityfile-drcn.dbankcdn.com/FileServer/getFile/cmtyManage/011/111/111/0000000000011111111.20260627152129.89276966309836366526585265125586:50001231000000:2800:A0161E048334FE0271F9F5ECBBD5070D17381C7846125F4D7109DBC7B532C715.zip?needInitFileName=true",
+  "resource_page": "https://developer.huawei.com/consumer/cn/design/resource",
+  "release_date": "2026/06/12",
+  "advertised_size": "21.6 MB",
+  "sha256": "5440a3d9337828eda72e35f48fbb246873bca26e89644d433a8b01b85e45ef85",
+  "bytes": 22636812,
+  "checked": "2026-10-23",
+  "fonts": [
+    {
+      "file": "HarmonyOS Sans/HarmonyOS_Sans.ttf",
+      "sha256": "72d5adb60242fae60686ca94c27e10b89cb7ed2008531390d3f22ac61ad64593",
+      "family": "HarmonyOS Sans",
+      "version": "Version 2.040",
+      "weight_axes": [
+        {
+          "tag": "wght",
+          "min": 40.0,
+          "default": 400.0,
+          "max": 900.0
+        }
+      ],
+      "named_instances": [
+        "Thin",
+        "UltraLight",
+        "Light",
+        "Regular",
+        "Medium",
+        "SemiBold",
+        "Bold",
+        "Heavy",
+        "Black"
+      ],
+      "glyph_coverage": 874,
+      "sample_coverage": {
+        "HarmonyShell 0123456789": true,
+        "简体中文通知控制中心": false,
+        "繁體中文通知控制中心": false,
+        "，。！？（）「」": false
+      },
+      "features": [
+        "aalt",
+        "calt",
+        "case",
+        "ccmp",
+        "dnom",
+        "frac",
+        "kern",
+        "liga",
+        "locl",
+        "numr",
+        "ordn",
+        "pnum",
+        "sinf",
+        "ss01",
+        "ss02",
+        "ss03",
+        "ss04",
+        "ss06",
+        "ss09",
+        "ss10",
+        "subs",
+        "sups",
+        "tnum"
+      ],
+      "units_per_em": 1000,
+      "ascender": 928,
+      "descender": -244,
+      "line_gap": 0,
+      "digit_advance_widths": [
+        570,
+        570,
+        570,
+        570,
+        570,
+        570,
+        570,
+        570,
+        570,
+        570
+      ]
+    },
+    {
+      "file": "HarmonyOS Sans/HarmonyOS_Sans_Condensed.ttf",
+      "sha256": "a07c6bd4e6ebe6f44c55350985295c779a2cdce70de21f4361c67d21a8f341c1",
+      "family": "HarmonyOS Sans Condensed",
+      "version": "Version 1.5",
+      "weight_axes": [
+        {
+          "tag": "wght",
+          "min": 40.0,
+          "default": 400.0,
+          "max": 900.0
+        }
+      ],
+      "named_instances": [
+        "Thin",
+        "UltraLight",
+        "Light",
+        "Regular",
+        "Medium",
+        "SemiBold",
+        "Bold",
+        "Heavy",
+        "Black"
+      ],
+      "glyph_coverage": 810,
+      "sample_coverage": {
+        "HarmonyShell 0123456789": true,
+        "简体中文通知控制中心": false,
+        "繁體中文通知控制中心": false,
+        "，。！？（）「」": false
+      },
+      "features": [
+        "aalt",
+        "calt",
+        "case",
+        "ccmp",
+        "dnom",
+        "frac",
+        "kern",
+        "liga",
+        "locl",
+        "numr",
+        "ordn",
+        "pnum",
+        "sinf",
+        "ss01",
+        "ss02",
+        "ss04",
+        "subs",
+        "sups",
+        "tnum"
+      ],
+      "units_per_em": 1000,
+      "ascender": 928,
+      "descender": -244,
+      "line_gap": 0,
+      "digit_advance_widths": [
+        474,
+        474,
+        474,
+        474,
+        474,
+        474,
+        474,
+        474,
+        474,
+        474
+      ]
+    },
+    {
+      "file": "HarmonyOS Sans/HarmonyOS_Sans_Condensed_Italic.ttf",
+      "sha256": "f2e54d86d58d5be546a38eb44edd6cb478a481888b70c9c8187ad4481a74f616",
+      "family": "HarmonyOS Sans Condensed Italic",
+      "version": "Version 1.5",
+      "weight_axes": [
+        {
+          "tag": "wght",
+          "min": 40.0,
+          "default": 400.0,
+          "max": 900.0
+        }
+      ],
+      "named_instances": [
+        "Thin",
+        "UltraLight",
+        "Light",
+        "Regular",
+        "Medium",
+        "SemiBold",
+        "Bold",
+        "Heavy",
+        "Black"
+      ],
+      "glyph_coverage": 810,
+      "sample_coverage": {
+        "HarmonyShell 0123456789": true,
+        "简体中文通知控制中心": false,
+        "繁體中文通知控制中心": false,
+        "，。！？（）「」": false
+      },
+      "features": [
+        "aalt",
+        "calt",
+        "case",
+        "ccmp",
+        "dnom",
+        "frac",
+        "kern",
+        "liga",
+        "locl",
+        "numr",
+        "ordn",
+        "pnum",
+        "sinf",
+        "ss04",
+        "subs",
+        "sups",
+        "tnum"
+      ],
+      "units_per_em": 1000,
+      "ascender": 928,
+      "descender": -244,
+      "line_gap": 0,
+      "digit_advance_widths": [
+        474,
+        474,
+        474,
+        474,
+        474,
+        474,
+        474,
+        474,
+        474,
+        474
+      ]
+    },
+    {
+      "file": "HarmonyOS Sans/HarmonyOS_Sans_Italic.ttf",
+      "sha256": "64234302c0e063fe30ce3ee5875e6e02535c023e8de29515972b1e524c346e0a",
+      "family": "HarmonyOS Sans",
+      "version": "Version 2.06",
+      "weight_axes": [
+        {
+          "tag": "wght",
+          "min": 40.0,
+          "default": 400.0,
+          "max": 900.0
+        }
+      ],
+      "named_instances": [
+        "Thin Italic",
+        "UltraLight Italic",
+        "Light Italic",
+        "Italic",
+        "Medium Italic",
+        "SemiBold Italic",
+        "Bold Italic",
+        "Heavy Italic",
+        "Black Italic"
+      ],
+      "glyph_coverage": 810,
+      "sample_coverage": {
+        "HarmonyShell 0123456789": true,
+        "简体中文通知控制中心": false,
+        "繁體中文通知控制中心": false,
+        "，。！？（）「」": false
+      },
+      "features": [
+        "aalt",
+        "calt",
+        "case",
+        "ccmp",
+        "dnom",
+        "frac",
+        "kern",
+        "liga",
+        "locl",
+        "numr",
+        "ordn",
+        "pnum",
+        "sinf",
+        "ss04",
+        "subs",
+        "sups",
+        "tnum"
+      ],
+      "units_per_em": 1000,
+      "ascender": 928,
+      "descender": -244,
+      "line_gap": 0,
+      "digit_advance_widths": [
+        570,
+        570,
+        570,
+        570,
+        570,
+        570,
+        570,
+        570,
+        570,
+        570
+      ]
+    },
+    {
+      "file": "HarmonyOS Sans/HarmonyOS_Sans_Naskh_Arabic.ttf",
+      "sha256": "62ae1dd2ce8f43894978ccf7c6cc2eecb797a13b7a7cdd46eae521d4b38b7d7c",
+      "family": "HarmonyOS Sans Naskh Arabic",
+      "version": "Version 1.401",
+      "weight_axes": [
+        {
+          "tag": "wght",
+          "min": 100.0,
+          "default": 400.0,
+          "max": 900.0
+        }
+      ],
+      "named_instances": [
+        "Thin",
+        "UltraLight",
+        "Light",
+        "Regular",
+        "Medium",
+        "SemiBold",
+        "Bold",
+        "Heavy",
+        "Black"
+      ],
+      "glyph_coverage": 584,
+      "sample_coverage": {
+        "HarmonyShell 0123456789": false,
+        "简体中文通知控制中心": false,
+        "繁體中文通知控制中心": false,
+        "，。！？（）「」": false
+      },
+      "features": [
+        "aalt",
+        "ccmp",
+        "dlig",
+        "fina",
+        "init",
+        "isol",
+        "kern",
+        "locl",
+        "mark",
+        "medi",
+        "mkmk",
+        "pnum",
+        "rlig",
+        "tnum"
+      ],
+      "units_per_em": 1000,
+      "ascender": 1069,
+      "descender": -634,
+      "line_gap": 0,
+      "digit_advance_widths": [
+        611,
+        425,
+        555,
+        542,
+        614,
+        553,
+        577,
+        547,
+        606,
+        577
+      ]
+    },
+    {
+      "file": "HarmonyOS Sans/HarmonyOS_Sans_Naskh_Arabic_UI.ttf",
+      "sha256": "061d91a477cedafa3cdbf8574af4440057e7ac2d58628743e65d1223efeae72f",
+      "family": "HarmonyOS Sans Naskh Arabic UI",
+      "version": "Version 1.401",
+      "weight_axes": [
+        {
+          "tag": "wght",
+          "min": 100.0,
+          "default": 400.0,
+          "max": 900.0
+        }
+      ],
+      "named_instances": [
+        "Thin",
+        "UltraLight",
+        "Light",
+        "Regular",
+        "Medium",
+        "SemiBold",
+        "Bold",
+        "Heavy",
+        "Black"
+      ],
+      "glyph_coverage": 584,
+      "sample_coverage": {
+        "HarmonyShell 0123456789": false,
+        "简体中文通知控制中心": false,
+        "繁體中文通知控制中心": false,
+        "，。！？（）「」": false
+      },
+      "features": [
+        "aalt",
+        "ccmp",
+        "dlig",
+        "fina",
+        "init",
+        "isol",
+        "kern",
+        "locl",
+        "mark",
+        "medi",
+        "mkmk",
+        "pnum",
+        "rlig",
+        "tnum"
+      ],
+      "units_per_em": 1000,
+      "ascender": 1179,
+      "descender": -323,
+      "line_gap": 0,
+      "digit_advance_widths": [
+        611,
+        425,
+        555,
+        542,
+        614,
+        553,
+        577,
+        547,
+        606,
+        577
+      ]
+    },
+    {
+      "file": "HarmonyOS Sans/HarmonyOS_Sans_SC.ttf",
+      "sha256": "8978e05044e7089ad6a9de38c505c8148305607983487435a916d2610700a7ca",
+      "family": "HarmonyOS Sans SC",
+      "version": "Version 2.040",
+      "weight_axes": [
+        {
+          "tag": "wght",
+          "min": 40.0,
+          "default": 400.0,
+          "max": 900.0
+        }
+      ],
+      "named_instances": [
+        "Thin",
+        "UltraLight",
+        "Light",
+        "Regular",
+        "Medium",
+        "SemiBold",
+        "Bold",
+        "Heavy",
+        "Black"
+      ],
+      "glyph_coverage": 29508,
+      "sample_coverage": {
+        "HarmonyShell 0123456789": true,
+        "简体中文通知控制中心": true,
+        "繁體中文通知控制中心": true,
+        "，。！？（）「」": true
+      },
+      "features": [
+        "calt",
+        "case",
+        "ccmp",
+        "dnom",
+        "frac",
+        "fwid",
+        "hist",
+        "hwid",
+        "kern",
+        "liga",
+        "locl",
+        "numr",
+        "ordn",
+        "pnum",
+        "sinf",
+        "ss01",
+        "ss02",
+        "ss03",
+        "ss04",
+        "ss05",
+        "ss08",
+        "ss09",
+        "ss10",
+        "subs",
+        "sups",
+        "tnum",
+        "vert",
+        "vrt2"
+      ],
+      "units_per_em": 1000,
+      "ascender": 928,
+      "descender": -244,
+      "line_gap": 0,
+      "digit_advance_widths": [
+        570,
+        570,
+        570,
+        570,
+        570,
+        570,
+        570,
+        570,
+        570,
+        570
+      ]
+    },
+    {
+      "file": "HarmonyOS Sans/HarmonyOS_Sans_TC.ttf",
+      "sha256": "6fb487e96d456b0e15875899c1a8180da828944bfe66fbf1ceffbb0177b9ee6d",
+      "family": "HarmonyOS Sans TC",
+      "version": "Version 2.00",
+      "weight_axes": [
+        {
+          "tag": "wght",
+          "min": 40.0,
+          "default": 400.0,
+          "max": 900.0
+        }
+      ],
+      "named_instances": [
+        "Thin",
+        "UltraLight",
+        "Light",
+        "Regular",
+        "Medium",
+        "SemiBold",
+        "Bold",
+        "Heavy",
+        "Black"
+      ],
+      "glyph_coverage": 14593,
+      "sample_coverage": {
+        "HarmonyShell 0123456789": true,
+        "简体中文通知控制中心": false,
+        "繁體中文通知控制中心": true,
+        "，。！？（）「」": true
+      },
+      "features": [
+        "aalt",
+        "calt",
+        "case",
+        "ccmp",
+        "dnom",
+        "frac",
+        "fwid",
+        "hist",
+        "hwid",
+        "kern",
+        "liga",
+        "locl",
+        "numr",
+        "ordn",
+        "pnum",
+        "sinf",
+        "ss01",
+        "ss02",
+        "ss03",
+        "ss04",
+        "ss05",
+        "ss07",
+        "ss08",
+        "ss09",
+        "ss10",
+        "subs",
+        "sups",
+        "tnum",
+        "vert",
+        "vrt2"
+      ],
+      "units_per_em": 1000,
+      "ascender": 928,
+      "descender": -244,
+      "line_gap": 0,
+      "digit_advance_widths": [
+        570,
+        570,
+        570,
+        570,
+        570,
+        570,
+        570,
+        570,
+        570,
+        570
+      ]
+    }
+  ]
+}

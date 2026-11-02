@@ -1,0 +1,50 @@
+{
+  "minimumVersions": {
+    "niri": "26.04",
+    "quickshell": "0.3.2",
+    "qt": "6.10"
+  },
+  "required": [
+    "quickshell with PipeWire, MPRIS, Bluetooth, NetworkManager, PAM and Wayland support",
+    "Qt Quick, Qt SVG, Qt Multimedia, Qt5Compat, Qt Wayland",
+    "Kirigami unwrapped QML",
+    "Niri",
+    "D-Bus",
+    "NetworkManager",
+    "BlueZ",
+    "PipeWire",
+    "WirePlumber",
+    "UPower",
+    "PolicyKit authentication agent",
+    "xdg-desktop-portal",
+    "xdg-desktop-portal-gnome",
+    "xdg-desktop-portal-gtk",
+    "Python 3",
+    "bash",
+    "jq",
+    "curl",
+    "glib tools",
+    "fontconfig",
+    "Material Symbols",
+    "HarmonyOS Sans (official local package)",
+    "xdg-utils",
+    "wl-clipboard",
+    "cliphist"
+  ],
+  "optional": [
+    "brightnessctl",
+    "ddcutil",
+    "power-profiles-daemon",
+    "grim",
+    "slurp",
+    "wf-recorder",
+    "playerctl",
+    "foot",
+    "mpv",
+    "cava",
+    "libqalculate",
+    "matugen",
+    "ImageMagick"
+  ],
+  "supervision": "Session startup works without systemd. Optional upstream system service integrations depend on the distribution."
+}

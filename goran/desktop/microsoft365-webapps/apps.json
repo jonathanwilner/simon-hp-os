@@ -1,0 +1,297 @@
+[
+  {
+    "id": "hub",
+    "name": "Microsoft 365",
+    "url": "https://m365.cloud.microsoft/apps",
+    "icon": "office.svg",
+    "keywords": [
+      "Office",
+      "365",
+      "apps",
+      "documents"
+    ]
+  },
+  {
+    "id": "copilot",
+    "name": "Microsoft 365 Copilot",
+    "url": "https://m365.cloud.microsoft/chat",
+    "icon": "copilot.png",
+    "keywords": [
+      "Office",
+      "365",
+      "work",
+      "AI",
+      "chat"
+    ]
+  },
+  {
+    "id": "word",
+    "name": "Microsoft Word",
+    "url": "https://word.cloud.microsoft/",
+    "icon": "word.svg",
+    "keywords": [
+      "Office",
+      "365",
+      "documents",
+      "writer"
+    ]
+  },
+  {
+    "id": "excel",
+    "name": "Microsoft Excel",
+    "url": "https://excel.cloud.microsoft/",
+    "icon": "excel.svg",
+    "keywords": [
+      "Office",
+      "365",
+      "spreadsheets"
+    ]
+  },
+  {
+    "id": "powerpoint",
+    "name": "Microsoft PowerPoint",
+    "url": "https://powerpoint.cloud.microsoft/",
+    "icon": "powerpoint.svg",
+    "keywords": [
+      "Office",
+      "365",
+      "presentations",
+      "slides"
+    ]
+  },
+  {
+    "id": "outlook",
+    "name": "Microsoft Outlook",
+    "url": "https://outlook.cloud.microsoft/",
+    "icon": "outlook.svg",
+    "keywords": [
+      "Office",
+      "365",
+      "email",
+      "calendar"
+    ]
+  },
+  {
+    "id": "onenote",
+    "name": "Microsoft OneNote",
+    "url": "https://onenote.cloud.microsoft/",
+    "icon": "onenote.svg",
+    "keywords": [
+      "Office",
+      "365",
+      "notes"
+    ]
+  },
+  {
+    "id": "onedrive",
+    "name": "Microsoft OneDrive",
+    "url": "https://www.office.com/launch/onedrive",
+    "icon": "onedrive.svg",
+    "keywords": [
+      "Office",
+      "365",
+      "files",
+      "storage"
+    ]
+  },
+  {
+    "id": "teams",
+    "name": "Microsoft Teams",
+    "url": "https://teams.cloud.microsoft/",
+    "icon": "teams.svg",
+    "keywords": [
+      "Office",
+      "365",
+      "chat",
+      "meetings"
+    ]
+  },
+  {
+    "id": "sharepoint",
+    "name": "Microsoft SharePoint",
+    "url": "https://www.office.com/launch/sharepoint",
+    "icon": "sharepoint.svg",
+    "keywords": [
+      "Office",
+      "365",
+      "intranet",
+      "sites"
+    ]
+  },
+  {
+    "id": "forms",
+    "name": "Microsoft Forms",
+    "url": "https://forms.office.com/",
+    "icon": "forms.svg",
+    "keywords": [
+      "Office",
+      "365",
+      "surveys",
+      "quizzes"
+    ]
+  },
+  {
+    "id": "lists",
+    "name": "Microsoft Lists",
+    "url": "https://www.office.com/launch/lists",
+    "icon": "lists.svg",
+    "keywords": [
+      "Office",
+      "365",
+      "lists",
+      "tracking"
+    ]
+  },
+  {
+    "id": "planner",
+    "name": "Microsoft Planner",
+    "url": "https://planner.cloud.microsoft/",
+    "icon": "planner.png",
+    "keywords": [
+      "Office",
+      "365",
+      "tasks",
+      "projects"
+    ]
+  },
+  {
+    "id": "todo",
+    "name": "Microsoft To Do",
+    "url": "https://to-do.office.com/tasks/",
+    "icon": "todo.svg",
+    "keywords": [
+      "Office",
+      "365",
+      "tasks"
+    ]
+  },
+  {
+    "id": "loop",
+    "name": "Microsoft Loop",
+    "url": "https://loop.cloud.microsoft/",
+    "icon": "loop.svg",
+    "keywords": [
+      "Office",
+      "365",
+      "collaboration"
+    ]
+  },
+  {
+    "id": "whiteboard",
+    "name": "Microsoft Whiteboard",
+    "url": "https://whiteboard.cloud.microsoft/",
+    "icon": "whiteboard.png",
+    "keywords": [
+      "Office",
+      "365",
+      "canvas",
+      "drawing"
+    ]
+  },
+  {
+    "id": "bookings",
+    "name": "Microsoft Bookings",
+    "url": "https://outlook.office.com/bookings/",
+    "icon": "bookings.svg",
+    "keywords": [
+      "Office",
+      "365",
+      "appointments",
+      "scheduling"
+    ]
+  },
+  {
+    "id": "powerapps",
+    "name": "Microsoft Power Apps",
+    "url": "https://make.powerapps.com/",
+    "icon": "powerapps.png",
+    "keywords": [
+      "Office",
+      "365",
+      "business",
+      "apps"
+    ]
+  },
+  {
+    "id": "powerautomate",
+    "name": "Microsoft Power Automate",
+    "url": "https://make.powerautomate.com/",
+    "icon": "powerautomate.svg",
+    "keywords": [
+      "Office",
+      "365",
+      "flows",
+      "automation"
+    ]
+  },
+  {
+    "id": "sway",
+    "name": "Microsoft Sway",
+    "url": "https://sway.cloud.microsoft/",
+    "icon": "sway.svg",
+    "keywords": [
+      "Office",
+      "365",
+      "storytelling",
+      "presentations"
+    ]
+  },
+  {
+    "id": "stream",
+    "name": "Microsoft Stream",
+    "url": "https://www.office.com/launch/stream",
+    "icon": "stream.svg",
+    "keywords": [
+      "Office",
+      "365",
+      "video"
+    ]
+  },
+  {
+    "id": "clipchamp",
+    "name": "Microsoft Clipchamp",
+    "url": "https://www.office.com/launch/clipchamp",
+    "icon": "clipchamp.png",
+    "keywords": [
+      "Office",
+      "365",
+      "video",
+      "editor"
+    ]
+  },
+  {
+    "id": "visio",
+    "name": "Microsoft Visio",
+    "url": "https://www.office.com/launch/visio",
+    "icon": "visio.svg",
+    "keywords": [
+      "Office",
+      "365",
+      "diagrams"
+    ]
+  },
+  {
+    "id": "powerbi",
+    "name": "Microsoft Power BI",
+    "url": "https://app.powerbi.com/",
+    "icon": "powerbi.png",
+    "keywords": [
+      "Office",
+      "365",
+      "analytics",
+      "dashboards"
+    ]
+  },
+  {
+    "id": "vivaengage",
+    "name": "Microsoft Viva Engage",
+    "url": "https://engage.cloud.microsoft/",
+    "icon": "vivaengage.svg",
+    "keywords": [
+      "Office",
+      "365",
+      "Yammer",
+      "communities"
+    ]
+  }
+]

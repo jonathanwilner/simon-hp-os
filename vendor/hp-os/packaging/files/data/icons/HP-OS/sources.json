@@ -1,0 +1,184 @@
+[
+  {
+    "file": "originals/files.png",
+    "repository": "https://gitcode.com/openharmony/applications_filepicker",
+    "revision": "4c5f5f8989d817589679dc17da39106c735ff157",
+    "path": "common/src/main/resources/base/media/app_icon_round.png",
+    "sha256": "1017d9034e9def9b09f3188eb553ca5065cb2cf2621d08c9b6bd49e844ef4a2e"
+  },
+  {
+    "file": "originals/folder.png",
+    "repository": "https://gitcode.com/openharmony/applications_filepicker",
+    "revision": "4c5f5f8989d817589679dc17da39106c735ff157",
+    "path": "common/src/main/resources/base/media/ic_normal_folder_empty.png",
+    "sha256": "2346ac8c533bc4ae1aca12b80c65a654849b56bf78e537410b4ae15bf1233345"
+  },
+  {
+    "file": "originals/folder-desktop.png",
+    "repository": "https://gitcode.com/openharmony/applications_filepicker",
+    "revision": "4c5f5f8989d817589679dc17da39106c735ff157",
+    "path": "common/src/main/resources/base/media/ic_pc_desktop.png",
+    "sha256": "40a8b70592002c6219e05b243bccb7751b728d0e78ffd310abcab8492a835c9a"
+  },
+  {
+    "file": "originals/folder-download.png",
+    "repository": "https://gitcode.com/openharmony/applications_filepicker",
+    "revision": "4c5f5f8989d817589679dc17da39106c735ff157",
+    "path": "common/src/main/resources/base/media/ic_pc_download.png",
+    "sha256": "13b92e680c00d1824809df8e6867ea9bb4126b909b1299ac713a0967bbac44d0"
+  },
+  {
+    "file": "originals/folder-pictures.png",
+    "repository": "https://gitcode.com/openharmony/applications_filepicker",
+    "revision": "4c5f5f8989d817589679dc17da39106c735ff157",
+    "path": "common/src/main/resources/base/media/ic_pc_picture.png",
+    "sha256": "2eda047b6ee8e6837fb2eea7fc99151f91d5bb2074191d6d4bc8a5767cecdaff"
+  },
+  {
+    "file": "originals/folder-documents.png",
+    "repository": "https://gitcode.com/openharmony/applications_filepicker",
+    "revision": "4c5f5f8989d817589679dc17da39106c735ff157",
+    "path": "common/src/main/resources/base/media/mycomputer_document.png",
+    "sha256": "5c3910b75bf990af4975846fd15bc8a515b14524d77bb3d1ac2ef81e7222bb74"
+  },
+  {
+    "file": "originals/folder-music.png",
+    "repository": "https://gitcode.com/openharmony/applications_filepicker",
+    "revision": "4c5f5f8989d817589679dc17da39106c735ff157",
+    "path": "common/src/main/resources/base/media/mycomputer_music.png",
+    "sha256": "512f82890c80399e94ec02dba2c4017ec5e66cf00fc46d262cf60a2e10e136b7"
+  },
+  {
+    "file": "originals/folder-videos.png",
+    "repository": "https://gitcode.com/openharmony/applications_filepicker",
+    "revision": "4c5f5f8989d817589679dc17da39106c735ff157",
+    "path": "common/src/main/resources/base/media/mycomputer_video.png",
+    "sha256": "38e9e32bcd5c6a97dbb2285010298b836f727a0516e77daa47216ff6c8443449"
+  },
+  {
+    "file": "originals/document.png",
+    "repository": "https://gitcode.com/openharmony/applications_filepicker",
+    "revision": "4c5f5f8989d817589679dc17da39106c735ff157",
+    "path": "common/src/main/resources/base/media/ic_normal_document.png",
+    "sha256": "d5e75c9814703e0332660d2235c5c691dda5fe09009cd6cd22b8c8500cb4c20b"
+  },
+  {
+    "file": "originals/image.png",
+    "repository": "https://gitcode.com/openharmony/applications_filepicker",
+    "revision": "4c5f5f8989d817589679dc17da39106c735ff157",
+    "path": "common/src/main/resources/base/media/ic_normal_image.png",
+    "sha256": "07b89ed5d46e6cdae3a0e64402e43723ffa8cc20f2d533a306706781ce001876"
+  },
+  {
+    "file": "originals/audio.png",
+    "repository": "https://gitcode.com/openharmony/applications_filepicker",
+    "revision": "4c5f5f8989d817589679dc17da39106c735ff157",
+    "path": "common/src/main/resources/base/media/ic_normal_audio.png",
+    "sha256": "e4273931b55470617996e784628debc3f9fd240c0ace52b8bde4f6b272a5d137"
+  },
+  {
+    "file": "originals/video.png",
+    "repository": "https://gitcode.com/openharmony/applications_filepicker",
+    "revision": "4c5f5f8989d817589679dc17da39106c735ff157",
+    "path": "common/src/main/resources/base/media/ic_normal_video.png",
+    "sha256": "7c081224dd39c8079e1ab104d45d51f2de3de5c9e63b2cd8338af88810fc7d17"
+  },
+  {
+    "file": "originals/pdf.png",
+    "repository": "https://gitcode.com/openharmony/applications_filepicker",
+    "revision": "4c5f5f8989d817589679dc17da39106c735ff157",
+    "path": "common/src/main/resources/base/media/share_pdf.png",
+    "sha256": "cb0c149aa0f8621b2ad0981483f6c25ca48b83ce4b0bea5210f8fdc10490ee6c"
+  },
+  {
+    "file": "originals/application.png",
+    "repository": "https://gitcode.com/openharmony/applications_filepicker",
+    "revision": "4c5f5f8989d817589679dc17da39106c735ff157",
+    "path": "common/src/main/resources/base/media/ic_normal_app.png",
+    "sha256": "b4444cfe263e596e9058d8b71f6c34e12dee15b56bd9abb93f5f35ada91993d2"
+  },
+  {
+    "file": "originals/calendar.png",
+    "repository": "https://gitcode.com/openharmony/applications_calendar",
+    "revision": "a44b0ad503f69e50943520a0ea569c9cfcb09a57",
+    "path": "AppScope/resources/base/media/launcher_icon.png",
+    "sha256": "2738b05761c35f72afd27bb6e15484241b2cc1a308e1d64b02679632724721ca"
+  },
+  {
+    "file": "originals/settings-background.webp",
+    "repository": "https://gitcode.com/openharmony/applications_settings",
+    "revision": "1211165cde511abbe961480468bac7cee5511311",
+    "path": "AppScope/resources/base/media/background.webp",
+    "sha256": "1d31aabcb17002944aab99f476d21e2b191d4cc9100b77472a00d049c8eee2a8"
+  },
+  {
+    "file": "originals/settings-foreground.png",
+    "repository": "https://gitcode.com/openharmony/applications_settings",
+    "revision": "1211165cde511abbe961480468bac7cee5511311",
+    "path": "AppScope/resources/base/media/foreground.png",
+    "sha256": "13f820e013f1ca11d18180e70131e8ae08436d1e533b90928686eee457105af0"
+  },
+  {
+    "file": "originals/photos-ohos_gallery_background.webp",
+    "repository": "https://gitcode.com/openharmony/applications_photos",
+    "revision": "253826009cca9c799e4d50281937d42cac46caa6",
+    "path": "AppScope/resources/base/media/ohos_gallery_background.webp",
+    "sha256": "124ed6d86d49e10d7dfa6d5ca6d12700b7ad73d8c177993ac2dfffec7e728db2"
+  },
+  {
+    "file": "originals/photos-ohos_gallery_op.png",
+    "repository": "https://gitcode.com/openharmony/applications_photos",
+    "revision": "253826009cca9c799e4d50281937d42cac46caa6",
+    "path": "AppScope/resources/base/media/ohos_gallery_op.png",
+    "sha256": "9b05d997413728aa4044efd2304b74fdf882ce19086f5ddf2a59be975e1b9121"
+  },
+  {
+    "file": "originals/trash.svg",
+    "repository": "https://gitcode.com/openharmony/applications_filepicker",
+    "revision": "4c5f5f8989d817589679dc17da39106c735ff157",
+    "path": "common/src/main/resources/base/media/trash_bin.svg",
+    "sha256": "75152b394e79911e9c10d4b41263c39eb45dc0102de7c57c6c32bcd24c3f5248"
+  },
+  {
+    "file": "originals/ohos-icon-mask.png",
+    "repository": "https://gitcode.com/openharmony/global_system_resources",
+    "revision": "8cb84b3f3dd2142826e3f09cf2c171a421a06c14",
+    "path": "systemres/main/resources/base/media/ohos_icon_mask.png",
+    "sha256": "3396febaa26fc6caacbdd4fb36523e457a5fd91fb23cee05e7153d906462bdbe"
+  },
+  {
+    "file": "originals/ohos-icon-mask.svg",
+    "repository": "https://gitcode.com/openharmony/global_system_resources",
+    "revision": "8cb84b3f3dd2142826e3f09cf2c171a421a06c14",
+    "path": "systemres/main/resources/base/media/ohos_icon_mask_svg.svg",
+    "sha256": "e0d4a95bf506341c410a14b14662d23661e8ddd26017831f27b2bf57c1c0f91c"
+  },
+  {
+    "file": "originals/ic_shortcut_background.png",
+    "repository": "https://gitcode.com/openharmony/applications_settings",
+    "revision": "1211165cde511abbe961480468bac7cee5511311",
+    "path": "product/phone/src/main/resources/base/media/ic_shortcut_background.png",
+    "sha256": "d44834a864554a2845713afffa6b61eba25dd4fd4a39db23a2f7a7c7fcadb664"
+  },
+  {
+    "file": "originals/ic_shortcut_wifi_foreground.png",
+    "repository": "https://gitcode.com/openharmony/applications_settings",
+    "revision": "1211165cde511abbe961480468bac7cee5511311",
+    "path": "product/phone/src/main/resources/base/media/ic_shortcut_wifi_foreground.png",
+    "sha256": "3014a8b1de9765f460c359ec8b4b9db8fedfb4b7ee3fa9a714abd22abd622082"
+  },
+  {
+    "file": "originals/ic_shortcut_bluetooth_foreground.png",
+    "repository": "https://gitcode.com/openharmony/applications_settings",
+    "revision": "1211165cde511abbe961480468bac7cee5511311",
+    "path": "product/phone/src/main/resources/base/media/ic_shortcut_bluetooth_foreground.png",
+    "sha256": "8e387dd7776f0ac87b2a3e413e98b900950629f8973fc3b0dd3623ab7ce2ca85"
+  },
+  {
+    "file": "originals/archive.png",
+    "repository": "https://gitcode.com/openharmony/applications_filepicker",
+    "revision": "4c5f5f8989d817589679dc17da39106c735ff157",
+    "path": "common/src/main/resources/base/media/ic_normal_zip2.png",
+    "sha256": "665737d311df466643ea96ff77ff3a8da9db56e56749aeca8df8df6a0e6ef638"
+  }
+]

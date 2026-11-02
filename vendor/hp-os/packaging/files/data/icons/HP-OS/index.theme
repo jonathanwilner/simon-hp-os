@@ -1,0 +1,11 @@
+[Icon Theme]
+Name=HP-OS
+Comment=Original OpenHarmony 7 system application assets
+Inherits=Adwaita,hicolor
+Directories=256x256
+
+[256x256]
+Size=256
+Type=Scalable
+MinSize=16
+MaxSize=512

@@ -1,0 +1,30 @@
+[
+  {
+    "file": "256x256/computer.svg",
+    "url": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Desktop%20computer/Flat/desktop_computer_flat.svg",
+    "revision": "1ffb34c752ecf5d402f04cfb4b392c77f57c54bc",
+    "license": "MIT",
+    "sha256": "85c27f4de051ce1cac4f19cb73d673b1f9728f6901c7616540e582f82cb68d67"
+  },
+  {
+    "file": "256x256/video-display.svg",
+    "url": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Desktop%20computer/Flat/desktop_computer_flat.svg",
+    "revision": "1ffb34c752ecf5d402f04cfb4b392c77f57c54bc",
+    "license": "MIT",
+    "sha256": "85c27f4de051ce1cac4f19cb73d673b1f9728f6901c7616540e582f82cb68d67"
+  },
+  {
+    "file": "256x256/edit-paste.svg",
+    "url": "https://raw.githubusercontent.com/microsoft/fluentui-emoji/1ffb34c752ecf5d402f04cfb4b392c77f57c54bc/assets/Clipboard/Flat/clipboard_flat.svg",
+    "revision": "1ffb34c752ecf5d402f04cfb4b392c77f57c54bc",
+    "license": "MIT",
+    "sha256": "547c9436baf05f0312c6afa0e9e07d174d22cce8498adf6cf68467487519c102"
+  },
+  {
+    "file": "256x256/hp-anyware.png",
+    "url": "https://dl.anyware.hp.com/DeAdBCiUYInHcSTy/pcoip-client/deb/ubuntu/pool/main/p/pcoip-client/pcoip-client_26.05.6-24.04_amd64.deb",
+    "package_sha256": "a224a7240129a9cb8293a908b77496f384f173fc16eb8b6a8c8488e12a06f769",
+    "path": "usr/share/icons/hicolor/256x256/apps/pcoip-client.png",
+    "sha256": "3d5acc186dad165b070c2174aebb3cb6737b289fa876628ac23a9b6c6af0ff87"
+  }
+]

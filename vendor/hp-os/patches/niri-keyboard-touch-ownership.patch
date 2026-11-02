@@ -1,0 +1,104 @@
+diff --git a/src/input/mod.rs b/src/input/mod.rs
+index 599ed70..8271eaf 100644
+--- a/src/input/mod.rs
++++ b/src/input/mod.rs
+@@ -309,6 +309,7 @@ impl State {
+             self.niri.touch_swipe_tracker.reset();
+             self.niri.touch_edge_swipe_tracker.reset();
+             self.niri.touch_input_suspended = false;
++            self.niri.keyboard_touch_slots.clear();
+             if self.niri.config.borrow().gestures.show_touch_points != ShowTouchPoints::Off
+                 && !self.niri.touch_points.is_empty()
+             {
+@@ -4125,6 +4126,21 @@ impl State {
+         };
+         let slot = evt.slot();
+ 
++        // A keyboard owns touches beginning on its layer surface until release.
++        // Do not feed compositor recognizers or change keyboard focus here.
++        let under = self.niri.contents_under(pos);
++        let keyboard = under.layer.as_ref().is_some_and(|layer|
++            matches!(layer.namespace(), "hp-os-keyboard" | "squeekboard"));
++        if keyboard || !self.niri.keyboard_touch_slots.is_empty() {
++            self.niri.keyboard_touch_slots.push(slot);
++            let serial = SERIAL_COUNTER.next_serial();
++            handle.down(self, under.surface, &DownEvent {
++                slot, location: pos, serial, time: evt.time_msec(),
++            });
++            self.niri.pointer_visibility = PointerVisibility::Disabled;
++            return;
++        }
++
+         self.sync_touch_debug_log();
+ 
+         // Touch point visualization (pure observer; never consumes events).
+@@ -4371,6 +4387,13 @@ impl State {
+         };
+         let slot = evt.slot();
+ 
++        if self.niri.keyboard_touch_slots.contains(&slot) {
++            self.niri.keyboard_touch_slots.retain(|s| *s != slot);
++            let serial = SERIAL_COUNTER.next_serial();
++            handle.up(self, &UpEvent { slot, serial, time: evt.time_msec() });
++            return;
++        }
++
+         self.sync_touch_debug_log();
+ 
+         // Touch point visualization: the dot remembers its position, so the
+@@ -4473,6 +4496,14 @@ impl State {
+         };
+         let slot = evt.slot();
+ 
++        if self.niri.keyboard_touch_slots.contains(&slot) {
++            let under = self.niri.contents_under(pos);
++            handle.motion(self, under.surface, &TouchMotionEvent {
++                slot, location: pos, time: evt.time_msec(),
++            });
++            return;
++        }
++
+         self.sync_touch_debug_log();
+ 
+         // Touch point visualization (pure observer; never consumes events).
+@@ -4822,6 +4853,12 @@ impl State {
+             return;
+         };
+ 
++        for slot in std::mem::take(&mut self.niri.keyboard_touch_slots) {
++            let serial = SERIAL_COUNTER.next_serial();
++            handle.up(self, &UpEvent { slot, serial, time: get_monotonic_time().as_millis() as u32 });
++        }
++        handle.frame(self);
++
+         // TouchHandle::cancel() cannot be used to end the touches the client
+         // already sees: smithay skips slots whose events were frame-flushed
+         // (all of them, after any frame), so it would send nothing and the
+@@ -4848,6 +4885,7 @@ impl State {
+         // Reset the pre-grab tracker so stale state doesn't carry over.
+         self.niri.touch_swipe_tracker.reset();
+         self.niri.touch_input_suspended = false;
++        self.niri.keyboard_touch_slots.clear();
+         if self.niri.config.borrow().gestures.show_touch_points != ShowTouchPoints::Off
+             && !self.niri.touch_points.is_empty()
+         {
+diff --git a/src/niri.rs b/src/niri.rs
+index 6dc14a5..c367e10 100644
+--- a/src/niri.rs
++++ b/src/niri.rs
+@@ -381,6 +381,7 @@ pub struct Niri {
+     /// the last finger lifts, so apps don't pinch-zoom or drag-select from the
+     /// early phase of one of our gestures.
+     pub touch_input_suspended: bool,
++    pub keyboard_touch_slots: Vec<smithay::backend::input::TouchSlot>,
+     pub overview_scroll_swipe_gesture: ScrollSwipeGesture,
+     pub vertical_wheel_tracker: ScrollTracker,
+     pub horizontal_wheel_tracker: ScrollTracker,
+@@ -2601,6 +2602,7 @@ impl Niri {
+             touch_edge_swipe_tracker: crate::input::touch_edge_swipe::EdgeSwipeTracker::default(),
+             pending_touch_action: None,
+             touch_input_suspended: false,
++            keyboard_touch_slots: Vec::new(),
+             overview_scroll_swipe_gesture: ScrollSwipeGesture::new(),
+             vertical_wheel_tracker: ScrollTracker::new(120),
+             horizontal_wheel_tracker: ScrollTracker::new(120),

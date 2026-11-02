@@ -1,0 +1,3 @@
+module qs.modules.harmony.settings
+HarmonyPreferences 1.0 HarmonyPreferences.qml
+HarmonyGallery 1.0 HarmonyGallery.qml

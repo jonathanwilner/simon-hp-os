@@ -1,0 +1,27 @@
+{
+  "source": "https://github.com/zeankundev/HMOSLarp",
+  "revision": "9e3d184c31f2c5c25419e130eae9eabd4e5950f0",
+  "assets": {
+    "hmglow.png": {
+      "original": "icons/misc/hmglow.png",
+      "sha256": "a5028c63399d5c90aca8cb8bf1ef310e1b48ab8f69fe959e3cd3400597e8f821"
+    },
+    "hp-os.png": {
+      "original": "icons/misc/celia.png",
+      "sha256": "d28216bcdec5d13deaff5202df876f9d0080e77d9ada2bde6b3f4c68518968d2"
+    },
+    "../harmony-wallpaper.png": {
+      "source": "https://file.moyubuluo.com/d/file/2025-08-29/d0fcb1ec3ec6e5ae87415278e17fbcd3.jpg",
+      "page": "https://www.moyubuluo.com/hdwallpapers/92363.html",
+      "description": "Gold-blue sphere wallpaper used by HP-OS, matching the upstream reference in HMOSLarp docs/main.png. Original JPEG decoded to PNG without resizing.",
+      "source_sha256": "9de8e566d7f85ba121d620530bb47a3f230f5702ec20e4873f526c7c5a94deda",
+      "sha256": "76e222a983f35c947910a181113b85caa4e71d0b849e8cb7130aeabf47addd77",
+      "rights": "Original artwork rights retained by its author. Source provides free personal wallpaper use and explicitly prohibits commercial use (\u7981\u6b62\u5546\u7528).",
+      "dimensions": [
+        1050,
+        1050
+      ]
+    }
+  },
+  "notice": "Reference imagery from HMOSLarp, retained at user request. No separate license was supplied for misc artwork; original authors retain rights. Reversal-dark GPL license applies to that icon theme only."
+}

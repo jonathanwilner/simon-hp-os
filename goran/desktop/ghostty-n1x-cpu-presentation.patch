@@ -1,0 +1,13 @@
+diff --git a/src/apprt/gtk/class/application.zig b/src/apprt/gtk/class/application.zig
+--- a/src/apprt/gtk/class/application.zig
++++ b/src/apprt/gtk/class/application.zig
+@@ -3270,6 +3270,9 @@ fn setGtkEnv(config: *const CoreConfig) std.Io.Writer.Error!void {
+         // Disabling Vulkan also saves hundreds of milliseconds of initialization
+         // time on certain systems.
+         vulkan: bool = true,
++        // N1X workaround: force GTK frame import to use the CPU presentation
++        // fallback while keeping Ghostty's NVIDIA OpenGL renderer active.
++        dmabuf: bool = true,
+     } = .{};
+ 
+     {

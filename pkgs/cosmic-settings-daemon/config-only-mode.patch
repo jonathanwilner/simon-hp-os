@@ -1,0 +1,318 @@
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -54,6 +54,7 @@
+ // const AMPLIFICATION_SOURCE: &str = "amplification_source";
+ 
+ struct SettingsDaemon {
++    config_only: bool,
+     logind_session: Option<LogindSessionProxy<'static>>,
+     a11y_session: Option<Mutex<cosmic_dbus_a11y::StatusProxy<'static>>>,
+     display_brightness_device: Option<BrightnessDevice>,
+@@ -182,6 +183,9 @@
+ 
+     /// Take the current xkb config and switch the active input source.
+     async fn input_source_switch(&self) {
++        if self.config_only {
++            return;
++        }
+         if let Err(why) = input::source_switch() {
+             log::error!("error switching xkb input source: {why}");
+         }
+@@ -332,6 +336,9 @@
+ 
+ impl SettingsDaemon {
+     async fn run_wpctl(&self, args: &[&str]) -> Result<(), std::io::Error> {
++        if self.config_only {
++            return Ok(());
++        }
+         let output = tokio::process::Command::new("wpctl")
+             .args(args)
+             .output()
+@@ -492,44 +499,62 @@
+ async fn main() -> zbus::Result<()> {
+     env_logger::init();
+ 
++    // Other desktops own appearance, audio, input and power management. They
++    // may opt in to only the COSMIC application configuration notification API.
++    let config_only = std::env::var("COSMIC_SETTINGS_CONFIG_ONLY").as_deref() == Ok("1");
++
+     let (theme_cleanup_done_tx, mut theme_cleanup_done_rx) = tokio::sync::mpsc::channel(1);
+     let (sigterm_tx, sigterm_rx) = tokio::sync::broadcast::channel(1);
++    let mut config_only_shutdown = sigterm_rx.resubscribe();
+ 
+     ctrlc::set_handler(move || {
+         sigterm_tx.send(()).unwrap();
+     })
+     .expect("Error setting sigterm handler");
+ 
+-    if let Err(err) = greeter::sync_with_greeter() {
+-        log::error!("Failed to sync with greeter. {err:?}");
++    if !config_only {
++        if let Err(err) = greeter::sync_with_greeter() {
++            log::error!("Failed to sync with greeter. {err:?}");
++        }
+     }
+ 
+     task::LocalSet::new()
+         .run_until(async move {
+-            let backlights = match backlight_enumerate() {
+-                Ok(backlights) => backlights,
+-                Err(err) => {
+-                    log::error!("Failed to enumerate backlights: {}", err);
+-                    Vec::new()
+-                }
+-            };
+-            let backlights: HashMap<_, _> = backlights
+-                .into_iter()
+-                .map(|i| (i.syspath().to_owned(), i))
+-                .collect();
+-            let display_brightness_device = choose_best_backlight(&backlights).await;
+-
+-            let logind_session = async {
+-                let connection = zbus::Connection::system().await?;
+-                LogindSessionProxy::builder(&connection).build().await
+-            }
+-            .await;
+-
+-            let a11y_session = async {
+-                let connection = zbus::Connection::session().await?;
+-                cosmic_dbus_a11y::StatusProxy::builder(&connection).build().await
+-            }
+-            .await;
++            let (backlights, display_brightness_device, logind_session, a11y_session) =
++                if config_only {
++                    (HashMap::new(), None, None, None)
++                } else {
++                    let backlights = match backlight_enumerate() {
++                        Ok(backlights) => backlights,
++                        Err(err) => {
++                            log::error!("Failed to enumerate backlights: {}", err);
++                            Vec::new()
++                        }
++                    };
++                    let backlights: HashMap<_, _> = backlights
++                        .into_iter()
++                        .map(|i| (i.syspath().to_owned(), i))
++                        .collect();
++                    let display_brightness_device = choose_best_backlight(&backlights).await;
++
++                    let logind_session = async {
++                        let connection = zbus::Connection::system().await?;
++                        LogindSessionProxy::builder(&connection).build().await
++                    }
++                    .await;
++
++                    let a11y_session = async {
++                        let connection = zbus::Connection::session().await?;
++                        cosmic_dbus_a11y::StatusProxy::builder(&connection).build().await
++                    }
++                    .await;
++                    (
++                        backlights,
++                        display_brightness_device,
++                        logind_session.ok(),
++                        a11y_session.ok().map(Mutex::new),
++                    )
++                };
+             let xdg_config = dirs::config_dir()
+                 .map(|x| x.join("cosmic"))
+                 .or_else(|| dirs::home_dir().map(|p| p.join(".config/cosmic")));
+@@ -615,8 +640,9 @@
+             let watched_configs = Arc::new(RwLock::new(HashMap::new()));
+             let watched_states = Arc::new(RwLock::new(HashMap::new()));
+             let settings_daemon = SettingsDaemon {
+-                logind_session: logind_session.ok(),
+-                a11y_session: a11y_session.ok().map(Mutex::new),
++                config_only,
++                logind_session,
++                a11y_session,
+                 display_brightness_device,
+                 watched_configs: watched_configs.clone(),
+                 watched_states: watched_states.clone(),
+@@ -628,12 +654,14 @@
+                 .build()
+                 .await?;
+ 
+-            let conn_clone = connection.clone();
+-            task::spawn_local(async move {
+-                backlight_monitor_task(backlights, conn_clone).await;
+-            });
+-
+-            tokio::task::spawn_local(battery::monitor());
++            if !config_only {
++                let conn_clone = connection.clone();
++                task::spawn_local(async move {
++                    backlight_monitor_task(backlights, conn_clone).await;
++                });
++
++                tokio::task::spawn_local(battery::monitor());
++            }
+ 
+             let conn_clone = connection.clone();
+             task::spawn_local(async move {
+@@ -648,42 +676,48 @@
+                 }
+             });
+ 
+-            let sigterm_rx_clone = sigterm_rx.resubscribe();
+             let (pulse_tx, pulse_rx) = tokio::sync::mpsc::channel(10);
+-            task::spawn_local(async move {
+-                if let Err(err) = pulse::pulse(sigterm_rx_clone,pulse_rx).await {
+-                    log::error!("Pulse task failed: {err:?}");
+-                }
+-            });
+-
+             let (theme_tx, mut theme_rx) = tokio::sync::mpsc::channel(10);
+-            task::spawn_local(async move {
+-                let mut sleep = Duration::from_millis(100);
+-
+-                loop {
+-                    if let Err(err) = watch_theme(
+-                        &mut theme_rx,
+-                        theme_cleanup_done_tx.clone(),
+-                        sigterm_rx.resubscribe(),
+-                    )
+-                    .await
+-                    {
+-                        log::error!(
+-                            "Failed to watch theme {err:?}. Will try again in {}s",
+-                            sleep.as_secs()
+-                        );
++            let (xkb_tx, xkb_rx) = tokio::sync::mpsc::channel(10);
++            if !config_only {
++                let sigterm_rx_clone = sigterm_rx.resubscribe();
++                task::spawn_local(async move {
++                    if let Err(err) = pulse::pulse(sigterm_rx_clone,pulse_rx).await {
++                        log::error!("Pulse task failed: {err:?}");
+                     }
+-                    tokio::time::sleep(sleep).await;
+-                    sleep = sleep.saturating_mul(2);
+-                }
+-            });
+-
+-            let (xkb_tx, xkb_rx) = tokio::sync::mpsc::channel(10);
+-            task::spawn_local(async move {
+-                if let Err(err) = locale::sync_locale1(xkb_rx).await {
+-                    log::error!("Failed to watch for systemd-localed changes: {}", err);
+-                }
+-            });
++                });
++
++                task::spawn_local(async move {
++                    let mut sleep = Duration::from_millis(100);
++
++                    loop {
++                        if let Err(err) = watch_theme(
++                            &mut theme_rx,
++                            theme_cleanup_done_tx.clone(),
++                            sigterm_rx.resubscribe(),
++                        )
++                        .await
++                        {
++                            log::error!(
++                                "Failed to watch theme {err:?}. Will try again in {}s",
++                                sleep.as_secs()
++                            );
++                        }
++                        tokio::time::sleep(sleep).await;
++                        sleep = sleep.saturating_mul(2);
++                    }
++                });
++
++                task::spawn_local(async move {
++                    if let Err(err) = locale::sync_locale1(xkb_rx).await {
++                        log::error!("Failed to watch for systemd-localed changes: {}", err);
++                    }
++                });
++            } else {
++                // No consumers run in config-only mode. Drop their receivers
++                // and never enqueue work to these bounded channels below.
++                drop((pulse_rx, theme_rx, xkb_rx, theme_cleanup_done_tx));
++            }
+ 
+             let conn_clone = connection.clone();
+             task::spawn(async move {
+@@ -698,37 +732,39 @@
+                     let settings_daemon = settings_daemon.get().await;
+                     for c in changes {
+                         if let Change::Config(id, key, version) = c {
+-                            if id.as_str() == cosmic_theme::THEME_MODE_ID {
+-                                if let Err(err) =
+-                                    theme_tx.send(theme::ThemeMsg::ThemeMode(key.clone())).await
++                            if !config_only {
++                                if id.as_str() == cosmic_theme::THEME_MODE_ID {
++                                    if let Err(err) =
++                                        theme_tx.send(theme::ThemeMsg::ThemeMode(key.clone())).await
++                                    {
++                                        log::error!("Failed to send theme mode update {err:?}");
++                                    }
++                                } else if id.as_str() == cosmic::config::ID {
++                                    if let Err(err) =
++                                        theme_tx.send(theme::ThemeMsg::Tk(key.clone())).await
++                                    {
++                                        log::error!("Failed to send theme toolkit update {err:?}");
++                                    }
++                                } else if id.as_str() == cosmic_theme::DARK_THEME_ID {
++                                    if let Err(err) = theme_tx.send(theme::ThemeMsg::Theme(true)).await
++                                    {
++                                        log::error!("Failed to send dark theme update {err:?}");
++                                    }
++                                } else if id.as_str() == cosmic_theme::LIGHT_THEME_ID {
++                                    if let Err(err) = theme_tx.send(theme::ThemeMsg::Theme(false)).await
++                                    {
++                                        log::error!("Failed to send dark theme update {err:?}");
++                                    }
++                                } else if id.as_str() == locale::COSMIC_COMP_ID
++                                    && key.as_str() == locale::COSMIC_COMP_XDG_KEY
+                                 {
+-                                    log::error!("Failed to send theme mode update {err:?}");
+-                                }
+-                            } else if id.as_str() == cosmic::config::ID {
+-                                if let Err(err) =
+-                                    theme_tx.send(theme::ThemeMsg::Tk(key.clone())).await
+-                                {
+-                                    log::error!("Failed to send theme toolkit update {err:?}");
+-                                }
+-                            } else if id.as_str() == cosmic_theme::DARK_THEME_ID {
+-                                if let Err(err) = theme_tx.send(theme::ThemeMsg::Theme(true)).await
+-                                {
+-                                    log::error!("Failed to send dark theme update {err:?}");
+-                                }
+-                            } else if id.as_str() == cosmic_theme::LIGHT_THEME_ID {
+-                                if let Err(err) = theme_tx.send(theme::ThemeMsg::Theme(false)).await
+-                                {
+-                                    log::error!("Failed to send dark theme update {err:?}");
+-                                }
+-                            } else if id.as_str() == locale::COSMIC_COMP_ID
+-                                && key.as_str() == locale::COSMIC_COMP_XDG_KEY
+-                            {
+-                                if let Err(err) = xkb_tx.send(()).await {
+-                                    log::error!("Failed to send xkb layout update: {err:?}");
+-                                }
+-                            } else if id.as_str() == cosmic_settings_daemon_config::NAME {
+-                                if let Err(err) = tokio::time::timeout(Duration::from_secs(1), pulse_tx.send(())).await {
+-                                    log::error!("Failed to send cosmic_settings_daemon_config update to pulse: {err:?}");
++                                    if let Err(err) = xkb_tx.send(()).await {
++                                        log::error!("Failed to send xkb layout update: {err:?}");
++                                    }
++                                } else if id.as_str() == cosmic_settings_daemon_config::NAME {
++                                    if let Err(err) = tokio::time::timeout(Duration::from_secs(1), pulse_tx.send(())).await {
++                                        log::error!("Failed to send cosmic_settings_daemon_config update to pulse: {err:?}");
++                                    }
+                                 }
+                             }
+                             let read_guard = settings_daemon.watched_configs.read().await;
+@@ -777,7 +813,12 @@
+                 }
+             });
+ 
+-            _ = theme_cleanup_done_rx.recv().await;
++            if config_only {
++                // There is no theme task to acknowledge shutdown in this mode.
++                _ = config_only_shutdown.recv().await;
++            } else {
++                _ = theme_cleanup_done_rx.recv().await;
++            }
+ 
+             Ok(())
+         })

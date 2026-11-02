@@ -1,0 +1,2 @@
+module qs.modules.harmony.design
+singleton HarmonyTokens 1.0 HarmonyTokens.qml

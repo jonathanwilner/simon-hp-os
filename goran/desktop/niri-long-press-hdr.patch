@@ -1,0 +1,205 @@
+--- a/src/input/mod.rs
++++ b/src/input/mod.rs
+@@ -326,6 +326,7 @@
+                 }
+                 handle.cancel(self);
+             }
++            self.niri.touch_long_press = None;
+             self.niri.touch_swipe_tracker.reset();
+             self.niri.touch_edge_swipe_tracker.reset();
+             self.niri.touch_input_suspended = false;
+@@ -4443,6 +4444,50 @@
+         self.niri.touch_swipe_tracker.set_debug_log(debug_log);
+     }
+ 
++    // A long press belongs to the compositor, including over native and XWayland
++    // app surfaces. Generation checks make old timers harmless after release,
++    // movement, another finger, device removal, or cancellation.
++    pub(crate) fn finish_touch_long_press(&mut self, generation: u64) {
++        if generation != self.niri.touch_long_press_generation {
++            return;
++        }
++        let Some((slot, pos)) = self.niri.touch_long_press.take() else { return; };
++        let Some(touch) = self.niri.seat.get_touch() else { return; };
++        let Some(pointer) = self.niri.seat.get_pointer() else { return; };
++        let ordinary_touch = !touch.is_grabbed() || touch.with_grab(|_, grab|
++            grab.as_any().is::<TouchDownGrab<State>>()).unwrap_or(false);
++        if self.niri.is_locked() || self.niri.touch_input_suspended
++            || self.niri.touch_swipe_tracker.slots().count() != 1
++            || self.niri.layout.is_overview_open() || self.niri.screenshot_ui.is_open()
++            || self.niri.window_mru_ui.is_open() || !ordinary_touch || pointer.is_grabbed() {
++            return;
++        }
++        let time = smithay::backend::input::InputTime::now();
++        // Mark the slot pending before cancel: this Smithay version otherwise
++        // skips cancellation for a stationary, already frame-flushed touch.
++        // Keep its original focus, even if a window moved during the hold.
++        let focus = touch.grab_start_data().and_then(|start| start.focus);
++        touch.unset_grab(self);
++        touch.motion(self, focus, &TouchMotionEvent { slot, location: pos, time });
++        touch.cancel(self);
++        self.niri.touch_input_suspended = true;
++        self.niri.touch_edge_swipe_tracker.reset();
++        let under = self.niri.contents_under(pos);
++        self.niri.pointer_contents.clone_from(&under);
++        pointer.motion(self, under.surface, &MotionEvent {
++            location: pos, serial: SERIAL_COUNTER.next_serial(), time,
++        });
++        for state in [ButtonState::Pressed, ButtonState::Released] {
++            pointer.button(self, &ButtonEvent {
++                button: 0x111, state, serial: SERIAL_COUNTER.next_serial(), time,
++            });
++            pointer.frame(self);
++        }
++        self.niri.pointer_visibility = PointerVisibility::Disabled;
++        self.niri.queue_redraw_all();
++        debug!("touch: compositor long-press right-click");
++    }
++
+     fn on_touch_down<I: InputBackend>(&mut self, evt: I::TouchDownEvent) {
+         let Some(handle) = self.niri.seat.get_touch() else {
+             return;
+@@ -4465,6 +4510,21 @@
+             });
+             self.niri.pointer_visibility = PointerVisibility::Disabled;
+             return;
++        }
++
++
++        self.niri.touch_long_press_generation = self.niri.touch_long_press_generation.wrapping_add(1);
++        self.niri.touch_long_press = None;
++        if self.niri.touch_swipe_tracker.is_idle() && !self.niri.is_locked() {
++            self.niri.touch_long_press = Some((slot, pos));
++            let generation = self.niri.touch_long_press_generation;
++            self.niri.event_loop.insert_source(
++                Timer::from_duration(Duration::from_millis(600)),
++                move |_, _, state| {
++                    state.finish_touch_long_press(generation);
++                    TimeoutAction::Drop
++                },
++            ).expect("register long-press timer");
+         }
+ 
+         self.sync_touch_debug_log();
+@@ -4721,6 +4781,9 @@
+             return;
+         }
+ 
++        self.niri.touch_long_press = None;
++        let was_suspended = self.niri.touch_input_suspended;
++
+         self.sync_touch_debug_log();
+ 
+         // Touch point visualization: the dot remembers its position, so the
+@@ -4780,7 +4843,7 @@
+             debug!("touch: multi-finger gesture ended, resuming client input");
+             self.niri.touch_input_suspended = false;
+         }
+-        if !self.niri.touch_input_suspended {
++        if !was_suspended {
+             if let Some(capture) = self.niri.screenshot_ui.pointer_up(Some(slot)) {
+                 if capture {
+                     self.confirm_screenshot(true);
+@@ -4827,6 +4890,13 @@
+                 slot, location: pos, time: evt.time(),
+             });
+             return;
++        }
++
++        if let Some((tracked, origin)) = self.niri.touch_long_press {
++            let delta = pos - origin;
++            if tracked != slot || delta.x * delta.x + delta.y * delta.y > 144.0 {
++                self.niri.touch_long_press = None;
++            }
+         }
+ 
+         self.sync_touch_debug_log();
+@@ -5202,6 +5272,7 @@
+         }
+ 
+         // Reset the pre-grab tracker so stale state doesn't carry over.
++        self.niri.touch_long_press = None;
+         self.niri.touch_swipe_tracker.reset();
+         self.niri.touch_input_suspended = false;
+         self.niri.keyboard_touch_slots.clear();
+--- a/src/niri.rs
++++ b/src/niri.rs
+@@ -432,6 +432,8 @@
+     /// the last finger lifts, so apps don't pinch-zoom or drag-select from the
+     /// early phase of one of our gestures.
+     pub touch_input_suspended: bool,
++    pub touch_long_press: Option<(smithay::backend::input::TouchSlot, Point<f64, Logical>)>,
++    pub touch_long_press_generation: u64,
+     pub keyboard_touch_slots: Vec<smithay::backend::input::TouchSlot>,
+     pub overview_scroll_swipe_gesture: ScrollSwipeGesture,
+     pub vertical_wheel_tracker: ScrollTracker,
+@@ -3330,6 +3332,8 @@
+             touch_edge_swipe_tracker: crate::input::touch_edge_swipe::EdgeSwipeTracker::default(),
+             pending_touch_action: None,
+             touch_input_suspended: false,
++            touch_long_press: None,
++            touch_long_press_generation: 0,
+             keyboard_touch_slots: Vec::new(),
+             overview_scroll_swipe_gesture: ScrollSwipeGesture::new(),
+             vertical_wheel_tracker: ScrollTracker::new(120),
+--- a/src/tests/mod.rs
++++ b/src/tests/mod.rs
+@@ -17,3 +17,58 @@
+ mod virtual_pointer;
+ mod window_opening;
+ mod xdg_decoration;
++
++#[cfg(test)]
++mod global_touch_tests {
++    use super::Fixture;
++    use smithay::backend::input::TouchSlot;
++    use std::time::Duration;
++
++    fn held_touch() -> Fixture {
++        let mut fixture = Fixture::new();
++        fixture.add_output(1, (1920, 1080));
++        let state = fixture.niri_state();
++        state.niri.seat.add_touch();
++        let slot = TouchSlot::from(Some(0));
++        let pos = (120.0, 150.0).into();
++        state.niri.touch_swipe_tracker.touch_down(slot, pos, Duration::ZERO);
++        state.niri.touch_long_press = Some((slot, pos));
++        state.niri.touch_long_press_generation = 7;
++        fixture
++    }
++
++    #[test]
++    fn long_press_releases_pointer_and_owns_remainder() {
++        let mut fixture = held_touch();
++        let state = fixture.niri_state();
++        state.finish_touch_long_press(7);
++        assert!(state.niri.touch_input_suspended);
++        assert!(state.niri.touch_long_press.is_none());
++        let pointer = state.niri.seat.get_pointer().unwrap();
++        assert_eq!(pointer.current_location(), (120.0, 150.0).into());
++        assert!(!pointer.is_grabbed());
++    }
++
++    #[test]
++    fn stale_timer_cannot_claim_new_touch() {
++        let mut fixture = held_touch();
++        let state = fixture.niri_state();
++        state.finish_touch_long_press(6);
++        assert!(!state.niri.touch_input_suspended);
++        assert!(state.niri.touch_long_press.is_some());
++        state.niri.touch_long_press = None;
++        state.finish_touch_long_press(7);
++        assert!(!state.niri.touch_input_suspended);
++    }
++
++    #[test]
++    fn multiple_fingers_cannot_right_click() {
++        let mut fixture = held_touch();
++        let state = fixture.niri_state();
++        state.niri.touch_swipe_tracker.touch_down(
++            TouchSlot::from(Some(1)), (130.0, 150.0).into(), Duration::ZERO);
++        state.finish_touch_long_press(7);
++        assert!(!state.niri.touch_input_suspended);
++        assert!(state.niri.touch_long_press.is_none());
++    }
++}

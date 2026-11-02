@@ -1,0 +1,21 @@
+[General]
+RememberOpenedTabs=false
+ShowStatusBar=0
+ShowZoomSlider=false
+ShowSelectionToggle=false
+[PlacesPanel]
+IconSize=24
+[DetailsMode]
+IconSize=24
+PreviewSize=24
+UseSystemFont=true
+[IconsMode]
+IconSize=64
+PreviewSize=64
+MaximumTextLines=2
+TextWidthIndex=1
+[MainWindow]
+MenuBar=Disabled
+[KFileDialog Settings]
+Places Icons Auto-resize=false
+Places Icons Static Size=24

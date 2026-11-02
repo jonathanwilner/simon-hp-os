@@ -1,0 +1,250 @@
+:root {
+  color-scheme: dark;
+  --bg: #101114;
+  --panel: #181b20;
+  --panel-2: #20242b;
+  --line: #303742;
+  --text: #eef2f7;
+  --muted: #9aa6b2;
+  --running: #46a3ff;
+  --failed: #f05d5e;
+  --ok: #56c271;
+  --unknown: #d6a94a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.topbar {
+  min-height: 88px;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  background: #14171c;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 24px;
+  font-weight: 720;
+}
+
+.topbar p,
+.detailsHeader p,
+small,
+time {
+  color: var(--muted);
+}
+
+.totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(74px, 1fr));
+  gap: 8px;
+}
+
+.totals div {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 8px;
+  min-height: 54px;
+  display: grid;
+  place-items: center;
+  padding: 6px;
+}
+
+.totals span {
+  font-size: 20px;
+  font-weight: 760;
+}
+
+.layout {
+  height: calc(100vh - 88px);
+  display: grid;
+  grid-template-columns: minmax(360px, 39vw) 1fr;
+  min-height: 0;
+}
+
+.machines {
+  overflow: auto;
+  border-right: 1px solid var(--line);
+  padding: 14px;
+}
+
+.machine {
+  margin-bottom: 16px;
+}
+
+.machineHeading,
+.detailsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.machineHeading {
+  margin: 4px 2px 8px;
+}
+
+.machineHeading h2,
+.detailsHeader h2 {
+  font-size: 16px;
+}
+
+.session {
+  width: 100%;
+  min-height: 74px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: inherit;
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) minmax(92px, auto);
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  margin-bottom: 8px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.session:hover,
+.session.selected {
+  background: var(--panel-2);
+  border-color: #53606f;
+}
+
+.statusDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--unknown);
+}
+
+.running .statusDot {
+  background: var(--running);
+  box-shadow: 0 0 0 5px rgba(70, 163, 255, 0.14);
+}
+
+.failed .statusDot {
+  background: var(--failed);
+}
+
+.succeeded .statusDot {
+  background: var(--ok);
+}
+
+.sessionMain {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.sessionMain strong,
+.sessionMain small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sessionSide {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.details {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.detailsHeader {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.detailsActions {
+  display: flex;
+  gap: 8px;
+}
+
+.detailsActions button {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.layout.detailsHidden {
+  grid-template-columns: 1fr;
+}
+
+.details[hidden] {
+  display: none;
+}
+
+.logOutput {
+  margin: 0;
+  padding: 16px;
+  overflow: auto;
+  background: #090b0e;
+  color: #d8dee8;
+  font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.empty {
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: var(--panel);
+}
+
+@media (max-width: 820px) {
+  .topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .layout {
+    height: auto;
+    grid-template-columns: 1fr;
+  }
+
+  .machines {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    max-height: 52vh;
+  }
+
+  .details {
+    min-height: 58vh;
+  }
+}
+
+.taskProgress { display: grid; gap: 4px; }
+.taskProgress small { white-space: normal; }
+.taskProgress progress { width: 100%; height: 8px; accent-color: var(--running); }

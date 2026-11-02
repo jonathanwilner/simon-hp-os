@@ -1,0 +1,45 @@
+{
+  "nodes": {
+    "inir": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1791487322,
+        "narHash": "sha256-+0rQz1y6wAIv1T4xAG3udY6bZSpTZ2nhdS9nzTCijkw=",
+        "owner": "snowarch",
+        "repo": "iNiR",
+        "rev": "48cdcecb0f6089cfbb7019054602eab28e154b3b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "snowarch",
+        "repo": "iNiR",
+        "rev": "48cdcecb0f6089cfbb7019054602eab28e154b3b",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1792502884,
+        "narHash": "sha256-IoNisKcGbUjdd45qCqywGMCYmZ5EnkxezvLII0FWwNA=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "02c087f3fe673c9e317f206a627cb6b910336dbe",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "inir": "inir",
+        "nixpkgs": "nixpkgs"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}

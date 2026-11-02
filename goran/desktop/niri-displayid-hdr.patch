@@ -1,0 +1,77 @@
+--- a/src/backend/tty.rs
++++ b/src/backend/tty.rs
+@@ -1,3 +1,6 @@
++#[path = "displayid_hdr.rs"]
++mod displayid_hdr;
++
+ use std::cell::RefCell;
+ use std::collections::{HashMap, HashSet};
+ use std::fmt::Write;
+@@ -466,17 +469,18 @@
+ }
+ 
+ impl EdidHdrInfo {
+-    fn from_edid(info: &libdisplay_info::info::Info) -> Self {
++    fn from_edid(info: &libdisplay_info::info::Info, data: &[u8]) -> Self {
+         let hdr = info.hdr_static_metadata();
+         let colorimetry = info.supported_signal_colorimetry();
+         let lum_u16 = |v: f32| v.clamp(0.0, u16::MAX as f32).round() as u16;
++        let embedded = displayid_hdr::parse(data);
+         Self {
+-            pq: hdr.pq,
+-            bt2020_rgb: colorimetry.bt2020_rgb,
+-            max_luminance: lum_u16(hdr.desired_content_max_luminance),
++            pq: hdr.pq || embedded.pq,
++            bt2020_rgb: colorimetry.bt2020_rgb || embedded.bt2020_rgb,
++            max_luminance: lum_u16(hdr.desired_content_max_luminance).max(embedded.max_luminance),
+             // EDID reports cd/m²; the infoframe field is in 0.0001 cd/m² units.
+-            min_luminance: lum_u16(hdr.desired_content_min_luminance * 10000.),
+-            max_frame_avg_luminance: lum_u16(hdr.desired_content_max_frame_avg_luminance),
++            min_luminance: lum_u16(hdr.desired_content_min_luminance * 10000.).max(embedded.min_luminance),
++            max_frame_avg_luminance: lum_u16(hdr.desired_content_max_frame_avg_luminance).max(embedded.max_frame_avg_luminance),
+         }
+     }
+ 
+@@ -1475,8 +1479,12 @@
+         let supports_hdr_metadata = surface
+             .hdr_metadata_supported(connector.handle())
+             .unwrap_or(false);
+-        let edid_hdr = get_edid_info(&device.drm, connector.handle())
+-            .map(|info| EdidHdrInfo::from_edid(&info))
++        let edid_hdr = get_edid_data(&device.drm, connector.handle())
++            .and_then(|data| {
++                let info = libdisplay_info::info::Info::parse_edid(&data)
++                    .context("error parsing EDID")?;
++                Ok(EdidHdrInfo::from_edid(&info, &data))
++            })
+             .unwrap_or_default();
+         let hdr_supported = supports_bt2020 && supports_hdr_metadata && edid_hdr.pq;
+         debug!(
+@@ -4214,10 +4222,10 @@
+     mode.map(|m| (*m, fallback))
+ }
+ 
+-fn get_edid_info(
++fn get_edid_data(
+     device: &DrmDevice,
+     connector: connector::Handle,
+-) -> anyhow::Result<libdisplay_info::info::Info> {
++) -> anyhow::Result<Vec<u8>> {
+     let (_, info, value) =
+         find_drm_property(device, connector, "EDID").context("no EDID property")?;
+     let blob = info
+@@ -4228,6 +4236,14 @@
+     let data = device
+         .get_property_blob(blob)
+         .context("error getting EDID blob value")?;
++    Ok(data)
++}
++
++fn get_edid_info(
++    device: &DrmDevice,
++    connector: connector::Handle,
++) -> anyhow::Result<libdisplay_info::info::Info> {
++    let data = get_edid_data(device, connector)?;
+     libdisplay_info::info::Info::parse_edid(&data).context("error parsing EDID")
+ }
+ 

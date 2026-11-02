@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=HP-OS
+Comment=HP-OS-inspired iNiR desktop
+Exec=@exec@ session
+Type=Application
+DesktopNames=HP-OS;niri

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=HP-OS Settings
+Comment=Desktop, dock and appearance preferences
+Exec=@exec@ settings
+Icon=preferences-system
+Terminal=false
+Categories=Settings;DesktopSettings;

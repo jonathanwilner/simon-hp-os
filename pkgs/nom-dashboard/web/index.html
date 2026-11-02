@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nix Builds</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>Nix Builds</h1>
+        <p id="generated">Waiting for build feed</p>
+      </div>
+      <div class="totals" aria-label="Build totals">
+        <div><span id="runningCount">0</span><small>running</small></div>
+        <div><span id="failedCount">0</span><small>failed</small></div>
+        <div><span id="okCount">0</span><small>passed</small></div>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="machines" id="machines" aria-label="Build machines"></section>
+      <section class="details" aria-label="Build log">
+        <div class="detailsHeader">
+          <div>
+            <h2 id="selectedTitle">No build selected</h2>
+            <p id="selectedMeta"></p>
+          </div>
+          <div class="detailsActions">
+            <button id="toggleDetailsButton" type="button" title="Hide or show the build log">Hide log</button>
+            <button id="refreshButton" type="button" title="Refresh now">Refresh</button>
+          </div>
+        </div>
+        <pre id="logOutput" class="logOutput">Select a build to view its nom output.</pre>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

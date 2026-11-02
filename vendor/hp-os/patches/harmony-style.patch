@@ -1,0 +1,979 @@
+--- a/modules/iris/bar/IrisBar.qml
++++ b/modules/iris/bar/IrisBar.qml
+@@ -23,6 +23,7 @@
+ import qs.modules.iris.palette
+ import qs.modules.iris.orbit
+ import qs.modules.iris.wallpaper
++import qs.modules.harmony.design
+ import qs.modules.iris.style
+ import qs.modules.iris.components as IrisParts
+ import qs.modules.iris.pieces
+@@ -780,6 +781,7 @@
+                     }
+                     Region { item: islandEdgeStrip.armed ? islandEdgeStrip : null }
+                     Region { item: dockLoader.item && !dockLoader.item.inputOff ? dockLoader.item.hitItem : null }
++                    Region { item: dockLoader.item?.assistantHitItem?.visible ? dockLoader.item.assistantHitItem : null }
+                     Region {
+                         readonly property var rect: editLoader.item?.hitRect ?? null
+                         x: rect?.x ?? 0
+@@ -982,7 +984,7 @@
+                         .concat(banners.fieldShapes)
+                         .concat(IrisFrame.placeShapesOn(barWindow.screen?.name ?? ""))
+                     const bodies = hung.filter(shape => shape.joins === "island")
+-                    const island = barWindow.islandTucked ? [] : (islandLoader.item?.fieldShapes ?? []).map(shape => {
++                    const island = (barWindow.islandTucked || (HarmonyTokens.active && windowLoader.loadedBottom && !(islandLoader.item?.expanded ?? false))) ? [] : (islandLoader.item?.fieldShapes ?? []).map(shape => {
+                         if (!shape.satellite) return shape
+                         const reach = IrisStyle.fuse
+                         const body = bodies.find(b => shape.x < b.x + b.width + reach && shape.x + shape.width > b.x - reach
+@@ -1149,6 +1151,9 @@
+                     asynchronous: true
+                     sourceComponent: IrisDock {
+                         screen: barWindow.screen
++                        statusRect: islandLoader.active && islandLoader.visible
++                            ? Qt.rect(islandInput.x, islandInput.y, islandInput.width, islandInput.height)
++                            : Qt.rect(0, 0, 0, 0)
+                         onPieceActivated: (slot, kind, rect) => stage.activate(slot, kind, rect)
+                         onPieceMenuRequested: (slot, kind, rect, menu) => {
+                             menu.model = stage.pieceMenu(slot, kind, rect)
+--- a/modules/iris/components/IrisGlassEdge.qml
++++ b/modules/iris/components/IrisGlassEdge.qml
+@@ -31,7 +31,7 @@
+         antialiasing: true
+         border.width: root.lineWidth
+         border.color: ColorUtils.applyAlpha(IrisStyle.glassEdgeColour, IrisStyle.glassEdgeLight)
+-        layer.enabled: true
++        layer.enabled: IrisStyle.harmonyFullEffects
+         layer.effect: MultiEffect {
+             maskEnabled: true
+             maskSource: litFade
+@@ -43,7 +43,7 @@
+         id: litFade
+         anchors.fill: parent
+         visible: false
+-        layer.enabled: true
++        layer.enabled: IrisStyle.harmonyFullEffects
+         gradient: Gradient {
+             GradientStop { position: 0; color: "white" }
+             GradientStop { position: 0.55; color: "transparent" }
+--- a/modules/iris/components/IrisLightWash.qml
++++ b/modules/iris/components/IrisLightWash.qml
+@@ -18,7 +18,7 @@
+     readonly property real extent: Math.max(1, root.across ? root.width : root.height)
+     readonly property real fall: Math.min(0.7, Math.max(0.12, Math.max(IrisStyle.lightReach, 1.5 * root.shapeRadius) / root.extent))
+ 
+-    visible: IrisStyle.auraStrength > 0 && root.light.a > 0
++    visible: IrisStyle.harmonyFullEffects && IrisStyle.auraStrength > 0 && root.light.a > 0
+     opacity: root.presence * Math.min(1, IrisStyle.tweak("lightReach", 0.5, 3))
+ 
+     // A shader rather than a Rectangle gradient: the same three stops, dithered, so the long faint ramp does not band.
+--- a/modules/iris/components/IrisMorphSurface.qml
++++ b/modules/iris/components/IrisMorphSurface.qml
+@@ -8,6 +8,7 @@
+ import qs.modules.common.functions
+ import qs.modules.iris.frame
+ import qs.modules.iris.style
++import qs.modules.harmony.design
+ import qs.modules.iris.field as Field
+ 
+ Item {
+@@ -283,6 +284,7 @@
+         Field.IrisField {
+             anchors.fill: parent
+             framed: false
++            materialThickness: IrisStyle.harmonyThickness(root.motionSurface)
+             compositorAllowed: root.blurs
+             sceneOrigin: {
+                 void (root.x + root.y + (root.parent?.x ?? 0) + (root.parent?.y ?? 0))
+@@ -309,7 +311,7 @@
+             ? root.lerp(Math.min(Math.min(root.start.width, root.start.height) / 2, root.fromRadius * root.originShare), root.radius)
+             : root.lerp(root.fromRadius, root.radius))
+         color: root.material === "field" ? IrisStyle.bodyClip
+-            : root.material === "compositor" ? IrisStyle.placeSurface : root.color
++            : root.material === "compositor" ? (HarmonyTokens.active ? IrisStyle.harmonySurface(root.motionSurface) : IrisStyle.placeSurface) : root.color
+         // Visible from the request: forceActiveFocus() is ignored on invisible subtrees.
+         visible: root.open || root.presentation > 0
+         opacity: root.warming ? root.warmth : root.armed || root.presentation > 0 ? root.emergence : 0
+@@ -318,6 +320,7 @@
+             anchors.fill: parent
+             active: root.material === "wallpaper"
+             sourceComponent: IrisGlassPane {
++                tint: HarmonyTokens.active ? IrisStyle.harmonySurface(root.motionSurface) : IrisStyle.placeSurface
+                 sceneOffset: {
+                     void (root.x + root.y + chassis.x + chassis.y + (root.parent?.x ?? 0) + (root.parent?.y ?? 0))
+                     return chassis.mapToItem(null, 0, 0)
+--- a/modules/iris/components/IrisSurface.qml
++++ b/modules/iris/components/IrisSurface.qml
+@@ -1,14 +1,17 @@
+ pragma ComponentBehavior: Bound
+ 
+ import QtQuick
++import QtQuick.Effects
+ import qs.modules.common
+ import qs.modules.common.widgets
+ import qs.modules.iris.style
++import qs.modules.harmony.design
+ 
+ PanelSurface {
+     id: root
+ 
+     property bool raised: false
++    property string materialThickness: root.raised ? "ULTRA_THICK" : "REGULAR"
+     property bool quiet: false
+     property real radius: IrisStyle.radius
+     property bool notchTop: false
+@@ -24,6 +27,16 @@
+     borderWidthOverride: 1
+     clipContent: false
+ 
++    RectangularShadow {
++        anchors.fill: parent
++        z: -2
++        visible: HarmonyTokens.active && IrisStyle.harmonyFullEffects && !root.quiet
++        radius: root.radius
++        blur: HarmonyTokens.recipe(root.materialThickness).elevation * 2
++        offset.y: HarmonyTokens.recipe(root.materialThickness).elevation / 3
++        color: HarmonyTokens.dark ? "#50000000" : "#180b203d"
++    }
++
+     Rectangle {
+         anchors.fill: parent
+         z: -1
+@@ -33,7 +46,9 @@
+         topRightRadius: root.notchTop ? 0 : radius
+         bottomLeftRadius: root.notchBottom ? 0 : radius
+         bottomRightRadius: root.notchBottom ? 0 : radius
+-        color: IrisStyle.surface
++        color: HarmonyTokens.active ? HarmonyTokens.surface : IrisStyle.surface
++        border.width: HarmonyTokens.active ? 1 : 0
++        border.color: HarmonyTokens.active ? HarmonyTokens.outline : "transparent"
+         antialiasing: true
+     }
+ }
+--- a/modules/iris/components/IrisText.qml
++++ b/modules/iris/components/IrisText.qml
+@@ -2,6 +2,7 @@
+ import QtQuick.Layouts
+ import qs.modules.common.widgets
+ import qs.modules.iris.style
++import qs.modules.harmony.design
+ 
+ StyledText {
+     id: root
+@@ -26,7 +27,7 @@
+         : role === IrisText.Display || role === IrisText.Metric ? Font.Bold : Font.Medium)
+     font.letterSpacing: role === IrisText.Display ? IrisStyle.tracking(IrisStyle.typeDisplay)
+         : role === IrisText.Metric ? IrisStyle.tracking(IrisStyle.typeTitleLarge) : 0
+-    font.variableAxes: ({})
++    font.variableAxes: HarmonyTokens.active ? ({ "wght": IrisStyle.weight(role === IrisText.Title ? Font.DemiBold : role === IrisText.Display || role === IrisText.Metric ? Font.Bold : Font.Normal) }) : ({})
+     // Whole-pixel size: a text's fractional natural size puts every neighbour after it off the pixel grid.
+     width: Math.ceil(implicitWidth)
+     height: root.wrapMode === Text.NoWrap ? Math.ceil(root.implicitHeight) : root.implicitHeight
+--- a/modules/iris/dock/IrisDock.qml
++++ b/modules/iris/dock/IrisDock.qml
+@@ -12,17 +12,31 @@
+ import qs.modules.common.widgets
+ import qs.modules.iris.frame
+ import qs.modules.iris.style
++import qs.modules.harmony.design
++import qs.modules.harmony.launcher
+ import qs.modules.iris.components
+ import qs.modules.iris.pieces
+ 
+ Item {
+     id: root
+     property var screen: null
++    property rect statusRect: Qt.rect(0, 0, 0, 0)
+     anchors.fill: parent
+     readonly property bool showLauncher: Config.options?.iris?.dock?.launcher ?? true
+     readonly property var options: Config.options?.iris?.dock ?? ({})
+     readonly property real d: IrisStyle.density
+-    readonly property real iconSize: Math.max(28, Math.min(64, Number(root.options?.iconSize ?? 40))) * root.d
++    // PC reference: edge-to-edge 80vp taskbar, 48vp icons, 64vp pitch.
++    readonly property bool harmonyTaskbar: HarmonyTokens.active && root.atBottom
++    readonly property real harmonyTaskbarHeight: (Math.max(28, Math.min(64, Number(root.options?.iconSize ?? 48))) + 32) * root.d
++    readonly property real iconSize: {
++        const requested = Math.max(28, Math.min(64, Number(root.options?.iconSize ?? 40))) * root.d
++        if (!root.harmonyTaskbar) return requested
++        // Leave the fixed left control and the live tray reachable on small outputs.
++        const apps = root.ordered.filter(e => e.appId !== "SEPARATOR").length + (root.showLauncher ? 1 : 0) + root.pieces.length
++        const separators = root.ordered.filter(e => e.appId === "SEPARATOR").length + (root.pieces.length > 0 ? 1 : 0)
++        const available = (root.screen?.width ?? root.width) - root.statusRect.width - 120 * root.d
++        return Math.max(28 * root.d, Math.min(requested, (available - 16 * root.d - separators * 15 * root.d) / Math.max(1, apps) - 16 * root.d))
++    }
+     readonly property string edge: IrisFrame.dockEdge
+     readonly property bool atTop: root.edge === "top"
+     readonly property bool atBottom: root.edge === "bottom"
+@@ -50,7 +63,7 @@
+     readonly property bool revealOnEmpty: root.options?.revealOnEmpty ?? true
+     readonly property var entries: {
+         const list = root.trimmed(root.ordered)
+-        if (root.showLauncher && list.length > 0) list.unshift({ appId: "SEPARATOR" })
++        if (root.showLauncher && !root.harmonyTaskbar && list.length > 0) list.unshift({ appId: "SEPARATOR" })
+         return list
+     }
+     function trimmed(list: var): var {
+@@ -82,7 +95,7 @@
+         return out
+     }
+     function centreIn(ids: var, appId: string): real {
+-        let x = root.showLauncher ? root.slotWidth + root.separatorWidth + 2 * root.slotSpacing : 0
++        let x = root.showLauncher ? root.slotWidth + (root.harmonyTaskbar ? root.slotSpacing : root.separatorWidth + 2 * root.slotSpacing) : 0
+         for (const id of root.trimmed(ids)) {
+             const w = id === "SEPARATOR" ? root.separatorWidth : root.slotWidth
+             if (id === appId) return x + w / 2
+@@ -195,7 +208,7 @@
+         function onSidebarRightOpenChanged(): void { if (GlobalStates.sidebarRightOpen) root.seenAllAt = Date.now() }
+         function onControlPanelOpenChanged(): void { if (GlobalStates.controlPanelOpen) root.seenAllAt = Date.now() }
+     }
+-    readonly property real slotWidth: root.iconSize + 10 * root.d
++    readonly property real slotWidth: root.iconSize + (root.harmonyTaskbar ? 14 : 10) * root.d
+     readonly property real plateSize: Math.round(root.iconSize + 6 * root.d)
+     readonly property real separatorWidth: 13 * root.d
+     readonly property real slotSpacing: 2 * root.d
+@@ -237,6 +250,7 @@
+     readonly property alias overFullscreen: window.overFullscreen
+     readonly property alias inputOff: window.inputOff
+     readonly property alias hitItem: hitArea
++    readonly property alias assistantHitItem: harmonySearch
+     readonly property alias bodyShape: window.bodyShape
+     readonly property alias editShapes: window.editShapes
+     // Customize selects the Dock first and what is in it second, as a design tool enters a group: a click on an app
+@@ -300,11 +314,18 @@
+                 }
+             }
+             readonly property bool menuOpen: window.menuApp !== null
+-            readonly property real dockHeight: root.iconSize + 18 * root.d
++            readonly property real dockHeight: root.harmonyTaskbar ? root.harmonyTaskbarHeight : root.iconSize + 18 * root.d
+             // Notch: the body rests on the band's inner line and melts into it.
+             // Plain: it floats, keeping its own air above the band.
+             readonly property real bodyAir: root.notch ? 0 : 10 * root.d
+-            readonly property real edgeGap: IrisFrame.band + window.bodyAir
++            readonly property real edgeGap: root.harmonyTaskbar ? 0 : IrisFrame.band + window.bodyAir
++            readonly property var harmonyPlacement: HarmonyTokens.active && root.atBottom
++                && IrisFrame.islandEdge === root.edge
++                ? IrisFrame.harmonyDockPlacement(window.width, dock.width,
++                    root.height - window.edgeGap - window.dockHeight, window.dockHeight,
++                    root.statusRect, 12 * root.d)
++                : ({ x: (window.width - dock.width) / 2, lift: 0 })
++            readonly property real harmonyLift: window.revealed ? window.harmonyPlacement.lift : 0
+             readonly property real headroom: root.magnify ? root.iconSize * root.magnifyGain + 30 * root.d : 30 * root.d
+             readonly property string material: {
+                 const chosen = String(root.options?.material ?? "inherit")
+@@ -394,8 +415,8 @@
+                     : Math.max(2, window.dockHeight + window.edgeOffset
+                         + (root.magnify && !window.menuOpen ? root.iconSize * root.magnifyGain + 4 * root.d : 0))
+                 readonly property real span: (root.vertical ? dock.height : dock.width) + (window.revealed ? 0 : 40 * root.d)
+-                x: root.vertical ? (root.atLeft ? 0 : window.width - hitArea.depth) : Math.round((window.width - hitArea.span) / 2)
+-                y: root.vertical ? Math.round((window.height - hitArea.span) / 2) : (root.atTop ? 0 : window.height - hitArea.depth)
++                x: root.vertical ? (root.atLeft ? 0 : window.width - hitArea.depth) : Math.round(dock.x + (dock.width - hitArea.span) / 2)
++                y: root.vertical ? Math.round((window.height - hitArea.span) / 2) : (root.atTop ? 0 : window.height - hitArea.depth - window.harmonyLift)
+                 width: root.vertical ? hitArea.depth : hitArea.span
+                 height: root.vertical ? hitArea.span : hitArea.depth
+             }
+@@ -405,7 +426,7 @@
+                 if (window.menuOpen) return window.frozenSlotX
+                 if (!root.magnify || !window.pointerOnDock || !window.revealed || root.slideApp.length > 0) return null
+                 const x = root.vertical ? windowHover.point.position.y - (window.height - dock.baseWidth) / 2
+-                    : windowHover.point.position.x - (window.width - dock.baseWidth) / 2
++                    : windowHover.point.position.x - dock.x - (dock.width - dock.baseWidth) / 2
+                 if (x < -root.slotWidth || x > dock.baseWidth + root.slotWidth) return null
+                 return x - dock.padding
+             }
+@@ -469,11 +490,11 @@
+                         radius: 0, paints: true, fuse: IrisStyle.fuseDeep, id: "dockEdge", glass: window.bodyGlass })
+                 }
+                 out.push({
+-                    x: Math.round(p.x + (root.atLeft ? -attached : 0)),
+-                    y: Math.round(p.y + window.screenOffsetY + (root.atTop ? -attached : 0)),
+-                    width: Math.round(dock.width + (root.vertical ? attached : 0)),
++                    x: root.harmonyTaskbar ? 0 : Math.round(p.x + (root.atLeft ? -attached : 0)),
++                    y: root.harmonyTaskbar ? screenH - window.dockHeight : Math.round(p.y + window.screenOffsetY + (root.atTop ? -attached : 0)),
++                    width: root.harmonyTaskbar ? screenW : Math.round(dock.width + (root.vertical ? attached : 0)),
+                     height: Math.round(dock.height + (root.vertical ? 0 : attached)),
+-                    radius: dock.radius, paints: true,
++                    radius: root.harmonyTaskbar ? 0 : dock.radius, paints: true,
+                     fuse: root.notch ? Math.round(IrisStyle.fuseEdge * window.notchReveal) : IrisStyle.fuse,
+                     id: "dock", joins: !root.notch ? "" : IrisFrame.framed ? "frame" : "dockEdge", glass: window.bodyGlass
+                 })
+@@ -504,23 +525,45 @@
+                 GlobalStates.irisDockBody = bodies
+             }
+ 
++            Item {
++                id: harmonySearch
++                visible: root.harmonyTaskbar && window.revealed
++                enabled: visible
++                x: 18 * root.d
++                y: window.height - window.dockHeight
++                width: 52 * root.d
++                height: window.dockHeight
++                Image {
++                    anchors.centerIn: parent
++                    width: 50 * root.d
++                    height: width
++                    source: Qt.resolvedUrl("../../../assets/larp/hmglow.png")
++                    sourceSize: Qt.size(128, 128)
++                    opacity: harmonySearchHover.hovered ? 1 : 0.86
++                }
++                HoverHandler { id: harmonySearchHover; cursorShape: Qt.PointingHandCursor }
++                TapHandler { onTapped: HarmonyStartState.toggle() }
++                Accessible.role: Accessible.Button
++                Accessible.name: Translation.tr("Start")
++            }
++
+             readonly property real notchReveal: Math.max(0, Math.min(1, (window.edgeOffset + window.dockHeight) / window.dockHeight))
+             IrisSurface {
+                 id: dock
+                 // The ends give the first and last hover plate room to sit concentric with the Dock's end curve:
+                 // a plate of radius r starts R − r from an end of radius R (nothing changes on a tight Dock).
+-                readonly property real padding: Math.max(8 * root.d,
++                readonly property real padding: root.harmonyTaskbar ? 8 * root.d : Math.max(8 * root.d,
+                     dock.radius - IrisStyle.iconRadius(root.plateSize) - (root.slotWidth - root.plateSize) / 2)
+                 readonly property real baseWidth: (window.baseCenters.length > 0
+                     ? window.baseCenters[window.baseCenters.length - 1] + root.slotWidth / 2 : 0) + dock.padding * 2
+                 width: root.vertical ? window.dockHeight : Math.min(window.width - 32, appRow.implicitWidth + dock.padding * 2)
+                 height: root.vertical ? Math.min(window.height - 32, appRow.implicitHeight + dock.padding * 2) : window.dockHeight
+                 x: root.vertical ? (root.atLeft ? window.edgeOffset : window.width - width - window.edgeOffset)
+-                    : Math.round((window.width - width) / 2)
++                    : Math.round(window.harmonyPlacement.x)
+                 y: root.vertical ? Math.round((window.height - height) / 2)
+-                    : root.atTop ? window.edgeOffset : window.height - height - window.edgeOffset
++                    : root.atTop ? window.edgeOffset : window.height - height - window.edgeOffset - window.harmonyLift
+                 readonly property real thickness: root.vertical ? width : height
+-                radius: IrisStyle.profileRadius(IrisStyle.bodyProfile(IrisStyle.dockShape, root.notch), dock.thickness)
++                radius: root.harmonyTaskbar ? 0 : IrisStyle.profileRadius(IrisStyle.bodyProfile(IrisStyle.dockShape, root.notch), dock.thickness)
+                 quiet: true
+                 opacity: window.revealed || window.edgeOffset > -window.dockHeight ? 1 : 0
+ 
+@@ -567,7 +610,8 @@
+                         + (root.pieces.length > 0 ? root.pieces.length + 1 : 0))
+                     flow: root.vertical ? Grid.TopToBottom : Grid.LeftToRight
+                     x: root.vertical ? (root.atLeft ? Math.round(4 * root.d) : parent.width - width - Math.round(4 * root.d)) : dock.padding
+-                    y: root.vertical ? dock.padding : (root.atTop ? Math.round(4 * root.d) : parent.height - height - Math.round(4 * root.d))
++                    y: root.harmonyTaskbar ? Math.round((parent.height - height) / 2 + 2 * root.d)
++                        : root.vertical ? dock.padding : (root.atTop ? Math.round(4 * root.d) : parent.height - height - Math.round(4 * root.d))
+                     spacing: root.slotSpacing
+                     move: Transition {
+                         enabled: root.slideApp.length > 0 && IrisStyle.motionEnabled
+@@ -616,14 +660,20 @@
+                             onContainsMouseChanged: nameLabel.present(containsMouse ? launcherSlot : null, Translation.tr("Applications"))
+                             Item {
+                                 id: launcherGlyph
+-                                x: root.edgeX(parent.width, width, 7 * root.d + (root.iconSize - root.iconSize * 0.9) / 2)
+-                                y: root.edgeY(parent.height, height, 7 * root.d + (root.iconSize - root.iconSize * 0.9) / 2)
+-                                width: Math.round(root.iconSize * 0.9 * launcherSlot.iconScale * (launcherArea.pressed ? IrisStyle.pressScale(0.92) : 1))
++                                Image {
++                                    anchors.fill: parent
++                                    visible: root.harmonyTaskbar
++                                    source: Qt.resolvedUrl("../../../assets/harmony-app-center.svg")
++                                    sourceSize: Qt.size(96, 96)
++                                }
++                                x: root.edgeX(parent.width, width, 7 * root.d + (root.iconSize - root.iconSize * (root.harmonyTaskbar ? 1 : 0.9)) / 2)
++                                y: root.edgeY(parent.height, height, 7 * root.d + (root.iconSize - root.iconSize * (root.harmonyTaskbar ? 1 : 0.9)) / 2)
++                                width: Math.round(root.iconSize * (root.harmonyTaskbar ? 1 : 0.9) * launcherSlot.iconScale * (launcherArea.pressed ? IrisStyle.pressScale(0.92) : 1))
+                                 height: width
+                                 Grid {
+                                     id: launcherDots
+                                     anchors.centerIn: parent
+-                                    visible: !window.spotlightHere
++                                    visible: !root.harmonyTaskbar && !window.spotlightHere
+                                     readonly property real dot: Math.max(3, Math.round(launcherGlyph.width * 0.11))
+                                     columns: 3
+                                     spacing: Math.round(launcherGlyph.width * 0.1)
+@@ -640,7 +690,7 @@
+                                 }
+                                 MaterialSymbol {
+                                     anchors.centerIn: parent
+-                                    visible: window.spotlightHere
++                                    visible: !root.harmonyTaskbar && window.spotlightHere
+                                     text: "close"
+                                     iconSize: launcherGlyph.width * 0.5
+                                     color: IrisStyle.text
+@@ -746,10 +796,10 @@
+ 
+                                 SequentialAnimation {
+                                     id: launchBounce
+-                                    loops: 2
++                                    loops: root.harmonyTaskbar ? 1 : 2
+                                     // A hop under gravity: slowing up, speeding down, and no ball-bounce on landing.
+-                                    NumberAnimation { target: appSlot; property: "lift"; to: 14 * root.d; duration: IrisStyle.duration(240); easing.type: Easing.OutQuad }
+-                                    NumberAnimation { target: appSlot; property: "lift"; to: 0; duration: IrisStyle.duration(240); easing.type: Easing.InQuad }
++                                    NumberAnimation { target: appSlot; property: "lift"; to: (root.harmonyTaskbar ? 5 : 14) * root.d; duration: IrisStyle.duration(root.harmonyTaskbar ? 120 : 240); easing.type: Easing.OutQuad }
++                                    NumberAnimation { target: appSlot; property: "lift"; to: 0; duration: IrisStyle.duration(root.harmonyTaskbar ? 120 : 240); easing.type: Easing.InQuad }
+                                 }
+ 
+                                 HoverPlate {
+@@ -896,18 +946,18 @@
+                                     readonly property bool urgent: root.appUrgent(entry.app)
+                                     x: Math.round(root.atLeft ? 0 : root.atRight ? appSlot.width - width
+                                         : appButton.iconCentreInSlot.x - width / 2)
+-                                    y: Math.round(root.atTop ? 0 : root.atBottom ? appSlot.height - height
++                                    y: Math.round(root.atTop ? 0 : root.atBottom ? appSlot.height - height + (root.harmonyTaskbar ? 5 * root.d : 0)
+                                         : appButton.iconCentreInSlot.y - height / 2)
+                                     spacing: Math.max(1, Math.round(2.5 * root.d))
+                                     visible: windows > 0
+                                     Repeater {
+-                                        model: indicators.windows
++                                        model: root.harmonyTaskbar ? Math.min(1, indicators.windows) : indicators.windows
+                                         IrisPulse {
+                                             id: indicator
+                                             required property int index
+-                                            readonly property bool lead: indicator.index === indicators.focusedIndex
++                                            readonly property bool lead: root.harmonyTaskbar ? appSlot.focused : indicator.index === indicators.focusedIndex
+                                             readonly property real dot: 2 * Math.max(1, Math.round(2 * root.d))
+-                                            property real along: indicator.lead ? 2 * Math.round(6 * root.d) : indicator.dot
++                                            property real along: !root.harmonyTaskbar && indicator.lead ? 2 * Math.round(6 * root.d) : indicator.dot
+                                             height: root.vertical ? Math.round(indicator.along) : indicator.dot
+                                             width: root.vertical ? indicator.dot : Math.round(indicator.along)
+                                             radius: Math.min(width, height) / 2
+--- a/modules/iris/field/IrisField.qml
++++ b/modules/iris/field/IrisField.qml
+@@ -5,12 +5,14 @@
+ import qs.services
+ import qs.modules.common
+ import qs.modules.iris.style
++import qs.modules.harmony.design
+ import qs.modules.iris.frame
+ 
+ Item {
+     id: root
+ 
+     property var shapes: []
++    property string materialThickness: IrisStyle.harmonyFieldThickness(root.shapes)
+     property color tint: IrisStyle.bodySurface
+     property color rim: IrisStyle.rim
+     property real rimWidth: IrisStyle.rimWidth
+@@ -261,7 +263,7 @@
+         readonly property vector4d glassE: pass.glassBlock(4)
+         readonly property bool backdropReady: root.backdropSource?.ready ?? false
+         readonly property vector4d glass: Qt.vector4d(pass.backdropReady ? 1 : 0, root.framed ? root.frameGlass : 0,
+-            IrisStyle.glassTint, IrisStyle.glassLip)
++            (HarmonyTokens.active ? IrisStyle.harmonyAlpha(root.materialThickness) : IrisStyle.glassTint), IrisStyle.glassLip)
+         readonly property vector4d edgeWave: root.edgeWave
+         readonly property vector4d waveClock: Qt.vector4d(root.waveClock, 0, 0, 0)
+         readonly property vector4d frameLight: Qt.vector4d(root.frameMusicAppearance, root.frameMusicLevel,
+--- a/modules/iris/field/IrisGlassSource.qml
++++ b/modules/iris/field/IrisGlassSource.qml
+@@ -11,6 +11,7 @@
+     id: root
+ 
+     property var screen: null
++    readonly property real textureDivisor: IrisStyle.harmonyFullEffects ? 2 : 4
+     width: root.screen?.width ?? 0
+     height: root.screen?.height ?? 0
+     readonly property bool ready: view.ready
+@@ -24,8 +25,8 @@
+         anchors.fill: parent
+         screen: root.screen
+         provideTexture: true
+-        decodeSize: Qt.size(Math.max(1, Math.round((root.screen?.width ?? root.width) / 2)),
+-            Math.max(1, Math.round((root.screen?.height ?? root.height) / 2)))
++        decodeSize: Qt.size(Math.max(1, Math.round((root.screen?.width ?? root.width) / root.textureDivisor)),
++            Math.max(1, Math.round((root.screen?.height ?? root.height) / root.textureDivisor)))
+     }
+ 
+     MultiEffect {
+@@ -33,7 +34,7 @@
+         anchors.fill: parent
+         visible: false
+         layer.enabled: true
+-        layer.textureSize: Qt.size(Math.max(1, Math.round(root.width / 2)), Math.max(1, Math.round(root.height / 2)))
++        layer.textureSize: Qt.size(Math.max(1, Math.round(root.width / root.textureDivisor)), Math.max(1, Math.round(root.height / root.textureDivisor)))
+         source: view.textureItem
+         autoPaddingEnabled: false
+         blurEnabled: true
+--- a/modules/iris/frame/IrisFrame.qml
++++ b/modules/iris/frame/IrisFrame.qml
+@@ -3,9 +3,29 @@
+ import QtQuick
+ import qs.modules.common
+ import qs.modules.iris.style
++import qs.modules.harmony.design
+ 
+ QtObject {
+     id: root
++
++    // Status geometry is output-local. Keep the centered position until rectangles intersect.
++    // A second row preserves usable app targets when neither horizontal interval fits.
++    function harmonyDockPlacement(screenWidth: real, dockWidth: real, dockY: real, dockHeight: real, status: var, gap: real): var {
++        const margin = Math.min(gap, Math.max(0, (screenWidth - dockWidth) / 2))
++        const center = Math.max(margin, (screenWidth - dockWidth) / 2)
++        if (!status || status.width <= 0 || status.height <= 0
++            || dockY + dockHeight <= status.y - gap || dockY >= status.y + status.height + gap)
++            return { x: center, lift: 0 }
++        if (center + dockWidth <= status.x - gap || center >= status.x + status.width + gap)
++            return { x: center, lift: 0 }
++        const left = status.x - gap - margin
++        const rightStart = status.x + status.width + gap
++        const right = screenWidth - margin - rightStart
++        if (left >= dockWidth && (left >= right || right < dockWidth))
++            return { x: Math.min(center, status.x - gap - dockWidth), lift: 0 }
++        if (right >= dockWidth) return { x: Math.max(center, rightStart), lift: 0 }
++        return { x: center, lift: Math.max(0, dockY + dockHeight - status.y + gap) }
++    }
+ 
+     readonly property var bar: Config.options?.iris?.bar ?? ({})
+     readonly property var dock: Config.options?.iris?.dock ?? ({})
+@@ -56,7 +76,7 @@
+     readonly property real musicLight: Math.max(0, Math.min(1, Number(root.surround?.musicLight ?? 35) / 100))
+     readonly property real musicLightWidth: Math.max(1, Math.min(18, Number(root.surround?.musicLightWidth ?? 5))) * root.d
+ 
+-    readonly property bool framed: Boolean(root.surround?.enable ?? false)
++    readonly property bool framed: !HarmonyTokens.active && Boolean(root.surround?.enable ?? false)
+     readonly property real band: root.framed
+         ? Math.max(1, Math.round(Number(root.surround?.thickness ?? 10) * root.d)) : 0
+     readonly property real cornerRadius: root.framed
+@@ -70,7 +90,7 @@
+     readonly property string islandEdge: root.edges.includes(String(root.bar?.position ?? "top")) ? String(root.bar.position) : "top"
+     readonly property string dockEdge: {
+         const wanted = String(root.dock?.position ?? "auto")
+-        return root.edges.includes(wanted) && wanted !== root.islandEdge ? wanted : root.opposite(root.islandEdge)
++        return root.edges.includes(wanted) && (HarmonyTokens.active || wanted !== root.islandEdge) ? wanted : root.opposite(root.islandEdge)
+     }
+     readonly property string wantedIsland: String(root.bar?.position ?? "top")
+     readonly property string wantedDock: String(root.dock?.position ?? "auto")
+@@ -78,13 +98,13 @@
+     property string settledDock: ""
+     Component.onCompleted: { root.settledIsland = root.islandEdge; root.settledDock = root.dockEdge }
+     onWantedIslandChanged: {
+-        if (root.edges.includes(root.wantedIsland) && root.wantedIsland === root.wantedDock
++        if (!HarmonyTokens.active && root.edges.includes(root.wantedIsland) && root.wantedIsland === root.wantedDock
+                 && root.settledIsland.length > 0 && root.settledIsland !== root.wantedIsland)
+             Config.setNestedValue("iris.dock.position", root.settledIsland)
+         root.settle()
+     }
+     onWantedDockChanged: {
+-        if (root.edges.includes(root.wantedDock) && root.wantedDock === root.islandEdge
++        if (!HarmonyTokens.active && root.edges.includes(root.wantedDock) && root.wantedDock === root.islandEdge
+                 && root.settledDock.length > 0 && root.settledDock !== root.wantedDock)
+             Config.setNestedValue("iris.bar.position", root.settledDock)
+         root.settle()
+@@ -104,8 +124,8 @@
+     readonly property real islandDepth: (root.bar?.reserveSpace ?? true) && !root.islandAutoHide
+         ? root.islandVisualDepth : 0
+     readonly property real dockIcon: Math.max(28, Math.min(64, Number(root.dock?.iconSize ?? 40))) * root.d
+-    readonly property real dockBand: root.dockIcon + 18 * root.d
+-    readonly property real dockMargin: Boolean(root.dock?.notch ?? false) ? 0 : 10 * root.d
++    readonly property real dockBand: root.dockIcon + (HarmonyTokens.active && root.dockEdge === "bottom" ? 32 : 18) * root.d
++    readonly property real dockMargin: (HarmonyTokens.active && root.dockEdge === "bottom") || Boolean(root.dock?.notch ?? false) ? 0 : 10 * root.d
+     readonly property real dockVisualDepth: (root.dock?.enable ?? true) && !(root.dock?.autoHide ?? false)
+         ? root.dockBand + root.dockMargin : 0
+     readonly property real dockDepth: (root.dock?.enable ?? true)
+--- a/modules/iris/style/IrisStyle.qml
++++ b/modules/iris/style/IrisStyle.qml
+@@ -7,6 +7,7 @@
+ import qs.modules.common
+ import qs.modules.common.functions
+ import qs.services
++import qs.modules.harmony.design
+ 
+ QtObject {
+     id: root
+@@ -87,6 +88,7 @@
+     readonly property int typeDisplay: Math.round(28 * root.typeScale)
+     // Inter's optical tracking (a + b·e^(c·size) em) in whole pixels: 0 to 25 px, −1 from 26, −2 from 68.
+     function tracking(px: real): int {
++        if (HarmonyTokens.active) return 0
+         return Math.round(px * (-0.0223 + 0.185 * Math.exp(-0.1745 * px)))
+     }
+ 
+@@ -152,9 +154,9 @@
+         const own = String(root.appearance?.surfaces?.cards?.grabber ?? "auto")
+         return own === "auto" ? Boolean(root.cardDesign.grabber ?? false) : own === "on"
+     }
+-    readonly property int radius: Math.round(Math.max(16, Math.min(40, Number(root.appearance?.expandedRadius ?? 28))) * root.density)
+-    readonly property int radiusSmall: Math.max(4, Math.round(root.radius * 0.58))
+-    readonly property int radiusTiny: Math.max(3, Math.round(root.radius * 0.36))
++    readonly property int radius: HarmonyTokens.active ? Math.round(28 * root.density) : (Math.round(Math.max(16, Math.min(40, Number(root.appearance?.expandedRadius ?? 28))) * root.density))
++    readonly property int radiusSmall: HarmonyTokens.active ? Math.round(12 * root.density) : (Math.max(4, Math.round(root.radius * 0.58)))
++    readonly property int radiusTiny: HarmonyTokens.active ? Math.round(8 * root.density) : (Math.max(3, Math.round(root.radius * 0.36)))
+     readonly property int gap: Math.max(4, Math.round(8 * root.density))
+     readonly property int gapLarge: Math.max(8, Math.round(14 * root.density))
+     readonly property int spaceSmall: Math.max(4, Math.round(6 * root.density))
+@@ -200,8 +202,8 @@
+         const configured = String(value ?? "")
+         return configured.length > 0 ? configured : (root.defaultFaces[path] ?? root.faceText)
+     }
+-    readonly property string fontMain: root.face("iris.appearance.fontFamily", root.appearance?.fontFamily)
+-    readonly property string fontTitle: root.face("iris.appearance.titleFontFamily", root.appearance?.titleFontFamily)
++    readonly property string fontMain: HarmonyTokens.active ? HarmonyTokens.fontFamily : (root.face("iris.appearance.fontFamily", root.appearance?.fontFamily))
++    readonly property string fontTitle: HarmonyTokens.active ? HarmonyTokens.fontFamily : (root.face("iris.appearance.titleFontFamily", root.appearance?.titleFontFamily))
+     // 220 font.weight bindings hang off this one. Read straight through `theme`, it is recomputed
+     // every time Config is reloaded — which is every write of any key — and drags all 220 with it,
+     // measured at six dropped frames per write. The name changes only when the weight really does.
+@@ -214,12 +216,12 @@
+         return steps[Math.max(0, Math.min(steps.length - 1, at + root.weightShift))]
+     }
+     readonly property int figureWeight: ({ light: Font.Light, regular: Font.Normal })[root.appearance?.figureWeight ?? "bold"] ?? Font.Bold
+-    readonly property string fontNumbers: root.face("iris.appearance.numbersFontFamily", root.appearance?.numbersFontFamily)
++    readonly property string fontNumbers: HarmonyTokens.active ? HarmonyTokens.fontFamily : (root.face("iris.appearance.numbersFontFamily", root.appearance?.numbersFontFamily))
+ 
+     readonly property color canvas: Appearance.colors.colLayer0Base
+     // iRiS is dark by construction. The light scheme turns its material and ink over; Ink sits between them, washi
+     // and sumi, softer than white. Auto follows the system (dark or light); each scheme is tuned on its own.
+-    readonly property string schemeChoice: String(root.appearance?.scheme ?? "auto")
++    readonly property string schemeChoice: HarmonyTokens.active ? (HarmonyTokens.dark ? "dark" : "light") : (String(root.appearance?.scheme ?? "auto"))
+     // The colour theme in use, when the person chose one that is not the wallpaper's: it is what the apps wear.
+     readonly property string colourTheme: String(ThemeService.currentTheme ?? "auto")
+     // Auto: the system's dark or light, and Ink when the apps wear the Ink theme.
+@@ -279,15 +281,42 @@
+     function materialLabel(name: string): string {
+         return root.materialLabels[name] ?? (name === "wallpaper" ? "Wallpaper" : name === "theme" ? "Theme" : name)
+     }
+-    readonly property color surfaceOpaque: root.role("surface", "#000000")
++    readonly property color surfaceOpaque: HarmonyTokens.active ? HarmonyTokens.surface : (root.role("surface", "#000000"))
+     readonly property color darkSurfaceOpaque: Qt.color(root.washiDark?.materials?.[root.materialName] ?? "#000000")
+     readonly property bool plainBlack: root.materialName === "black"
+-    readonly property color surfaceHighOpaque: root.role("surfaceHigh", "#1c1c1e")
+-    readonly property color surfaceHighestOpaque: root.role("surfaceHighest", "#2c2c2e")
++    readonly property color surfaceHighOpaque: HarmonyTokens.active ? HarmonyTokens.elevated : (root.role("surfaceHigh", "#1c1c1e"))
++    readonly property color surfaceHighestOpaque: HarmonyTokens.active ? HarmonyTokens.canvas : (root.role("surfaceHighest", "#2c2c2e"))
+     readonly property real tintAmount: Math.max(0, Math.min(1, Number(root.appearance?.tint ?? 0) / 100))
+     readonly property color tintSeed: root.accent
+     function tinted(base: color, strength: real): color {
+         return root.tintAmount <= 0 ? base : ColorUtils.mix(base, root.tintSeed, 1 - strength * root.tintAmount)
++    }
++    // Shared fields use their strongest material; independently hosted surfaces use their own role.
++    readonly property bool harmonyFullEffects: !HarmonyTokens.active || HarmonyTokens.quality === "full"
++    function harmonyThickness(id: string): string {
++        const name = id.toLowerCase()
++        if (/dialog|confirm|polkit/.test(name)) return "ULTRA_THICK"
++        if (/menu|notification/.test(name)) return "THICK"
++        if (/search|field/.test(name)) return "THIN"
++        if (/dock|island|toolbar|osd/.test(name)) return "ULTRA_THIN"
++        return "REGULAR"
++    }
++    function harmonyFieldThickness(shapes: var): string {
++        let chosen = "ULTRA_THIN"
++        let count = 0
++        for (const shape of shapes ?? []) {
++            if (shape.paints === false) continue
++            const name = root.harmonyThickness(String(shape.id ?? ""))
++            if (HarmonyTokens.materialNames.indexOf(name) > HarmonyTokens.materialNames.indexOf(chosen)) chosen = name
++            count++
++        }
++        return count > 0 ? chosen : "REGULAR"
++    }
++    function harmonyAlpha(thickness: string): real {
++        return HarmonyTokens.tint(thickness).a
++    }
++    function harmonySurface(id: string): color {
++        return root.glassy ? HarmonyTokens.tint(root.harmonyThickness(id)) : HarmonyTokens.surface
+     }
+     readonly property color surface: root.surfaceOpaque
+     readonly property color bodySurface: root.surfaceOpaque
+@@ -297,7 +326,7 @@
+     // person keeps them solid. A Glass mode they chose stands.
+     readonly property string glassRequested: ["wallpaper", "compositor"].includes(String(root.glassOptions?.mode ?? ""))
+         ? root.glassOptions.mode : root.lumeOn ? "wallpaper" : "off"
+-    readonly property bool glassy: root.glassRequested !== "off" && Appearance.effectsEnabled
++    readonly property bool glassy: (!HarmonyTokens.active || !HarmonyTokens.reducedTransparency) && root.glassRequested !== "off" && Appearance.effectsEnabled
+     readonly property bool menuCompact: String(root.appearance?.surfaces?.menus?.density ?? "compact") === "compact"
+     readonly property bool glassCompositor: root.glassy && root.glassRequested === "compositor" && Appearance.compositorBlurActive
+         && IrisCompositorBlur.usable
+@@ -313,7 +342,7 @@
+     // and the accent keep the wallpaper's tint, or every window opened would regenerate every app theme. 4.5:1 there,
+     // not 7: an always-thick Blur left nothing to see through.
+     readonly property bool bodiesCovered: root.glassCompositor && Lume.covered(root.placeOutput)
+-    readonly property real glassTint: root.bodiesCovered
++    readonly property real glassTint: HarmonyTokens.active ? root.harmonyAlpha("REGULAR") : root.bodiesCovered
+         ? Math.max(root.wallpaperGlassTint, Math.min(0.9, root.legibleVeil("glass", 0.72, 0.18, 1))) : root.wallpaperGlassTint
+     // What the apps wear: the paper itself, solved with the shell's palette (IrisWashi `apps`). Frost over the wallpaper
+     // changes with every window behind it; an app window is opaque, so it wears the paper the frost is held to.
+@@ -327,7 +356,7 @@
+     readonly property color bodyClip: Qt.rgba(0, 0, 0, 0.004)
+     readonly property color placeSurface: root.glassy ? ColorUtils.applyAlpha(root.surfaceOpaque, root.glassTint) : root.surface
+     readonly property real glassLip: 0
+-    readonly property bool afterglow: String(root.appearance?.texture ?? "solid") === "afterglow"
++    readonly property bool afterglow: root.harmonyFullEffects && String(root.appearance?.texture ?? "solid") === "afterglow"
+     readonly property var afterglowOptions: root.appearance?.afterglow ?? ({})
+     function afterglowPercent(name: string, fallback: real): real {
+         const value = Number(root.afterglowOptions?.[name] ?? fallback)
+@@ -364,7 +393,7 @@
+     readonly property vector4d afterglowBloomInk: root.colourVector(Qt.color(root.afterglowPalette.bloom), root.afterglowBloomRadius)
+     readonly property vector4d afterglowShape: Qt.vector4d(Math.round(8 * root.density), 3, 1.25 * root.density, 0)
+     // The cut edge of Blur glass (IrisField.frag): lit where it faces up, a line elsewhere.
+-    readonly property real glassEdgeLight: Math.max(0, Math.min(1, Number(root.glassOptions?.edgeLight ?? 34) / 100))
++    readonly property real glassEdgeLight: !root.harmonyFullEffects ? 0 : Math.max(0, Math.min(1, Number(root.glassOptions?.edgeLight ?? 34) / 100))
+     readonly property real glassEdgeLine: Math.max(0, Math.min(0.6, Number(root.glassOptions?.edgeLine ?? 10) / 100))
+     readonly property real glassEdgeWidth: Math.max(0.5, Math.min(3, Number(root.glassOptions?.edgeWidth ?? 1.5)))
+     readonly property color glassEdgeColour: {
+@@ -390,12 +419,12 @@
+         : root.tinted(root.surfaceHighestOpaque, 0.2)
+     // What sits raised on a group (a segmented thumb): the brighter step in the dark, a lit plate on paper.
+     readonly property color raised: root.light ? ColorUtils.applyAlpha(root.litLayer, root.glassy ? 0.86 : 1) : root.fillHover
+-    readonly property color field: root.surfaceHighest
++    readonly property color field: HarmonyTokens.active ? root.harmonySurface("search") : root.surfaceHighest
+     // Sumi on paper, paper white at night: the paper's own hue, 7:1 on its deepest group.
+-    readonly property color text: root.role("text", "#f5f5f7")
++    readonly property color text: HarmonyTokens.active ? HarmonyTokens.text : (root.role("text", "#f5f5f7"))
+     readonly property color quietInk: root.text
+-    readonly property color subtext: ColorUtils.applyAlpha(root.quietInk, root.inkLevel(Math.max(0.78, root.preset.textStrong - 0.02), 0.9))
+-    readonly property color muted: ColorUtils.applyAlpha(root.quietInk, root.inkLevel(Math.max(0.64, root.preset.textSecondary + 0.04), 0.8))
++    readonly property color subtext: HarmonyTokens.active ? HarmonyTokens.secondary : (ColorUtils.applyAlpha(root.quietInk, root.inkLevel(Math.max(0.78, root.preset.textStrong - 0.02), 0.9)))
++    readonly property color muted: HarmonyTokens.active ? HarmonyTokens.secondary : (ColorUtils.applyAlpha(root.quietInk, root.inkLevel(Math.max(0.64, root.preset.textSecondary + 0.04), 0.8)))
+     // A group's caption: secondary ink, as every other caption.
+     readonly property color label: root.subtext
+     // A colour picked from a wallpaper or artwork for light and glow (never for text): saturated and mid-bright.
+@@ -469,10 +498,10 @@
+     }
+     readonly property bool animeHighlightOn: Boolean(root.animeLayer?.highlight ?? false)
+     // The accent: actions, selection, links, live marks. 4.5:1 on every ground, and on paper a fill under white ink.
+-    readonly property color baseAccent: root.accentFrom(root.followsTheme ? "theme" : String(root.appearance?.accent ?? "blue"), root.appearance?.theme?.accentHue ?? 212)
++    readonly property color baseAccent: HarmonyTokens.active ? HarmonyTokens.accent : (root.accentFrom(root.followsTheme ? "theme" : String(root.appearance?.accent ?? "blue"), root.appearance?.theme?.accentHue ?? 212))
+     readonly property color accent: root.animeEnabled
+         ? root.animeAccent(root.baseAccent, root.animePaletteName, root.animeStrength) : root.baseAccent
+-    readonly property color inkOnAccent: root.animeEnabled ? root.onTintFor(root.accent) : root.role("onAccent", "#101318")
++    readonly property color inkOnAccent: HarmonyTokens.active ? HarmonyTokens.onAccent : (root.animeEnabled ? root.onTintFor(root.accent) : root.role("onAccent", "#101318"))
+     // Colour over imagery (the lock, artwork veils), which stays dark in every scheme: the night palette's roles.
+     readonly property color accentOnMedia: root.animeEnabled ? Lume.mark(root.accent, 0.35, 0, false, 3) : Qt.color(root.washiDark?.accent ?? "#a8c7fa")
+     readonly property color highlightOnMedia: Qt.color(root.washiDark?.highlight ?? "#ff9f0a")
+@@ -663,7 +692,7 @@
+     }
+     readonly property real shadowThrough: root.glassy ? 0.4 : 1
+     readonly property real shadowLight: root.ink ? 0.5 : root.light ? 0.55 : 1
+-    readonly property color shadow: root.glowing(Math.min(0.9, 0.55 * root.tweak("shadow", 0, 1.6)) * root.shadowThrough * root.shadowLight)
++    readonly property color shadow: HarmonyTokens.active && HarmonyTokens.quality === "performance" ? Qt.color("transparent") : root.glowing(Math.min(0.9, 0.55 * root.tweak("shadow", 0, 1.6)) * root.shadowThrough * root.shadowLight)
+     readonly property color material: ColorUtils.applyAlpha(root.surfaceHigh, 0.68)
+     readonly property color onMedia: "#ffffff"
+     readonly property color onMediaSecondary: ColorUtils.applyAlpha(root.onMedia, 0.72)
+@@ -704,8 +733,8 @@
+     readonly property real glassBlur: 1
+     readonly property real glassWash: 0.55
+     readonly property color clearRim: ColorUtils.applyAlpha(root.text, 0.07)
+-    readonly property int glassBlurMax: 48
+-    readonly property real glassSaturation: 0.3
++    readonly property int glassBlurMax: HarmonyTokens.active && HarmonyTokens.quality !== "full" ? 24 : 48
++    readonly property real glassSaturation: HarmonyTokens.active ? 0.12 : 0.3
+     // The glass a widget shows the wallpaper through gains or loses colour with the scheme's Widget colour.
+     // On paper the frost is light: a saturation boost under it glows (a lit pane of the wallpaper's colour), so it stays neutral.
+     readonly property real widgetGlassSaturation: root.light ? Math.min(0, (root.widgetColour - 1) * 0.5)
+@@ -782,13 +811,13 @@
+     function concentricPad(outerRadius: real, floor: real): int {
+         return Math.max(Math.round(floor), Math.round(outerRadius * 0.3 + 7 * root.density))
+     }
+-    readonly property int radiusPanel: root.corner(30)   // Control Center, Settings frame
+-    readonly property int radiusSheet: root.corner(26)   // Spotlight, media card, wallpaper picker
+-    readonly property int radiusPlate: root.corner(22)   // widget and lock plates, dialogs, blocks
+-    readonly property int radiusCard: root.corner(18)    // side-panel sections, menus
+-    readonly property int radiusTile: root.corner(14)    // grouped cards, tiles, results
+-    readonly property int radiusRow: root.corner(10)     // list rows, menu items, small buttons
+-    readonly property int radiusChip: root.corner(7)     // chips, thumbnails, small marks
++    readonly property int radiusPanel: HarmonyTokens.active ? Math.round(28 * root.density) : (root.corner(30))
++    readonly property int radiusSheet: HarmonyTokens.active ? Math.round(28 * root.density) : (root.corner(26))
++    readonly property int radiusPlate: HarmonyTokens.active ? Math.round(24 * root.density) : (root.corner(22))
++    readonly property int radiusCard: HarmonyTokens.active ? Math.round(20 * root.density) : (root.corner(18))
++    readonly property int radiusTile: HarmonyTokens.active ? Math.round(16 * root.density) : (root.corner(14))
++    readonly property int radiusRow: HarmonyTokens.active ? Math.round(12 * root.density) : (root.corner(10))
++    readonly property int radiusChip: HarmonyTokens.active ? Math.round(8 * root.density) : (root.corner(7))
+     readonly property int radiusMicro: root.corner(4)    // bars inside skeletons, swatches
+     readonly property real meltDepth: {
+         const t = root.tweak("melt", 0, 2)
+@@ -855,7 +884,7 @@
+     readonly property real accentRuleWidth: Math.round(24 * root.density)
+     readonly property real accentRuleHeight: Math.max(2, Math.round(3 * root.density))
+ 
+-    readonly property bool motionEnabled: (root.appearance?.motion ?? true) && Appearance.animationsEnabled
++    readonly property bool motionEnabled: (!HarmonyTokens.active || !HarmonyTokens.reducedMotion) && (root.appearance?.motion ?? true) && Appearance.animationsEnabled
+ 
+     // --- Arrival: the family grows inward once the shell has its first frame ------------------
+     // Boot, a reload and a family switch all end in shellEntryReady; the chassis rides this one
+--- a/modules/iris/bar/IrisIsland.qml
++++ b/modules/iris/bar/IrisIsland.qml
+@@ -1,6 +1,7 @@
+ pragma ComponentBehavior: Bound
+ 
+ import QtQuick
++import qs.modules.harmony.design
+ import QtQuick.Dialogs
+ import QtQuick.Layouts
+ import QtQuick.Shapes
+@@ -660,13 +661,14 @@
+         if (root.rightSatelliteRest && IrisStyle.cluster && root.trailingKind === kind) return true
+         return root.leftSatelliteRest && kind === "media"
+     }
++    readonly property var harmonyStatusPieces: HarmonyTokens.active ? ["network", "sound", "controls"] : []
+     readonly property var barPieces: {
+         const carried = IrisPieces.carriedBy(Config.options?.iris?.bubbles, IrisStyle.structuralValue("bar.pieces", []))
+-        for (const kind of root.absorbedPieces) if (!carried.includes(kind)) carried.push(kind)
++        for (const kind of root.harmonyStatusPieces.concat(root.absorbedPieces)) if (!carried.includes(kind)) carried.push(kind)
+         if (root.auxiliary === "tray" && root.trayAppsFace && !root.floatsAlone("tray")
+                 && !root.floatingSlots.includes("utility") && !carried.includes("tray"))
+             carried.push("tray")
+-        return carried.filter(kind => IrisPieces.extraIds.includes(kind) && IrisPieces.available(kind) && !root.pieceTaken(kind))
++        return carried.filter(kind => IrisPieces.extraIds.includes(kind) && IrisPieces.available(kind) && (root.harmonyStatusPieces.includes(kind) || !root.pieceTaken(kind)))
+     }
+     readonly property real barPieceSize: Math.round(root.compactHeight - 10 * root.d)
+     readonly property real barPieceGap: Math.round(6 * root.d)
+@@ -2058,7 +2060,7 @@
+                             anchors.fill: parent
+                             screenName: root.targetScreen?.name ?? ""
+                             kind: barPiece.modelData
+-                            plated: true
++                            plated: !HarmonyTokens.active
+                             hovered: pieceHover.hovered
+                             pressed: pieceGrip.pressed
+                         }
+--- a/modules/iris/pieces/IrisPieces.qml
++++ b/modules/iris/pieces/IrisPieces.qml
+@@ -1,6 +1,7 @@
+ pragma Singleton
+ 
+ import QtQuick
++import qs.modules.harmony.design
+ import Quickshell
+ import Quickshell.Io
+ import Quickshell.Services.SystemTray
+@@ -218,7 +219,7 @@
+     readonly property var iconKinds: ["controls", "tools", "focus", "notifications", "bluetooth", "updates", "anime", "watching"]
+     readonly property var icons: Config.options?.iris?.pieces?.icons ?? []
+     function defaultGlyph(kind: string): string {
+-        if (kind === "controls") return Network.wifiEnabled ? "wifi" : "tune"
++        if (kind === "controls") return HarmonyTokens.active ? "tune" : Network.wifiEnabled ? "wifi" : "tune"
+         if (kind === "tools") return "timer"
+         if (kind === "focus") return "bedtime"
+         if (kind === "notifications") return "notifications"
+--- a/modules/common/functions/ShellExec.qml
++++ b/modules/common/functions/ShellExec.qml
+@@ -39,12 +39,41 @@
+         return root._fishAvailable === 1
+     }
+ 
++    // A private Harmony session owns its compositor and bus environment.
++    function shellArgs(script): var {
++        return Config.options?.panelFamily === "harmony"
++            ? ["env", "-u", "BASH_ENV", "-u", "ENV", root.bashPath, "--noprofile", "--norc", "-c", script]
++            : [root.bashPath, "-lc", script]
++    }
++
+     function execDetachedArgs(args, description = "", workingDirectory = ""): void {
+         const argv = Array.from(args ?? []).map(arg => String(arg ?? "")).filter(arg => arg.length > 0)
+         if (argv.length === 0) return
+ 
+         const desc = String(description ?? "").trim()
+         const workDir = String(workingDirectory ?? "").trim()
++        if (Config.options?.panelFamily === "harmony") {
++            // Preserve this session's DISPLAY, WAYLAND_DISPLAY, NIRI_SOCKET,
++            // runtime directory and D-Bus address. Never read the global manager
++            // or a login profile when launching from an isolated desktop.
++            const privateScript = `
++                workdir="$1"
++                shift
++                if [ -n "$workdir" ] && [ -d "$workdir" ]; then
++                    cd -- "$workdir" || exit
++                fi
++                unset QT_SCALE_FACTOR QT_SCALE_FACTOR_ROUNDING_POLICY QT_WAYLAND_FORCE_DPI
++                unset QT_FONT_DPI QT_AUTO_SCREEN_SCALE_FACTOR QT_SCREEN_SCALE_FACTORS
++                unset GDK_SCALE GDK_DPI_SCALE QSG_ATLAS_WIDTH QSG_ATLAS_HEIGHT
++                unset QS_DISABLE_CRASH_HANDLER INIR_DISABLE_HOT_RELOAD
++                # A host portal may belong to another compositor. Resolve local
++                # desktop files directly inside this private graphical session.
++                unset NIXOS_XDG_OPEN_USE_PORTAL
++                exec "$@"
++            `
++            Quickshell.execDetached([...root.shellArgs(privateScript), "harmony-launch", workDir, ...argv])
++            return
++        }
+         // A transient scope, never a service. Launchers like zeditor and
+         // /usr/bin/code fork the real process and exit immediately; a service
+         // treats that first exit as the unit finishing and kills the rest of
+@@ -204,7 +233,7 @@
+             fi
+             exec xdg-open "$target"
+         `
+-        root.execDetachedArgs([root.bashPath, "-lc", script, "inir-open-directory", target], description)
++        root.execDetachedArgs([...root.shellArgs(script), "inir-open-directory", target], description)
+     }
+ 
+     function execCmd(cmd: string, workingDirectory = ""): void {
+@@ -216,7 +245,7 @@
+             return
+         }
+ 
+-        root.execDetachedArgs([root.bashPath, "-lc", c], "", workingDirectory)
++        root.execDetachedArgs(root.shellArgs(c), "", workingDirectory)
+     }
+ 
+     function execFishOrBashOneLiner(fishCmd: string, bashCmd: string): void {
+@@ -230,7 +259,7 @@
+         }
+ 
+         if (b.length === 0) return
+-        root.execDetachedArgs([root.bashPath, "-lc", b])
++        root.execDetachedArgs(root.shellArgs(b))
+     }
+ 
+     function launchDesktopEntry(desktopId: string, description = ""): bool {
+--- a/modules/background/desktopItems/DesktopItemDelegate.qml
++++ b/modules/background/desktopItems/DesktopItemDelegate.qml
+@@ -475,6 +475,12 @@
+             }
+             if (!root._positionOverride)
+                 return
++            // A plain click must not snap the icon away before the second click.
++            if (Config.options?.panelFamily === "harmony"
++                    && Math.abs(root.x - root._pressX) <= 1 && Math.abs(root.y - root._pressY) <= 1) {
++                root._positionOverride = false
++                return
++            }
+             const pos = root._clampPosition(root.x, root.y)
+             root.x = pos.x
+             root.y = pos.y
+--- a/modules/common/widgets/SmartAppIcon.qml
++++ b/modules/common/widgets/SmartAppIcon.qml
+@@ -35,7 +35,7 @@
+ 
+     // === Logic ===
+     readonly property string resolvedSource: AppSearch.resolveIcon(root.icon, root.fallback)
+-    readonly property bool isFileUrl: resolvedSource.startsWith("file://")
++    readonly property bool isImageSource: resolvedSource.startsWith("file://") || resolvedSource.startsWith("image://") || resolvedSource.startsWith("qrc:/")
+     
+     // Error handling state
+     property bool _imageError: false
+@@ -44,8 +44,9 @@
+     Loader {
+         anchors.fill: parent
+         sourceComponent: {
+-            if (root._imageError) return fallbackKind
+-            if (root.isFileUrl) return imageKind
++            if (root._imageError || (!root.useFluent && !root.icon.includes("/") && !Quickshell.hasThemeIcon(root.icon))) return fallbackKind
++            // Quickshell.iconPath returns an image-provider URL, not a KDE icon name.
++            if (root.isImageSource && !root.useFluent && !root.monochrome) return imageKind
+             return iconKind
+         }
+     }
+@@ -88,7 +89,7 @@
+                 return root.resolvedSource
+             }
+             
+-            fallback: root.resolvedSource // Falls back to system theme if file not found
++            fallback: root.fallback // Never retry the same unresolved source.
+             
+             implicitWidth: root.iconSize
+             implicitHeight: root.iconSize
+@@ -99,15 +100,18 @@
+         }
+     }
+     
+-    // 3. Last Resort Fallback
++    // 3. Theme fallback, with a bundled asset when the theme is incomplete.
+     Component {
+         id: fallbackKind
+-        Kirigami.Icon {
+-            source: root.fallback
+-            implicitWidth: root.iconSize
+-            implicitHeight: root.iconSize
+-            isMask: root.monochrome
+-            color: root.monochrome ? root.color : "transparent"
++        Image {
++            property bool themeFailed: false
++            source: !themeFailed && root.fallback !== "application-x-executable" && Quickshell.hasThemeIcon(root.fallback)
++                ? Quickshell.iconPath(root.fallback)
++                : Qt.resolvedUrl("../../../assets/harmony-application.svg")
++            sourceSize: Qt.size(root.iconSize, root.iconSize)
++            fillMode: Image.PreserveAspectFit
++            smooth: true
++            onStatusChanged: if (status === Image.Error) themeFailed = true
+         }
+     }
+ }

@@ -1,0 +1,8 @@
+QWidget { font-family: "HarmonyOS Sans", "HarmonyOS Sans SC", sans-serif; font-size: 16px; }
+QToolBar { background: palette(window); border: 0; spacing: 8px; padding: 7px 12px; }
+QToolButton { border: 0; border-radius: 8px; padding: 6px; min-height: 22px; }
+QToolButton:hover { background: palette(alternate-base); }
+QLineEdit { background: palette(base); border: 0; border-radius: 8px; padding: 8px; }
+QAbstractItemView { border: 0; }
+QStatusBar { background: palette(window); border-top: 1px solid palette(mid); color: palette(text); }
+KFilePlacesView::item { min-height: 40px; padding-top: 1px; padding-bottom: 1px; }

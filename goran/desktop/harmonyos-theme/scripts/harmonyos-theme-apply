@@ -1,0 +1,196 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+cache_home="${XDG_CACHE_HOME:-$HOME/.cache}"
+state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
+settings="$config_home/DankMaterialShell/settings.json"
+session="$state_home/DankMaterialShell/session.json"
+theme_file="@theme_file@"
+state_dir="$state_home/nixos-intc/harmonyos-dms-theme"
+backup="$state_dir/settings.pre-harmonyos.json"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --theme-file)
+      theme_file="${2:?--theme-file needs a path}"
+      shift 2
+      ;;
+    *)
+      printf 'usage: harmonyos-theme-apply [--theme-file PATH]\n' >&2
+      exit 2
+      ;;
+  esac
+done
+
+if [[ ! -f "$settings" ]]; then
+  printf 'harmonyos-theme-apply: DMS settings do not exist: %s\n' "$settings" >&2
+  exit 1
+fi
+if [[ ! -e "$theme_file" ]]; then
+  printf 'harmonyos-theme-apply: theme file does not exist: %s\n' "$theme_file" >&2
+  exit 1
+fi
+if ! @jq@ -e 'type == "object"' "$settings" >/dev/null; then
+  printf 'harmonyos-theme-apply: refusing to modify invalid JSON: %s\n' "$settings" >&2
+  exit 1
+fi
+
+mkdir -p "$state_dir"
+chmod 700 "$state_dir"
+if [[ ! -e "$backup" ]]; then
+  install -m600 "$settings" "$backup"
+fi
+
+tmp="$(mktemp "$state_dir/settings.apply.XXXXXX")"
+trap 'rm -f "$tmp"' EXIT
+@jq@ --arg theme "$theme_file" '
+  .currentThemeName = "custom"
+  | .customThemeFile = $theme
+  | .fontFamily = "HarmonyOS Sans"
+  | .monoFontFamily = "Fira Mono"
+  | .notepadUseMonospace = true
+  | .fontWeight = 400
+  | .fontScale = 1
+  | .cornerRadius = 16
+  | .niriLayoutGapsOverride = 12
+  | .niriLayoutRadiusOverride = 16
+  | .niriLayoutBorderSize = 2
+  | .gtkThemingEnabled = true
+  | .qtThemingEnabled = true
+  | .runDmsMatugenTemplates = true
+  | .matugenTemplateGtk = true
+  | .matugenTemplateNiri = true
+  | .matugenTemplateQt5ct = true
+  | .matugenTemplateQt6ct = true
+  | .matugenTemplateKcolorscheme = true
+  | if (.barConfigs | type) == "array" then
+      .barConfigs |= map(
+        .spacing = 8
+        | .innerPadding = 4
+        | .widgetPadding = 8
+        | .popupGapsManual = 8
+        | .fontScale = 1
+      )
+    else . end
+' "$settings" > "$tmp"
+install -m600 "$tmp" "$settings"
+
+if command -v dms >/dev/null 2>&1; then
+  mode="dark"
+  if [[ -s "$session" ]]; then
+    mode="$(@jq@ -r 'if .isLightMode then "light" else "dark" end' "$session" 2>/dev/null || echo dark)"
+  fi
+  primary="$(@jq@ -r --arg mode "$mode" '.[$mode].primary' "$theme_file")"
+  scheme="$(@jq@ -r --arg mode "$mode" '.[$mode].matugen_type // "scheme-neutral"' "$theme_file")"
+  stock_colors="$(@jq@ -c --arg mode "$mode" '
+    .dark as $d | .light as $l |
+    def c($dv; $lv): {dark:{color:$dv}, light:{color:$lv}, default:{color:(if $mode == "light" then ($lv // $dv) else ($dv // $lv) end)}};
+    {
+      primary: c($d.primary; $l.primary),
+      on_primary: c($d.primaryText; $l.primaryText),
+      primary_container: c($d.primaryContainer; $l.primaryContainer),
+      on_primary_container: c(($d.primaryContainerText // $d.surfaceText); ($l.primaryContainerText // $l.surfaceText)),
+      secondary: c($d.secondary; $l.secondary),
+      on_secondary: c(($d.secondaryText // $d.primaryText); ($l.secondaryText // $l.primaryText)),
+      secondary_container: c(($d.secondaryContainer // $d.surfaceContainerHigh); ($l.secondaryContainer // $l.surfaceContainerHigh)),
+      on_secondary_container: c(($d.secondaryContainerText // $d.surfaceText); ($l.secondaryContainerText // $l.surfaceText)),
+      tertiary: c(($d.tertiary // $d.secondary); ($l.tertiary // $l.secondary)),
+      on_tertiary: c(($d.tertiaryText // $d.secondaryText // $d.primaryText); ($l.tertiaryText // $l.secondaryText // $l.primaryText)),
+      tertiary_container: c(($d.tertiaryContainer // $d.secondaryContainer // $d.surfaceContainerHigh); ($l.tertiaryContainer // $l.secondaryContainer // $l.surfaceContainerHigh)),
+      on_tertiary_container: c(($d.tertiaryContainerText // $d.surfaceText); ($l.tertiaryContainerText // $l.surfaceText)),
+      error: c(($d.error // "#F2B8B5"); ($l.error // "#B3261E")),
+      on_error: c(($d.errorText // "#601410"); ($l.errorText // "#FFFFFF")),
+      error_container: c(($d.errorContainer // "#8C1D18"); ($l.errorContainer // "#F9DEDC")),
+      on_error_container: c(($d.errorContainerText // "#F9DEDC"); ($l.errorContainerText // "#410E0B")),
+      surface: c($d.surface; $l.surface),
+      on_surface: c($d.surfaceText; $l.surfaceText),
+      surface_variant: c($d.surfaceVariant; $l.surfaceVariant),
+      on_surface_variant: c($d.surfaceVariantText; $l.surfaceVariantText),
+      surface_tint: c($d.surfaceTint; $l.surfaceTint),
+      background: c($d.background; $l.background),
+      on_background: c($d.backgroundText; $l.backgroundText),
+      outline: c($d.outline; $l.outline),
+      outline_variant: c(($d.outlineVariant // $d.surfaceVariant); ($l.outlineVariant // $l.surfaceVariant)),
+      surface_container: c($d.surfaceContainer; $l.surfaceContainer),
+      surface_container_high: c($d.surfaceContainerHigh; $l.surfaceContainerHigh),
+      surface_container_highest: c(($d.surfaceContainerHighest // $d.surfaceContainerHigh); ($l.surfaceContainerHighest // $l.surfaceContainerHigh)),
+      surface_container_low: c(($d.surfaceContainerLow // $d.surface); ($l.surfaceContainerLow // $l.surface)),
+      surface_container_lowest: c(($d.surfaceContainerLowest // $d.background); ($l.surfaceContainerLowest // $l.background)),
+      surface_bright: c(($d.surfaceBright // $d.surfaceContainerHighest // $d.surfaceContainerHigh); ($l.surfaceBright // $l.surface)),
+      surface_dim: c(($d.surfaceDim // $d.background); ($l.surfaceDim // $l.surfaceContainer)),
+      inverse_surface: c(($d.inverseSurface // $l.surface); ($l.inverseSurface // $d.surface)),
+      inverse_on_surface: c(($d.inverseOnSurface // $l.surfaceText); ($l.inverseOnSurface // $d.surfaceText)),
+      inverse_primary: c(($d.inversePrimary // $l.primary); ($l.inversePrimary // $d.primary)),
+      scrim: c(($d.scrim // "#000000"); ($l.scrim // "#000000")),
+      shadow: c(($d.shadow // "#000000"); ($l.shadow // "#000000")),
+      source_color: c($d.primary; $l.primary)
+    }
+  ' "$theme_file")"
+
+  shell_dir=""
+  if [[ -n "${DMS_SHELL_DIR:-}" && -d "$DMS_SHELL_DIR" ]]; then
+    shell_dir="$DMS_SHELL_DIR"
+  elif [[ -e /tmp/SHELL_DIR ]]; then
+    shell_dir="$(readlink -f /tmp/SHELL_DIR)"
+  elif [[ -d "$cache_home/DankMaterialShell/shell" ]]; then
+    shell_dir="$cache_home/DankMaterialShell/shell"
+  fi
+
+  if [[ -n "$shell_dir" ]]; then
+    dms matugen generate \
+      --state-dir "$cache_home/DankMaterialShell" \
+      --shell-dir "$shell_dir" \
+      --config-dir "$config_home" \
+      --kind hex \
+      --value "$primary" \
+      --mode "$mode" \
+      --icon-theme "System Default" \
+      --matugen-type "$scheme" \
+      --stock-colors "$stock_colors" \
+      --run-user-templates \
+      --skip-templates "hyprland,mangowc,nvim" >/dev/null 2>&1 \
+      || dms matugen queue >/dev/null 2>&1 \
+      || true
+  else
+    dms matugen queue >/dev/null 2>&1 || true
+  fi
+fi
+
+# Niri's DMS layout is generated from settings held in the running QML
+# process, so an external settings edit is not reflected there until the next
+# DMS start. Write the same deterministic values now for a no-restart apply.
+niri_dms_dir="$config_home/niri/dms"
+if [[ -d "$niri_dms_dir" ]]; then
+  cat >"$niri_dms_dir/layout.kdl" <<'EOF'
+// ! DO NOT EDIT !
+// ! AUTO-GENERATED BY THE HARMONYOS DMS THEME !
+// ! CHANGES WILL BE OVERWRITTEN BY DMS !
+
+layout {
+    gaps 12
+
+    border {
+        width 2
+    }
+
+    focus-ring {
+        width 2
+    }
+}
+
+window-rule {
+    geometry-corner-radius 16
+    clip-to-geometry true
+    tiled-state true
+    draw-border-with-background false
+}
+EOF
+fi
+
+if command -v systemctl >/dev/null 2>&1 && [[ -n "${XDG_RUNTIME_DIR:-}" ]]; then
+  systemctl --user start dms-theme-sync.service >/dev/null 2>&1 || true
+fi
+
+printf 'Applied HarmonyOS theme. Original DMS settings: %s\n' "$backup"
+printf 'DMS was not restarted; restart it only from an unlocked session if a live refresh is needed.\n'

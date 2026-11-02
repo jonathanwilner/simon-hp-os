@@ -1,0 +1,51 @@
+--- a/internal/server/brightness/types.go
++++ b/internal/server/brightness/types.go
+@@ -44,6 +44,7 @@
+ }
+ 
+ type Manager struct {
++	goranBackend *goranPanelBackend
+ 	logindBackend *LogindBackend
+ 	sysfsBackend  *SysfsBackend
+ 	nativeBackend Backend
+--- a/internal/server/brightness/manager.go
++++ b/internal/server/brightness/manager.go
+@@ -17,6 +17,11 @@
+ 	m := &Manager{
+ 		stopChan:    make(chan struct{}),
+ 		exponential: exponential,
++	}
++
++	m.goranBackend = newGoranPanelBackend()
++	if m.goranBackend != nil {
++		go m.watchGoranPanel()
+ 	}
+ 
+ 	go m.initLogind()
+@@ -137,6 +142,10 @@
+ 		}
+ 	}
+ 
++	if m.goranBackend != nil {
++		allDevices = m.goranBackend.appendDevice(allDevices)
++	}
++
+ 	sortDevices(allDevices)
+ 
+ 	m.stateMutex.Lock()
+@@ -190,6 +199,15 @@
+ 		m.stateMutex.Unlock()
+ 		log.Debugf("Device not found in state: %s", deviceID)
+ 		return fmt.Errorf("device not found: %s", deviceID)
++	}
++
++	// Publish the hardware-confirmed helper state, including its minimum clamp.
++	if deviceID == goranPanelID && m.goranBackend != nil {
++		m.stateMutex.Unlock()
++		err := m.goranBackend.SetBrightnessWithExponent(deviceID, percent, exponential, exponent)
++		m.updateState()
++		m.debouncedBroadcast(deviceID)
++		return err
+ 	}
+ 
+ 	newDevices := make([]Device, len(currentState.Devices))

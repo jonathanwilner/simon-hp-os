@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
+settings="$config_home/DankMaterialShell/settings.json"
+state_dir="$state_home/nixos-intc/harmonyos-dms-theme"
+backup="$state_dir/settings.pre-harmonyos.json"
+fontconfig_alias="$config_home/fontconfig/conf.d/99-dms-theme-sync.conf"
+fontconfig_backup="$state_dir/fontconfig.pre-harmonyos.conf"
+
+if [[ ! -f "$backup" ]]; then
+  printf 'harmonyos-theme-restore: no original settings snapshot found: %s\n' "$backup" >&2
+  exit 1
+fi
+if ! @jq@ -e 'type == "object"' "$backup" >/dev/null; then
+  printf 'harmonyos-theme-restore: refusing to restore invalid JSON: %s\n' "$backup" >&2
+  exit 1
+fi
+
+mkdir -p "$(dirname "$settings")" "$state_dir"
+if [[ -f "$settings" ]]; then
+  stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+  install -m600 "$settings" "$state_dir/settings.before-restore.$stamp.json"
+fi
+tmp="$(mktemp "$state_dir/settings.restore.XXXXXX")"
+trap 'rm -f "$tmp"' EXIT
+install -m600 "$backup" "$tmp"
+install -m600 "$tmp" "$settings"
+
+# Restore the compositor geometry immediately. DMS will generate the same file
+# from the restored settings at its next start, but Niri need not wait for it.
+niri_dms_dir="$config_home/niri/dms"
+if [[ -d "$niri_dms_dir" ]]; then
+  read -r gaps radius border < <(@jq@ -r '
+    [
+      (if (.niriLayoutGapsOverride // -1) >= 0
+       then .niriLayoutGapsOverride
+       else ([4, (.barConfigs[0].spacing // 4)] | max)
+       end),
+      (if (.niriLayoutRadiusOverride // -1) >= 0
+       then .niriLayoutRadiusOverride
+       else (.cornerRadius // 12)
+       end),
+      (if (.niriLayoutBorderSize // -1) >= 0
+       then .niriLayoutBorderSize
+       else 2
+       end)
+    ] | @tsv
+  ' "$backup")
+  cat >"$niri_dms_dir/layout.kdl" <<EOF
+// ! DO NOT EDIT !
+// ! AUTO-GENERATED FROM THE PRE-HARMONYOS DMS SETTINGS !
+// ! CHANGES WILL BE OVERWRITTEN BY DMS !
+
+layout {
+    gaps $gaps
+
+    border {
+        width $border
+    }
+
+    focus-ring {
+        width $border
+    }
+}
+
+window-rule {
+    geometry-corner-radius $radius
+    clip-to-geometry true
+    tiled-state true
+    draw-border-with-background false
+}
+EOF
+fi
+
+if [[ -f "$fontconfig_backup" ]]; then
+  rm -f "$fontconfig_alias"
+  install -m600 "$fontconfig_backup" "$fontconfig_alias"
+elif [[ -L "$fontconfig_alias" ]] && [[ "$(readlink -f "$fontconfig_alias")" == *harmonyos-dms-theme* ]]; then
+  rm -f "$fontconfig_alias"
+fi
+
+if command -v systemctl >/dev/null 2>&1 && [[ -n "${XDG_RUNTIME_DIR:-}" ]]; then
+  systemctl --user start dms-theme-sync.service >/dev/null 2>&1 || true
+fi
+
+printf 'Restored original DMS settings from %s\n' "$backup"
+printf 'DMS was not restarted; restart it only from an unlocked session if a live refresh is needed.\n'

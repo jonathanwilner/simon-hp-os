@@ -1,0 +1,65 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "name": "HarmonyOS-inspired desktop tokens",
+  "source": {
+    "project": "OpenHarmony global_system_resources",
+    "release": "7.0",
+    "commit": "a6056518ce24773ef06aa5d16113f3bd3d8d966b",
+    "note": "Values are adapted for a Linux DMS/Niri desktop; this file contains no copied source code."
+  },
+  "spacing": {
+    "xxs": 2,
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24
+  },
+  "shape": {
+    "card": 8,
+    "popup": 8,
+    "dialog": 16,
+    "window": 16,
+    "focusRing": 2
+  },
+  "typography": {
+    "family": "HarmonyOS Sans",
+    "monospaceFamily": "Fira Mono",
+    "fallbacks": [
+      "HarmonyOS Sans SC",
+      "HarmonyOS Sans TC",
+      "HarmonyOS Sans Naskh Arabic UI",
+      "Noto Sans"
+    ],
+    "monospaceFallbacks": [
+      "Noto Sans Mono"
+    ],
+    "weight": {
+      "thin": 100,
+      "light": 300,
+      "regular": 400,
+      "medium": 500,
+      "bold": 700,
+      "black": 900
+    },
+    "body": {
+      "small": 12,
+      "medium": 14,
+      "large": 16
+    },
+    "title": {
+      "small": 14,
+      "medium": 16,
+      "large": 20
+    },
+    "caption": 10,
+    "dialogTitle": 20
+  },
+  "desktop": {
+    "barHeight": 48,
+    "niriGaps": 12,
+    "windowRadius": 16,
+    "borderWidth": 2,
+    "iconSizes": [16, 24, 32]
+  }
+}

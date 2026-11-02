@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Files
+GenericName=File Manager
+Comment=Browse files and folders
+Exec=@exec@ %U
+Icon=system-file-manager
+Terminal=false
+Categories=Qt;KDE;System;FileTools;FileManager;
+MimeType=inode/directory;
+StartupWMClass=org.kde.dolphin

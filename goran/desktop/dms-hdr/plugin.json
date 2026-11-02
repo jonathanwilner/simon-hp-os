@@ -1,0 +1,14 @@
+{
+  "id": "niriHdr",
+  "name": "Niri HDR",
+  "description": "HDR and desktop white level for Goran's internal display",
+  "version": "1.0.0",
+  "author": "Jonathan Wilner",
+  "license": "MIT",
+  "icon": "hdr_on",
+  "type": "widget",
+  "capabilities": ["control-center"],
+  "component": "./HdrWidget.qml",
+  "settings": "./HdrSettings.qml",
+  "permissions": ["settings_read", "settings_write", "process"]
+}
