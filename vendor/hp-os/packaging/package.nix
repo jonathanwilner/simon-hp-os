@@ -35,6 +35,7 @@ let
     '';
   });
   touchBackend = pkgs.callPackage ../touch/backend/default.nix { };
+  searchOcr = pkgs.tesseract.override { enableLanguages = [ "eng" "chi_sim" ]; };
   touchPython = pkgs.python3.withPackages (ps: [ ps.evdev ps.pyudev ]);
   touchSupport = pkgs.callPackage ../touch/package.nix {
     inherit touchBackend touchPython touchGestures niri;
@@ -128,6 +129,7 @@ in pkgs.stdenvNoCC.mkDerivation {
       --replace-fail '@exec@' "$out/bin/hp-os-files"
     install -Dm755 hp-os-search "$out/bin/hp-os-search"
     substituteInPlace "$out/bin/hp-os-search" --replace-fail '@python@' '${pkgs.python3}/bin/python3'
+    wrapProgram "$out/bin/hp-os-search" --prefix PERL5LIB : '${pkgs.perlPackages.makeFullPerlPath [ pkgs.perlPackages.JSON ]}' --prefix PATH : '${lib.makeBinPath [ pkgs.recoll searchOcr pkgs.poppler-utils ]}'
     wrapProgram "$out/bin/hp-os" \
       --set HP_OS_TOUCH_PATCHED "${if touchGestures then "1" else "0"}" \
       --set FONTCONFIG_FILE "${fontsConf}" \
