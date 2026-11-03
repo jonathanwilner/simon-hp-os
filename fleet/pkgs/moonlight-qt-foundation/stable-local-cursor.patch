@@ -1,0 +1,29 @@
+--- a/app/streaming/input/input.cpp
++++ b/app/streaming/input/input.cpp
+@@ -453,6 +453,12 @@
+         return SDL_DISABLE;
+     }
+ 
++    // Desktop fallback: keep a local pointer even when the host hides its cursor.
++    if (getLocalCursorMode() == LI_CURSOR_MODE_LOCAL &&
++        SDL_GetHintBoolean("MOONLIGHT_STABLE_LOCAL_CURSOR", SDL_FALSE)) {
++        return SDL_ENABLE;
++    }
++
+     if (getLocalCursorMode() == LI_CURSOR_MODE_LOCAL &&
+         (LiGetHostFeatureFlags() & LI_FF_CURSOR_SHAPE) != 0) {
+         return m_RemoteCursorVisible ? SDL_ENABLE : SDL_DISABLE;
+@@ -464,7 +470,12 @@
+ void SdlInputHandler::applyCapturedCursorState()
+ {
+     if (getLocalCursorMode() == LI_CURSOR_MODE_LOCAL &&
+-        m_RemoteCursor != nullptr) {
++        SDL_GetHintBoolean("MOONLIGHT_STABLE_LOCAL_CURSOR", SDL_FALSE)) {
++        // Host shapes can be transparent. Keep SDL's standard desktop pointer.
++        SDL_SetCursor(SDL_GetDefaultCursor());
++    }
++    else if (getLocalCursorMode() == LI_CURSOR_MODE_LOCAL &&
++             m_RemoteCursor != nullptr) {
+         SDL_SetCursor(m_RemoteCursor);
+     }
+     SDL_ShowCursor(getCapturedCursorVisibilityState());

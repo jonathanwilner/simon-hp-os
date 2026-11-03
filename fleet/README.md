@@ -26,5 +26,24 @@ This baseline excludes Goran's Ubuntu and NVIDIA control panels, Googlebook VM
 application bridges, installed Steam game shortcuts, personal proxy launchers,
 and private service tools. Those entries require their corresponding runtime
 or host configuration. Microsoft 365, search, Steam, Sunshine, COSMIC files,
-BlueBubbles and other service integrations continue through their own modules.
+other service integrations continue through their own modules.
 The baseline installs applications without starting or restarting them.
+
+`fleet/launcher-packages.nix` exposes the same native package list for NixOS
+`environment.systemPackages`, making launcher entries available to every normal
+account without separate Home Manager profiles. The list also includes COSMIC
+Files with GVfs network-drive support, COSMIC Terminal, Emacs, KDE Connect,
+LibrePods, OpenFreebuds, Fcitx configuration, BlueBubbles and the same pinned
+source build of Moonlight Foundation used on Goran. Native BlueBubbles currently
+uses nixpkgs 2.1.1; Slazenger's independently pinned private 2.1.5 build and
+Goran's Ubuntu Flatpak launcher remain separate integrations. Emacs uses native
+Emacs PGTK without copying personal mail credentials or the private Emacs setup.
+
+Goran's DeepSeek Harness desktop command depends on a separate ARM64 package
+profile. Its web interface depends on a user server, model endpoint configuration
+and application state. Open WebUI runs a Docker container configured for Goran's
+NVIDIA-hosted Qwen endpoints. These runtimes require separate AMD service setup;
+copying their desktop files would create launchers without their dependencies.
+Windows 365 uses the public RDPiO flake and user authentication. Its package is
+host-integrated independently of this package list. Goran's DMS wallpaper
+launchers require the corresponding DMS plugins, supplied by the session module.

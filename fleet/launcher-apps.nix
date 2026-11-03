@@ -37,15 +37,7 @@ let
   '';
 in {
   config = lib.mkIf config.programs.hp-os-fleet.enable {
-    home.packages = with pkgs; [
-      ghostty alacritty foot fuzzel swaylock
-      networkmanagerapplet networkmanager_dmenu blueman
-      pavucontrol easyeffects playerctl
-      mpv celluloid vlc ffmpeg ffmpegthumbnailer
-      simple-scan kdePackages.skanpage remmina obs-studio
-      neovim vim yad ulauncher
-      wl-clipboard grim slurp libnotify desktop-file-utils xdg-utils
-    ];
+    home.packages = import ./launcher-packages.nix { inherit pkgs; };
     # Goran's theme service maintains its existing writable file. Seed the same
     # launcher appearance only for new accounts, without replacing user edits.
     home.activation.hpOsFleetLauncherDefaults = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
