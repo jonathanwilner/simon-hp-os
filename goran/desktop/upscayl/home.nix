@@ -11,7 +11,7 @@ let
     }
   '';
 in {
- config = lib.mkIf (config.programs.hp-os-fleet.enable && config.programs.hp-os-fleet.upscayl.enable && pkgs.stdenv.isLinux) {
+ config = lib.mkIf (config.programs.hp-os-fleet.enable && config.programs.hp-os-fleet.upscayl.enable && pkgs.stdenv.hostPlatform.isLinux) {
   home.packages = [ app ];
   home.activation.upscaylSandbox = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     if [[ -x /usr/sbin/apparmor_parser && -d /sys/module/apparmor ]]; then
