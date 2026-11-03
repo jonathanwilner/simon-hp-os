@@ -4,6 +4,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'packaging'))
@@ -13,6 +14,19 @@ spec.loader.exec_module(profile)
 
 
 class FilesProfileTests(unittest.TestCase):
+    def test_icon_assets_are_decodable_including_aliases(self):
+        theme = ROOT / 'packaging/files/data/icons/HP-OS'
+        icons = list(theme.rglob('*.png')) + list(theme.rglob('*.svg'))
+        self.assertGreater(len(icons), 50)
+        for icon in icons:
+            with self.subTest(icon=str(icon.relative_to(theme))):
+                self.assertTrue(icon.is_file(), 'Broken icon alias')
+                if icon.suffix == '.png':
+                    self.assertTrue(icon.read_bytes().startswith(b'\x89PNG\r\n\x1a\n'),
+                                    'Icon must contain image data, not a flattened symlink')
+                else:
+                    self.assertEqual(ET.parse(icon).getroot().tag.rsplit('}', 1)[-1], 'svg')
+
     def test_launch_tracks_mode_and_preserves_preferences(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
