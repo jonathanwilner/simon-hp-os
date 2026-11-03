@@ -102,3 +102,18 @@ notice are retained in `goran/desktop/hp-os-theme/`. See
 the CPU. Search retains the original query alongside suggested keywords.
 The service runs locally at login with a 2 GB memory limit and two CPU threads.
 See [Ask IQ service](pkgs/hp-os-search-iq/README.md).
+
+## Included wallpapers
+
+The desktop profile installs 17 original HarmonyOS 7 emulator wallpapers in
+`~/Pictures/Wallpapers/HP-OS`. Select that folder in the wallpaper picker.
+`harmonyos7-default.png` is 3000 × 2000; the other 16 images are 2160 × 1440.
+The update preserves your selected wallpaper. Original bytes and SHA-256
+checksums are recorded in `goran/desktop/wallpapers/SOURCE.json`.
+
+Get the collection with the usual update command:
+
+```sh
+cd ~/src/simon-hp-os
+bash goran/installer/update-desktop.sh
+```

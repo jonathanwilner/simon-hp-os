@@ -1,0 +1,32 @@
+{
+  "source": "HarmonyOS 7 PC emulator /sys_prod/media/themes, including Boundless.hwt",
+  "reportedVersion": "OpenHarmony-7.0.0.105",
+  "defaultDimensions": [
+    3000,
+    2000
+  ],
+  "collectionDimensions": [
+    2160,
+    1440
+  ],
+  "encoding": "Original bytes; extensions corrected to match format. No resizing or upscaling.",
+  "files": {
+    "harmonyos7-default.png": "35f1b1ad617b55ddbb9a2490134ed0ad93d704c843294f949c39eae512a7ca1c",
+    "home_wallpaper_00.png": "4ec955c58e0656e3477e4974678e181c0a3f0ae68bc4ff3cd4f2c4ed95be45de",
+    "home_wallpaper_01.jpg": "07b80bb2644060a69befc08149c61e5f607d1378dd52e0556d85ac9789b4aa81",
+    "home_wallpaper_02.jpg": "fa841466622a7ecb030c2af21124eb145ec8c39ac5521c802285fe4bbf078ac4",
+    "home_wallpaper_03.jpg": "3470358e8c81f8e084f76d296ea1b076a4847fc5cf6a5819942ee004e5c3bf0d",
+    "home_wallpaper_04.jpg": "a3027e1ef677796d3a4dd4003f69e67f1342889ddf3d6fa10e0201fc5220cf84",
+    "home_wallpaper_05.jpg": "fd846c42eadaa07332e69ea5887b614f95586dd82df3257e0b3f76f1af65208c",
+    "home_wallpaper_06.jpg": "739c07df6a5879d96a9b501dd09e5d2a49aacfba000b4a23f0c38568f0321aa7",
+    "home_wallpaper_07.jpg": "b8815752213d57ccdbcb9d92c1616eb92bc002372282499093263b2b74f7e669",
+    "home_wallpaper_08.jpg": "70b6d694a68c58d146fed219e1e2b5dbea730ec769cea9d6cc2bf6f79186c7a1",
+    "home_wallpaper_09.jpg": "4d3a91fa1e4ed7ab6225e8cb3126d99285635987fdc2d5689223638a380d2b39",
+    "home_wallpaper_10.jpg": "1af0c15c76bd813ee6af18bc15997330178d6c0942c83e768838d1060f7b8d3d",
+    "home_wallpaper_11.jpg": "507ddcdf3859c17e62d83b0b50f82ee4677444d7dda3b077700270750276c2af",
+    "home_wallpaper_12.jpg": "25690a39f6d5ae9131bfc8aae2c41bfb4a642509c0d23d1af3e88608aafe7726",
+    "home_wallpaper_13.jpg": "3c3d829ed1a5e12eecc62f7968daf0f305012722e39bc709813744eb12c0c4dc",
+    "home_wallpaper_14.jpg": "8d3ead7d6ac30806cabb1ada056965d16440542103c805de7f590d3ae23c78a5",
+    "home_wallpaper_15.jpg": "7edf408bfda81591ff326a6858c59792b678394996ab48a6e8a3b64216ffc5f4"
+  }
+}
