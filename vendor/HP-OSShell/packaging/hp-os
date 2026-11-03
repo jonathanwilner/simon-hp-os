@@ -3,6 +3,8 @@ set -euo pipefail
 runtime="${HP_OS_RUNTIME:-@runtime@}"
 packaging="${HP_OS_PACKAGING:-@packaging@}"
 if [[ ! -d "$packaging" ]]; then packaging="$(cd -- "$(dirname -- "$0")" && pwd)"; fi
+source "$packaging/session-environment.sh"
+hpos_clean_data_dirs "$packaging"
 python3 "$packaging/migrate-brand.py"
 config="${INIR_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/hp-os}"
 export INIR_CONFIG_DIR="$config"
