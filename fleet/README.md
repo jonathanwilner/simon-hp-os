@@ -11,3 +11,20 @@ Consumers add `inputs.desktop-fleet.url = "github:jonathanwilner/simon-hp-os"` a
 Simon can merge public main with `bash goran/installer/update-desktop.sh`. His configuration directly imports this same module, so the updater and installer receive the same shared features. Local customizations are retained by the updater recovery and merge workflow. Feature overrides are available under `programs.hp-os-fleet`: `enable`, `upscayl.enable`, and `wallpapers.enable`.
 
 Upscayl updates are managed by Home Manager. On Ubuntu with AppArmor, activation installs a policy for the exact pinned Electron executable using passwordless sudo. This allows its user-namespace sandbox without disabling the sandbox. Linux hosts without that Ubuntu AppArmor tool path skip this activation step.
+
+## Application launcher baseline
+
+`launcher-apps.nix` installs Goran's portable terminal, media, audio, network,
+scanner, remote desktop, recording and editor applications in every consuming
+Home Manager account. Ghostty, Alacritty, Foot and fuzzel use each host's native
+package set on ARM64 and x86-64. Package desktop entries provide executable
+paths and icons to both fuzzel and the HP-OS app launcher. New accounts receive
+Goran's light fuzzel appearance and Ghostty as the terminal for console apps.
+Existing fuzzel settings and the theme service's writable file remain intact.
+
+This baseline excludes Goran's Ubuntu and NVIDIA control panels, Googlebook VM
+application bridges, installed Steam game shortcuts, personal proxy launchers,
+and private service tools. Those entries require their corresponding runtime
+or host configuration. Microsoft 365, search, Steam, Sunshine, COSMIC files,
+BlueBubbles and other service integrations continue through their own modules.
+The baseline installs applications without starting or restarting them.
