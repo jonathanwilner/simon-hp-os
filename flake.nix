@@ -27,6 +27,10 @@
         ];
       };
     in {
+      homeModules.fleetApps = import ./fleet/home.nix;
+      homeManagerModules.default = import ./fleet/home.nix;
+      packages.x86_64-linux.upscayl = let p = import nixpkgs { system = "x86_64-linux"; config.allowUnfree = true; }; in p.callPackage ./goran/desktop/upscayl/package.nix {};
+      packages.aarch64-linux.upscayl = pkgs.callPackage ./goran/desktop/upscayl/package.nix {};
       packages.${system}.foundation-sunshine = import ./goran/remote-access/pkgs/foundation-sunshine.nix { inherit pkgs; };
       homeConfigurations.simon-daytona = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
@@ -35,6 +39,7 @@
           n1xPersonalServices = false;
         };
         modules = [
+          ./fleet/home.nix
           ./goran/installer/simon-home.nix
           ./goran/remote-access/simon.nix
           ./goran/installer/simon-apps.nix

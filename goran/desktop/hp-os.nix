@@ -108,7 +108,7 @@ PYWRAP
     exec ${shell}/bin/hp-os session "$@"
   '';
 in {
-  imports = [ ./wallpapers/home.nix hp-os.homeManagerModules.default ./hp-os-appearance-schedule.nix ];
+  imports = [ ./upscayl/home.nix ./wallpapers/home.nix hp-os.homeManagerModules.default ./hp-os-appearance-schedule.nix ];
   options.programs.goran-hp-os.enable = lib.mkEnableOption "the additional HP-OS login session";
   config = lib.mkIf cfg.enable {
     programs.hp-os = {
