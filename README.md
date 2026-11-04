@@ -9,6 +9,9 @@ This is a modified downstream integration, with its own HP-OS configuration.
 
 ## Install the desktop update
 
+For the touch update, local merges and native flake integration, use the
+[Simon touch update guide](goran/installer/SIMON-TOUCH-UPDATE.md).
+
 Use the existing Simon Ubuntu installation with NVIDIA driver **615.78.08**,
 Nix, Git, Python and tmux. Run these commands as `simon`, without sudo:
 
