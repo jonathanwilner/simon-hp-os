@@ -12,6 +12,19 @@ Simon can merge public main with `bash goran/installer/update-desktop.sh`. His c
 
 Upscayl updates are managed by Home Manager. On Ubuntu with AppArmor, activation installs a policy for the exact pinned Electron executable using passwordless sudo. This allows its user-namespace sandbox without disabling the sandbox. Linux hosts without that Ubuntu AppArmor tool path skip this activation step.
 
+## Media keys
+
+`media-keys.nix` installs `hp-os-media-key` with pinned WirePlumber and playerctl
+dependencies. Hosts bind media keys to `volume-up`, `volume-down`, `mute`,
+`mic-mute`, `play-pause`, `stop`, `next`, or `previous`. Volume changes use 10%
+steps capped at 100% and unmute the selected output after a successful change.
+This prevents a muted output from making working volume keys appear inactive.
+Brightness remains in each host's hardware module. Set
+`programs.hp-os-fleet.mediaKeys.enable = false` to omit this helper.
+Both ARM64 and x86-64 expose `packages.<system>.hp-os-media-key` for focused
+builds. The shared Home Manager import supplies the helper to both fresh
+installations and existing systems when their fleet input is updated.
+
 ## Application launcher baseline
 
 `launcher-apps.nix` installs Goran's portable terminal, media, audio, network,
