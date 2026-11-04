@@ -30,11 +30,19 @@
     in {
       homeModules.fleetApps = { imports = [ ./fleet/home.nix ]; _module.args.owlySource = owly; };
       homeManagerModules.default = { imports = [ ./fleet/home.nix ]; _module.args.owlySource = owly; };
-      nixosModules.owly = { lib, ... }: { imports = [ owly.nixosModules.default ]; services.owly.enable = lib.mkDefault true; };
+      nixosModules.owly = { lib, pkgs, ... }: {
+        imports = [ owly.nixosModules.default ];
+        services.owly.enable = lib.mkDefault true;
+        environment.systemPackages = [ (pkgs.callPackage ./fleet/owly/omdrop-package.nix { owlySource = owly; }) ];
+      };
+      packages.x86_64-linux.omdrop = nixpkgs.legacyPackages.x86_64-linux.callPackage ./fleet/owly/omdrop-package.nix { owlySource = owly; };
+      packages.aarch64-linux.omdrop = pkgs.callPackage ./fleet/owly/omdrop-package.nix { owlySource = owly; };
       packages.x86_64-linux.owly = nixpkgs.legacyPackages.x86_64-linux.callPackage "${owly}/nix/package.nix" {};
       packages.aarch64-linux.owly = pkgs.callPackage "${owly}/nix/package.nix" {};
-      packages.x86_64-linux.owly-ubuntu-system = nixpkgs.legacyPackages.x86_64-linux.callPackage ./fleet/owly/ubuntu-system.nix { owly = nixpkgs.legacyPackages.x86_64-linux.callPackage "${owly}/nix/package.nix" {}; };
-      packages.aarch64-linux.owly-ubuntu-system = pkgs.callPackage ./fleet/owly/ubuntu-system.nix { owly = pkgs.callPackage "${owly}/nix/package.nix" {}; };
+      packages.x86_64-linux.omdrop-gui = let p = nixpkgs.legacyPackages.x86_64-linux; in p.callPackage ./fleet/owly/gui-package.nix { omdrop = p.callPackage ./fleet/owly/omdrop-package.nix { owlySource = owly; }; owly = p.callPackage "${owly}/nix/package.nix" {}; };
+      packages.aarch64-linux.omdrop-gui = pkgs.callPackage ./fleet/owly/gui-package.nix { omdrop = pkgs.callPackage ./fleet/owly/omdrop-package.nix { owlySource = owly; }; owly = pkgs.callPackage "${owly}/nix/package.nix" {}; };
+      packages.x86_64-linux.owly-ubuntu-system = nixpkgs.legacyPackages.x86_64-linux.callPackage ./fleet/owly/ubuntu-system.nix { owlySource = owly; owly = nixpkgs.legacyPackages.x86_64-linux.callPackage "${owly}/nix/package.nix" {}; };
+      packages.aarch64-linux.owly-ubuntu-system = pkgs.callPackage ./fleet/owly/ubuntu-system.nix { owlySource = owly; owly = pkgs.callPackage "${owly}/nix/package.nix" {}; };
       packages.x86_64-linux.upscayl = let p = import nixpkgs { system = "x86_64-linux"; config.allowUnfree = true; }; in p.callPackage ./goran/desktop/upscayl/package.nix {};
       packages.aarch64-linux.upscayl = pkgs.callPackage ./goran/desktop/upscayl/package.nix {};
       packages.x86_64-linux.hp-os-media-key = let p = import nixpkgs { system = "x86_64-linux"; }; in p.callPackage ./fleet/media-key-package.nix {};

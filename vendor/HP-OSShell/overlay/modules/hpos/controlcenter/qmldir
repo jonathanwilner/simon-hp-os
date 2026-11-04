@@ -1,2 +1,3 @@
 module qs.modules.hpos.controlcenter
 HposControlCenter 1.0 HposControlCenter.qml
+OmdropControl 1.0 OmdropControl.qml

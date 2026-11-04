@@ -1,0 +1,1 @@
+{"id":"omdrop","name":"Omdrop AirDrop","description":"Send and receive files with nearby Apple devices using Omdrop and Owly","version":"0.18.7-hpos1","author":"Brent Kearney; HP-OS adaptation","license":"MIT","icon":"wifi_tethering","type":"widget","component":"./OmdropWidget.qml","permissions":["process"]}

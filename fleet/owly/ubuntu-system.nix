@@ -1,4 +1,5 @@
-{ lib, writeShellApplication, owly, coreutils, radioConfig ? null }:
+{ lib, writeShellApplication, callPackage, owly, owlySource, coreutils, radioConfig ? null
+, omdrop ? callPackage ./omdrop-package.nix { inherit owlySource; } }:
 writeShellApplication {
   name = "hp-os-owly-install-system";
   excludeShellChecks = [ "SC1091" ];
@@ -14,6 +15,8 @@ writeShellApplication {
       /usr/share/dbus-1/system-services /usr/share/polkit-1/actions \
       /etc/NetworkManager/conf.d /etc/systemd/network /nix/var/nix/gcroots/owly
     ln -sfn "$package" /nix/var/nix/gcroots/owly/package
+    ln -sfn ${omdrop} /nix/var/nix/gcroots/owly/omdrop
+    ln -sfn ${omdrop}/share/polkit-1/actions/org.omarchy.omdrop.radio.policy /usr/share/polkit-1/actions/org.omarchy.omdrop.radio.policy
     ln -sfn "$package/lib/systemd/system/owlyd.service" /etc/systemd/system/owlyd.service
     ln -sfn "$package/share/dbus-1/system.d/io.github.t4t5.Owly.conf" /etc/dbus-1/system.d/io.github.t4t5.Owly.conf
     ln -sfn "$package/share/dbus-1/system-services/io.github.t4t5.Owly.service" /usr/share/dbus-1/system-services/io.github.t4t5.Owly.service
