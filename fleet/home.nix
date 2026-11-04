@@ -2,7 +2,7 @@
 { config, lib, pkgs, ... }:
 let cfg = config.programs.hp-os-fleet;
 in {
-  imports = [ ../goran/desktop/upscayl/home.nix ./launcher-apps.nix ];
+  imports = [ ../goran/desktop/upscayl/home.nix ./launcher-apps.nix ./media-keys.nix ];
   options.programs.hp-os-fleet = {
     enable = lib.mkEnableOption "shared HP-OS fleet desktop defaults" // { default = true; };
     upscayl.enable = lib.mkEnableOption "native Upscayl" // { default = true; };

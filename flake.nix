@@ -31,6 +31,8 @@
       homeManagerModules.default = import ./fleet/home.nix;
       packages.x86_64-linux.upscayl = let p = import nixpkgs { system = "x86_64-linux"; config.allowUnfree = true; }; in p.callPackage ./goran/desktop/upscayl/package.nix {};
       packages.aarch64-linux.upscayl = pkgs.callPackage ./goran/desktop/upscayl/package.nix {};
+      packages.x86_64-linux.hp-os-media-key = let p = import nixpkgs { system = "x86_64-linux"; }; in p.callPackage ./fleet/media-key-package.nix {};
+      packages.aarch64-linux.hp-os-media-key = pkgs.callPackage ./fleet/media-key-package.nix {};
       packages.aarch64-linux.foundation-sunshine = import ./goran/remote-access/pkgs/foundation-sunshine.nix { inherit pkgs; };
       homeConfigurations.simon-daytona = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
