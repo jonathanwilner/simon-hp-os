@@ -16,7 +16,7 @@ in with pkgs; [
   ghostty alacritty foot cosmic-term cosmicFiles fuzzel swaylock
   # Managed Emacs modules supply their own commands and desktop entries.
   # Keep the standalone editor as the lower-priority fleet fallback.
-  (lib.lowPrio emacs-pgtk) bluebubbles kdePackages.kdeconnect-kde librepods openfreebuds
+  (lib.lowPrio emacs-pgtk) (lib.lowPrio bluebubbles) kdePackages.kdeconnect-kde librepods openfreebuds
   networkmanagerapplet networkmanager_dmenu blueman
   pavucontrol easyeffects playerctl
   mpv celluloid vlc ffmpeg ffmpegthumbnailer
