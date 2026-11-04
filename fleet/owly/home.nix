@@ -1,4 +1,4 @@
-{ config, lib, pkgs, owlySource, ... }:
+{ config, lib, pkgs, owlySource, osConfig ? null, ... }:
 let
   cfg = config.programs.hp-os-fleet;
   owly = pkgs.callPackage "${owlySource}/nix/package.nix" {};
@@ -32,7 +32,7 @@ in {
       icon = "network-wireless";
       terminal = true;
       categories = [ "Network" "Settings" ];
-      noDisplay = lib.mkDefault false;
+      noDisplay = osConfig != null;
     };
     xdg.desktopEntries.owly-radio = {
       name = "AirDrop Radio";

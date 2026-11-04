@@ -24,6 +24,7 @@ writeShellApplication {
     ${lib.optionalString (radioConfig != null) ''
       install -d /etc/owly
       ln -sfn ${radioConfig} /etc/owly/radio.toml
+      ln -sfn ${radioConfig} /nix/var/nix/gcroots/owly/radio-config
     ''}
     /usr/bin/systemctl daemon-reload
     /usr/bin/systemctl reload dbus
