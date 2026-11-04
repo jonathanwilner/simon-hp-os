@@ -805,15 +805,6 @@
      }
      readonly property real barPieceSize: Math.round(root.compactHeight - 10 * root.d)
      readonly property real barPieceGap: Math.round(6 * root.d)
-@@ -2058,7 +2060,7 @@
-                             anchors.fill: parent
-                             screenName: root.targetScreen?.name ?? ""
-                             kind: barPiece.modelData
--                            plated: true
-+                            plated: !HposTokens.active
-                             hovered: pieceHover.hovered
-                             pressed: pieceGrip.pressed
-                         }
 --- a/modules/iris/pieces/IrisPieces.qml
 +++ b/modules/iris/pieces/IrisPieces.qml
 @@ -1,6 +1,7 @@
