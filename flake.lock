@@ -291,6 +291,27 @@
         "type": "github"
       }
     },
+    "owly": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1793708364,
+        "narHash": "sha256-srNyP/FzZYNFuSECMfIvVssPVF84bIQBedxGP1yOTeY=",
+        "owner": "t4t5",
+        "repo": "owly",
+        "rev": "6f2e8ea99aed0687558d78a1dd49154ab3a5fa76",
+        "type": "github"
+      },
+      "original": {
+        "owner": "t4t5",
+        "repo": "owly",
+        "rev": "6f2e8ea99aed0687558d78a1dd49154ab3a5fa76",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "codex-fleet": "codex-fleet",
@@ -300,6 +321,7 @@
         "home-manager": "home-manager_2",
         "hp-os": "hp-os",
         "nixpkgs": "nixpkgs_3",
+        "owly": "owly",
         "xwayland-satellite": "xwayland-satellite"
       }
     },
