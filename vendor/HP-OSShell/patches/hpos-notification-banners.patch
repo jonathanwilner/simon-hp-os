@@ -214,3 +214,172 @@
                  }
  
                  Loader {
+--- a/modules/iris/sidebar/IrisSidebar.qml
++++ b/modules/iris/sidebar/IrisSidebar.qml
+@@ -141,8 +141,9 @@
+     property bool engaged: false
+     property real heldTop: 0
+     readonly property bool holding: !root.open || (root.engaged && frame.settled)
++    readonly property bool hposNotifications: Config.options?.panelFamily === "hpos" && !root.left
+     readonly property real alignedY: Math.round(root.topInset + (root.availableHeight - frame.height)
+-        * (root.options.alignment === "top" ? 0 : root.options.alignment === "bottom" ? 1 : 0.5))
++        * (root.hposNotifications ? 1 : root.options.alignment === "top" ? 0 : root.options.alignment === "bottom" ? 1 : 0.5))
+     Timer {
+         interval: 320
+         running: root.peek && !peekHover.hovered && frame.settled
+@@ -155,8 +156,8 @@
+     }
+     Shortcut { sequence: "Ctrl+E"; enabled: root.open; onActivated: root.editing = !root.editing }
+ 
+-    readonly property real edgeGap: (root.notch ? 0 : 12 * root.d) + IrisFrame.band + root.edgeHeld
+-    readonly property real verticalGap: 12 * root.d
++    readonly property real edgeGap: root.hposNotifications ? 16 * root.d : (root.notch ? 0 : 12 * root.d) + IrisFrame.band + root.edgeHeld
++    readonly property real verticalGap: (root.hposNotifications ? 16 : 12) * root.d
+     readonly property real notchOverflow: root.notch ? frame.radius : 0
+     readonly property real topInset: root.verticalGap + IrisFrame.safeInset("top")
+     readonly property real bottomInset: root.verticalGap + IrisFrame.safeInset("bottom")
+@@ -193,7 +194,7 @@
+         height: Math.round(Math.min(root.availableHeight * Math.max(0.45, Math.min(1, (root.options.height ?? 88) / 100)),
+             panelLayout.implicitHeight + 36 * root.d))
+         x: root.left ? root.edgeGap - root.notchOverflow : root.width - width - root.edgeGap + root.notchOverflow
+-        y: root.holding
++        y: root.hposNotifications ? root.alignedY : root.holding
+             ? Math.round(Math.max(root.topInset, Math.min(root.heldTop, root.topInset + root.availableHeight - height)))
+             : root.alignedY
+         onYChanged: if (!root.holding) root.heldTop = frame.y
+--- a/modules/iris/control/IrisControlCenter.qml
++++ b/modules/iris/control/IrisControlCenter.qml
+@@ -146,7 +146,7 @@
+         light: IrisStyle.surfaceLight("controlCenter", IrisStyle.wallpaperLight)
+         lightFrom: root.placement ? (root.placement.sideways ? (root.placement.towardsLeft ? "right" : "left") : (root.placement.towardsUp ? "bottom" : "top"))
+             : root.islandSide ? root.islandEdge : root.barBottom ? "bottom" : "top"
+-        x: root.placement ? root.placement.x
++        x: root.hposFamily ? Math.max(16 * IrisStyle.density, root.width - width - 16 * IrisStyle.density) : root.placement ? root.placement.x
+             : root.islandSide && root.islandBody ? (root.islandEdge === "left"
+                 ? root.islandBody.x + root.islandBody.width - IrisStyle.weld
+                 : root.islandBody.x - width + IrisStyle.weld)
+@@ -154,7 +154,7 @@
+             ? Math.max(root.edgeLeft, Math.min(root.width - width - root.edgeRight,
+                 root.positionOrigin.x + root.positionOrigin.width / 2 - width / 2))
+             : (root.width - width) / 2
+-        y: root.placement ? root.placement.y
++        y: root.hposFamily ? Math.max(IrisFrame.safeClear("top") + 16 * IrisStyle.density, root.height - height - IrisFrame.safeClear("bottom") - 16 * IrisStyle.density) : root.placement ? root.placement.y
+             : root.holding ? Math.max(12, Math.min(root.heldTop, root.height - height - root.edgeGap))
+             : root.islandSide ? Math.round(Math.max(IrisFrame.safeInset("top") + root.edge, Math.min(root.height - height - IrisFrame.safeInset("bottom") - root.edge,
+                 (root.positionOrigin ? root.positionOrigin.y + root.positionOrigin.height / 2 : (root.islandBody ? root.islandBody.y + root.islandBody.height / 2 : root.height / 2)) - height / 2)))
+@@ -165,10 +165,10 @@
+         onYChanged: if (!root.holding) root.heldTop = panel.y
+         width: root.panelWidth
+         readonly property real room: {
+-            const top = IrisFrame.safeClear("top") + Math.round(8 * IrisStyle.density)
+-            const bottom = IrisFrame.safeClear("bottom") + Math.round(8 * IrisStyle.density)
++            const top = IrisFrame.safeClear("top") + Math.round((root.hposFamily ? 16 : 8) * IrisStyle.density)
++            const bottom = IrisFrame.safeClear("bottom") + Math.round((root.hposFamily ? 16 : 8) * IrisStyle.density)
+             const body = root.islandBody
+-            if (root.placement || root.islandSide || !body) return root.height - top - bottom
++            if (root.hposFamily || root.placement || root.islandSide || !body) return root.height - top - bottom
+             return root.barBottom ? body.y - top : root.height - (body.y + body.height) - bottom
+         }
+         height: Math.min(panel.room, contents.contentHeight + root.contentPadding * 2)
+--- a/services/Notifications.qml
++++ b/services/Notifications.qml
+@@ -38,6 +38,7 @@
+                 ? Translation.tr("Open") : action.text,
+         })) ?? []
+         property bool popup: false
++        property bool panelUnread: false
+         property bool isTransient: notification?.hints.transient ?? false
+         property string appIcon: notification?.appIcon ?? ""
+         property string appName: notification?.appName ?? ""
+@@ -62,6 +63,7 @@
+         }
+         return {
+             "notificationId": notif.notificationId,
++            "panelUnread": notif.panelUnread ?? false,
+             "actions": notif.actions,
+             "appIcon": notif.appIcon,
+             "appName": notif.appName,
+@@ -126,7 +128,7 @@
+     property int _manualUnreadCounter: 0
+     readonly property int unread: (Config.options?.notifications?.useLegacyCounter ?? false)
+                                     ? _manualUnreadCounter
+-                                    : popupList.length
++                                    : root.list.filter(notif => notif.popup || notif.panelUnread).length
+ 
+     property var filePath: Directories.notificationsPath
+     // Use the stable QtObject base type here. Inline component type identities
+@@ -277,6 +279,13 @@
+         return String(name ?? "").toLowerCase().replace(/[^a-z0-9]/g, "")
+     }
+ 
++    // BlueBubbles belongs in history and app badges, without a desktop banner.
++    function _panelOnly(notification): bool {
++        if (Config.options?.panelFamily !== "hpos") return false
++        const key = root._normalizeAppKey(notification?.appName || notification?.appIcon)
++        return key === "bluebubbles" || key === "appbluebubblesbluebubbles" || key === "combluebubblesbluebubbles"
++    }
++
+     function _notificationBlocked(notification): bool {
+         const blocked = Config.options?.notifications?.blockedApps ?? []
+         if (!blocked || blocked.length === 0)
+@@ -319,7 +328,7 @@
+     function countForApp(identifiers): int {
+         const keys = (identifiers ?? []).map(root._normalizeAppKey).filter(k => k.length > 0)
+         if (keys.length === 0) return 0
+-        const groups = root.popupGroupsByAppName
++        const groups = root._groupsForListOptimized(root.list.filter(notif => notif.popup || notif.panelUnread))
+         for (const appName in groups) {
+             if (keys.indexOf(root._normalizeAppKey(appName)) !== -1)
+                 return groups[appName].notifications?.length ?? 0
+@@ -332,13 +341,14 @@
+         if (keys.length === 0) return
+         let changed = false
+         root.list.forEach((notif) => {
+-            if (notif.popup && keys.indexOf(root._normalizeAppKey(notif.appName)) !== -1) {
++            if ((notif.popup || notif.panelUnread) && keys.indexOf(root._normalizeAppKey(notif.appName)) !== -1) {
+                 cancelTimeout(notif.notificationId)
+                 notif.popup = false
++                notif.panelUnread = false
+                 changed = true
+             }
+         })
+-        if (changed) triggerListChange()
++        if (changed) { triggerListChange(); notifFileView.setText(stringifyList(root.list)); }
+     }
+ 
+     // Public API - use cached values
+@@ -467,8 +477,14 @@
+                     ? "notificationCritical" : "notification");
+             }
+ 
+-            // Popup
+-            if (!root.popupInhibited) {
++            const panelOnly = root._panelOnly(notification)
++            if (panelOnly) {
++                newNotifObject.panelUnread = true
++                newNotifObject.isTransient = false
++                if (Config.options?.notifications?.useLegacyCounter ?? false) root._manualUnreadCounter++
++            }
++            // Presentation-only policy never rejects the saved notification.
++            if (!panelOnly && !root.popupInhibited) {
+                 newNotifObject.popup = true;
+ 
+                 const timeout = _timeoutForNotification(notification);
+@@ -491,6 +507,9 @@
+     }
+ 
+     function markAllRead() {
++        root.list.forEach(notif => { notif.panelUnread = false })
++        triggerListChange()
++        notifFileView.setText(stringifyList(root.list))
+         if (Config.options?.notifications?.useLegacyCounter ?? false) {
+             // Legacy mode: just reset the manual counter
+             root._manualUnreadCounter = 0;
+@@ -772,6 +791,7 @@
+             root.list = JSON.parse(fileContents).map((notif) => {
+                 return notifComponent.createObject(root, {
+                     "notificationId": notif.notificationId,
++                    "panelUnread": notif.panelUnread ?? false,
+                     "actions": [], // Notification actions are meaningless if they're not tracked by the server or the sender is dead
+                     "appIcon": notif.appIcon,
+                     "appName": notif.appName,

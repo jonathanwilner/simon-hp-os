@@ -11,6 +11,9 @@ Pane {
     property bool compact: false
     property string cli: "@omdrop@/bin/omdrop"
     property string radioCli: "@owly@/bin/owly"
+    property string controllerCli: "@controller@/bin/hp-os-omdrop-controller"
+    property var control: ({})
+    property bool controlChecked: false
     property var state: ({})
     property var radio: ({})
     property var peers: []
@@ -22,14 +25,12 @@ Pane {
     property string progressText: ""
     readonly property bool receiving: state.receiving === true
     onReceivingChanged: { if (!receiving) peers = []; }
-    readonly property string blocker: {
-        if (!checked) return "Checking Wi-Fi radio…";
-        if (radio.missing && radio.missing.length) return radio.missing.map(x => x.say).join("\n");
-        return "";
-    }
-    readonly property bool busy: action.running || send.running
+    readonly property string radioIssue: radio.missing ? radio.missing.map(x => x.say).join("\n") : ""
+    readonly property string blocker: !controlChecked ? "Checking AirDrop readiness…" : (control.can_enable === true || (receiving && control.phase === "receiving")) ? "" : (control.message || "AirDrop cannot be enabled on the current connection.")
+    readonly property bool busy: action.running || send.running || ["starting", "steering", "restoring", "restore_failed"].indexOf(control.phase) >= 0
     padding: compact ? 12 : 18
     function refresh() {
+        if (!controlPoll.running) controlPoll.running = true;
         if (!status.running) status.running = true;
         if (!doctor.running) doctor.running = true;
         if (!identityPoll.running) identityPoll.running = true;
@@ -38,7 +39,8 @@ Pane {
     function run(args) {
         if (busy) return;
         errorText = "";
-        action.command = [cli].concat(args);
+        if (args[0] === "on" && blocker) { errorText = blocker; return; }
+        action.command = [args[0] === "on" || args[0] === "off" ? controllerCli : cli].concat(args);
         action.running = true;
     }
     function sendTo(mac) {
@@ -49,6 +51,14 @@ Pane {
     }
     Component.onCompleted: refresh()
     Timer { interval: 4000; running: root.visible || root.receiving; repeat: true; onTriggered: root.refresh() }
+    Process {
+        id: controlPoll
+        command: [root.controllerCli, "status", "--json"]
+        stdout: StdioCollector { onStreamFinished: {
+            try { root.control = JSON.parse(text); root.controlChecked = true; }
+            catch (e) { root.controlChecked = false; }
+        } }
+    }
     Process {
         id: doctor
         command: [root.radioCli, "doctor", "--json"]
@@ -83,6 +93,14 @@ Pane {
     }
     Process {
         id: action
+        stdout: StdioCollector { onStreamFinished: {
+            if (!text.trim()) return;
+            try {
+                const result = JSON.parse(text);
+                if (result.phase !== undefined) { root.control = result; root.controlChecked = true; }
+                if (result.ok === false) root.errorText = result.message || result.reason || "AirDrop could not be enabled.";
+            } catch (e) {}
+        } }
         stderr: StdioCollector { onStreamFinished: { if (text.trim()) root.errorText = text.trim(); } }
         onExited: (code, exitStatus) => {
             if (code !== 0 && !root.errorText) root.errorText = "Omdrop could not complete this action. Check the Wi-Fi status below.";
@@ -107,13 +125,23 @@ Pane {
             Label { text: "Omdrop · AirDrop"; font.pixelSize: root.compact ? 20 : 24; font.bold: true }
             Label {
                 Layout.fillWidth: true; wrapMode: Text.WordWrap
-                text: !root.checked ? "Checking radio…" : root.blocker ? "Wi-Fi needs attention" : root.receiving ? (root.state.visible === true ? "Visible to nearby Apple devices" : "Receiver on · waiting for visibility") : "Not discoverable"
+                text: root.busy ? (root.control.message || "Working…") : !root.controlChecked ? "Checking AirDrop…" : root.blocker ? "Wi-Fi needs attention" : root.receiving ? (root.state.visible === true ? "Visible to nearby Apple devices" : "Receiver on · waiting for visibility") : "Not discoverable"
                 font.bold: true
             }
             Label {
                 Layout.fillWidth: true; wrapMode: Text.WordWrap
                 visible: !!root.blocker
-                text: root.blocker + (root.blocker.indexOf("channel") >= 0 ? "\nConnect Wi-Fi to an access point on channel 6, 44 or 149, then click Refresh. Your current connection has been preserved." : "")
+                text: root.blocker
+            }
+            Label {
+                Layout.fillWidth: true; wrapMode: Text.WordWrap
+                visible: !!root.control.message
+                text: root.control.message || ""
+            }
+            Label {
+                Layout.fillWidth: true; wrapMode: Text.WordWrap
+                visible: root.control.needs_steering === true && !root.receiving
+                text: "Enable AirDrop will temporarily select a compatible access point on your current network. The original connection will be restored when receiving stops."
             }
             Label { Layout.fillWidth: true; wrapMode: Text.WordWrap; visible: !!root.errorText; text: root.errorText; color: "#c04040" }
             GridLayout {
@@ -121,14 +149,14 @@ Pane {
                 columns: root.compact ? 2 : 3
                 Button {
                     Layout.fillWidth: true
-                    text: action.running ? "Please wait…" : root.receiving ? "Stop receiving" : "Receive files"
-                    enabled: !root.busy && root.statusChecked && (root.receiving || (root.checked && !root.blocker))
+                    text: action.running ? "Please wait…" : root.receiving ? "Stop receiving" : "Enable AirDrop"
+                    enabled: !root.busy && root.statusChecked && (root.receiving || (root.controlChecked && !root.blocker))
                     onClicked: root.run(root.receiving ? ["off"] : ["on", duration.currentValue])
                 }
                 ComboBox {
                     id: duration; Layout.fillWidth: true; enabled: !root.receiving && !root.busy
                     textRole: "label"; valueRole: "value"
-                    model: [{label:"10 minutes", value:"10m"}, {label:"30 minutes", value:"30m"}, {label:"One file", value:"once"}]
+                    model: [{label:"10 minutes", value:"10m"}, {label:"30 minutes", value:"30m"}]
                 }
                 Button { Layout.columnSpan: root.compact ? 2 : 1; text: "Refresh"; onClicked: root.refresh() }
             }

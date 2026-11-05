@@ -1,7 +1,8 @@
 # The GUI and receiver share the pinned upstream Rust command contract.
 # Privileged hooks and the polkit entry point are immutable store paths.
 { lib, rustPlatform, fetchFromGitHub, callPackage, owlySource, makeWrapper
-, bash, coreutils, gnugrep, iproute2, openssl, systemd, avahi, wl-clipboard }:
+, bash, coreutils, gnugrep, iproute2, openssl, systemd, avahi, wl-clipboard
+, runCommand, python3, libnotify }:
 let
   radioHooks = (callPackage "${owlySource}/nix/package.nix" {}).overrideAttrs (_: {
     pname = "omdrop-owl-hooks";
@@ -20,7 +21,15 @@ let
       runHook postInstall
     '';
   });
-  runtimePath = lib.makeBinPath [ coreutils gnugrep iproute2 openssl systemd avahi wl-clipboard ];
+  notificationAdapter = runCommand "hp-os-omdrop-notifications" {} ''
+    mkdir -p $out/bin
+    cp ${./notify.py} $out/bin/omarchy-notification-send
+    substituteInPlace $out/bin/omarchy-notification-send \
+      --replace-fail '#!/usr/bin/env python3' '#!${python3}/bin/python3' \
+      --replace-fail '@notifySend@' '${libnotify}/bin/notify-send'
+    chmod 755 $out/bin/omarchy-notification-send
+  '';
+  runtimePath = lib.makeBinPath [ notificationAdapter coreutils gnugrep iproute2 openssl systemd avahi wl-clipboard ];
   # pkexec must be the host's privileged executable. Ubuntu supplies it in
   # /usr/bin; NixOS supplies its setuid wrapper in /run/wrappers/bin.
   commandPath = "/run/wrappers/bin:/usr/bin:/usr/sbin:${runtimePath}";
@@ -93,7 +102,7 @@ in rustPlatform.buildRustPackage {
     ln -s $out/share/omdrop/bin/omdrop $out/bin/omdrop
     runHook postInstall
   '';
-  passthru = { inherit radioHooks; coreVersion = "0.1.11"; };
+  passthru = { inherit radioHooks notificationAdapter; coreVersion = "0.1.11"; };
   meta = {
     description = "Omdrop AirDrop sender and receiver with the Owly radio backend";
     homepage = "https://github.com/netmojo-systems/omdrop-plugin";

@@ -8,7 +8,8 @@ let
     radioConfig = if cfg.owly.settings == {} then null else toml.generate "owly-radio.toml" cfg.owly.settings;
   };
   omdrop = pkgs.callPackage ./omdrop-package.nix { inherit owlySource; };
-  gui = pkgs.callPackage ./gui-package.nix { inherit omdrop owly; };
+  controller = pkgs.callPackage ./controller-package.nix { inherit omdrop owly; };
+  gui = pkgs.callPackage ./gui-package.nix { inherit omdrop owly controller; };
 
 in {
   options.programs.hp-os-fleet.owly = {
@@ -21,7 +22,7 @@ in {
   };
   config = lib.mkIf (cfg.enable && cfg.owly.enable) {
     # The root helper refuses NixOS; NixOS uses the exported system module.
-    home.packages = [ owly omdrop gui systemInstaller ];
+    home.packages = [ owly omdrop controller gui systemInstaller ];
     xdg.configFile."hp-os/omdrop".source = "${gui}/share/omdrop";
     xdg.configFile."DankMaterialShell/plugins/omdrop".source = "${gui}/share/omdrop";
     # Merge the native DMS control into mutable user settings without replacing

@@ -43,7 +43,7 @@ ColumnLayout {
     }
     spacing: 12 * d
     function focusInitial() { editButton.forceActiveFocus() }
-    onVisibleChanged: if (visible) { root.monitor?.refresh(); hotspot.refreshStatus(); omdrop.refresh() }
+    onVisibleChanged: if (visible) { root.monitor?.refresh(); hotspot.refreshStatus(); omdrop.refresh(); relay.refresh() }
     Keys.onEscapePressed: event => { root.picker = ""; root.editing = false; GlobalStates.controlPanelOpen = false; event.accepted = true }
     function togglePicker(name) { picker = picker === name ? "" : name }
     function takePickerRequest() {
@@ -202,6 +202,12 @@ ColumnLayout {
         ConnectionCard { model: hotspot; detailPage: "network" }
         ConnectionCard { model: vpn; detailPage: "network" }
     }
+    RelayControl {
+        id: relay
+        Layout.fillWidth: true
+        expanded: root.picker === "relay"
+        onDetailsRequested: root.togglePicker("relay")
+    }
     OmdropControl {
         id: omdrop
         Layout.fillWidth: true
@@ -258,7 +264,7 @@ ColumnLayout {
     // A single loader keeps inactive detail lists and their delegates out of the scene.
     Loader {
         Layout.fillWidth: true
-        active: root.picker.length > 0 && root.picker !== "power" && root.picker !== "omdrop"
+        active: root.picker.length > 0 && root.picker !== "power" && root.picker !== "omdrop" && root.picker !== "relay"
         sourceComponent: root.picker === "network" ? networkDetails : root.picker === "bluetooth" ? bluetoothDetails
             : root.picker === "display" ? displayDetails : root.picker === "system" ? systemDetails : audioDetails
     }
