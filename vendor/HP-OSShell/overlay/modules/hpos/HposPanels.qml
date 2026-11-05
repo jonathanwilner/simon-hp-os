@@ -55,6 +55,7 @@ Item {
         function keyboard(): void { touchCommand.command = ["touch-support", "toggle"]; touchCommand.running = true }
         function touchSettings(): void { touchCommand.command = ["touch-support", "settings"]; touchCommand.running = true }
         function controlCenter(): void { GlobalStates.controlPanelOpen = !GlobalStates.controlPanelOpen }
+        function printing(): void { GlobalStates.irisControlPickerRequest = "printing"; GlobalStates.controlPanelOpen = true }
         function sharing(): void { GlobalStates.irisControlPickerRequest = "omdrop"; GlobalStates.controlPanelOpen = true }
         function notifications(): void { GlobalStates.toggleSidebarRight("") }
         function set(key: string, value: string): bool {

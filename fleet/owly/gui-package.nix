@@ -1,4 +1,8 @@
-{ runtimeShell, runCommand, quickshell, omdrop, owly, controller }:
+{ runtimeShell, runCommand, quickshell, omdrop, owly, controller, callPackage }:
+let
+  printingClient = callPackage ../printing/package.nix {};
+  printingGui = callPackage ../printing/gui-package.nix { client = printingClient; };
+in
 runCommand "hp-os-omdrop-gui" {} ''
   mkdir -p "$out/share/omdrop" "$out/bin"
   cp -r ${./gui}/* "$out/share/omdrop/"
@@ -6,7 +10,8 @@ runCommand "hp-os-omdrop-gui" {} ''
   substituteInPlace "$out/share/omdrop/OmdropPanel.qml" \
     --replace-fail '@omdrop@' '${omdrop}' \
     --replace-fail '@owly@' '${owly}' \
-    --replace-fail '@controller@' '${controller}'
+    --replace-fail '@controller@' '${controller}' \
+    --replace-fail '@printingGui@' '${printingGui}'
   cat > "$out/bin/hp-os-omdrop" <<SCRIPT
   #!${runtimeShell}
   export QT_QUICK_CONTROLS_STYLE=Basic

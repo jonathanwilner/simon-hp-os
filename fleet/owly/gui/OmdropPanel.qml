@@ -12,6 +12,8 @@ Pane {
     property string cli: "@omdrop@/bin/omdrop"
     property string radioCli: "@owly@/bin/owly"
     property string controllerCli: "@controller@/bin/hp-os-omdrop-controller"
+    property string printingCli: "@printingGui@/bin/hp-os-aware-print-gui"
+    Process { id: printing; command: [root.printingCli] }
     property var control: ({})
     property bool controlChecked: false
     property var state: ({})
@@ -122,7 +124,17 @@ Pane {
         ColumnLayout {
             width: parent.width
             spacing: 12
-            Label { text: "Omdrop · AirDrop"; font.pixelSize: root.compact ? 20 : 24; font.bold: true }
+            RowLayout {
+                Layout.fillWidth: true
+                Label { Layout.fillWidth: true; text: "Omdrop · AirDrop"; font.pixelSize: root.compact ? 20 : 24; font.bold: true }
+                Button {
+                    text: "Printers"
+                    Layout.minimumHeight: 40
+                    enabled: !printing.running
+                    onClicked: printing.running = true
+                    Accessible.name: "Open nearby printing"
+                }
+            }
             Label {
                 Layout.fillWidth: true; wrapMode: Text.WordWrap
                 text: root.busy ? (root.control.message || "Working…") : !root.controlChecked ? "Checking AirDrop…" : root.blocker ? "Wi-Fi needs attention" : root.receiving ? (root.state.visible === true ? "Visible to nearby Apple devices" : "Receiver on · waiting for visibility") : "Not discoverable"

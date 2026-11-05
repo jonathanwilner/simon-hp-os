@@ -133,6 +133,15 @@ if [[ -e /etc/systemd/system/owlyd.service ]]; then
     printf 'Open Set Up AirDrop to refresh the Owly system service.\n'
   fi
 fi
+# Refresh the explicitly configured printing adapter without restarting its radio.
+# Refresh requires the same saved adapter and preserves its active session.
+if [[ -f /etc/hp-os-aware-print-interface ]]; then
+  if /usr/bin/sudo -n true 2>/dev/null; then
+    /usr/bin/sudo "$HOME/.nix-profile/bin/hp-os-aware-install-system" --refresh "$(cat /etc/hp-os-aware-print-interface)"
+  else
+    printf 'Refresh Wi-Fi Aware setup: sudo hp-os-aware-install-system --refresh %s\n' "$(cat /etc/hp-os-aware-print-interface)"
+  fi
+fi
 ln -sfn "$run_dir" "$state/current"
 printf 'Simon desktop updated to %s\nGeneration: %s\n' "$revision" "$candidate"
 printf 'Remote services: open Set Up Remote Access once to enable Sunshine and SSH. Tailscale stays unenrolled.\n'

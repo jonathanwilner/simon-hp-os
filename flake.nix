@@ -30,6 +30,21 @@
     in {
       homeModules.fleetApps = { imports = [ ./fleet/home.nix ]; _module.args.owlySource = owly; };
       homeManagerModules.default = { imports = [ ./fleet/home.nix ]; _module.args.owlySource = owly; };
+      packages.x86_64-linux.hp-os-aware-radio = nixpkgs.legacyPackages.x86_64-linux.callPackage ./fleet/printing/radio.nix {};
+      packages.aarch64-linux.hp-os-aware-radio = pkgs.callPackage ./fleet/printing/radio.nix {};
+      packages.x86_64-linux.hp-os-aware-install-system = nixpkgs.legacyPackages.x86_64-linux.callPackage ./fleet/printing/ubuntu-system.nix {};
+      packages.aarch64-linux.hp-os-aware-install-system = pkgs.callPackage ./fleet/printing/ubuntu-system.nix {};
+      nixosModules.aware-printing = import ./fleet/printing/nixos.nix;
+      packages.x86_64-linux.hp-os-aware-print-gui = nixpkgs.legacyPackages.x86_64-linux.callPackage ./fleet/printing/gui-package.nix {
+        client = nixpkgs.legacyPackages.x86_64-linux.callPackage ./fleet/printing/package.nix {};
+      };
+      packages.aarch64-linux.hp-os-aware-print-gui = pkgs.callPackage ./fleet/printing/gui-package.nix {
+        client = pkgs.callPackage ./fleet/printing/package.nix {};
+      };
+      packages.x86_64-linux.hp-os-aware-print = nixpkgs.legacyPackages.x86_64-linux.callPackage ./fleet/printing/package.nix {};
+      packages.aarch64-linux.hp-os-aware-print = pkgs.callPackage ./fleet/printing/package.nix {};
+      packages.x86_64-linux.hp-os-aware-supplicant = nixpkgs.legacyPackages.x86_64-linux.callPackage ./fleet/printing/supplicant.nix {};
+      packages.aarch64-linux.hp-os-aware-supplicant = pkgs.callPackage ./fleet/printing/supplicant.nix {};
       nixosModules.owly = { lib, pkgs, ... }: {
         imports = [ owly.nixosModules.default ];
         services.owly.enable = lib.mkDefault true;
