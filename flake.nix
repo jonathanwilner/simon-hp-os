@@ -28,6 +28,10 @@
         ];
       };
     in {
+      nixosConfigurations.hp-os-test = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        modules = [ (import ./tests/desktop-vm/configuration.nix { inherit hp-os home-manager owly; }) ];
+      };
       homeModules.fleetApps = { imports = [ ./fleet/home.nix ]; _module.args.owlySource = owly; };
       homeManagerModules.default = { imports = [ ./fleet/home.nix ]; _module.args.owlySource = owly; };
       packages.x86_64-linux.hp-os-aware-radio = nixpkgs.legacyPackages.x86_64-linux.callPackage ./fleet/printing/radio.nix {};
