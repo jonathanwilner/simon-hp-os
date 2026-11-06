@@ -5,7 +5,8 @@ let
       pkgs = import flake.inputs.nixpkgs { inherit system; config.allowUnfree = true; overlays = [ (import ./overlay.nix) ]; };
       home = flake.inputs.home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
-        modules = [ ./home.nix {
+        modules = [ flake.homeModules.fleetApps flake.homeModules.chromeChannels {
+          programs.hp-os-fleet.enable = false;
           home.username = "test";
           home.homeDirectory = "/home/test";
           home.stateVersion = "26.05";

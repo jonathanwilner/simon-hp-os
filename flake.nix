@@ -45,7 +45,7 @@
         };
       in { type = "app"; program = "${updater}/bin/update-chrome-channels"; };
       overlays.chromeChannels = import ./fleet/chrome-channels/overlay.nix;
-      homeModules.chromeChannels = import ./fleet/chrome-channels/home.nix;
+      homeModules.chromeChannels = ./fleet/chrome-channels/home.nix;
       nixosConfigurations.hp-os-test = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         modules = [ (import ./tests/desktop-vm/configuration.nix { inherit hp-os home-manager owly; }) ];
