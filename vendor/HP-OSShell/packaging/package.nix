@@ -82,7 +82,7 @@ let
     exec ${pkgs.kdePackages.systemsettings}/bin/systemsettings kcm_users
   '';
   desktopApps = [ pkgs.kdePackages.dolphin pkgs.kdePackages.gwenview ];
-  runtimeDeps = [ niri touchSupport ] ++ (builtins.filter (p: lib.getName p != "niri") shell.runtimeDependencies) ++ [ pkgs.swayidle pkgs.dbus pkgs.polkit_gnome pkgs.fontconfig pkgs.patch ];
+  runtimeDeps = [ niri touchSupport ] ++ (builtins.filter (p: lib.getName p != "niri") shell.runtimeDependencies) ++ [ pkgs.swayidle pkgs.dbus pkgs.libsecret pkgs.polkit_gnome pkgs.fontconfig pkgs.patch ];
 in pkgs.stdenvNoCC.mkDerivation {
   pname = "hp-os";
   version = "0.1.0";
