@@ -7,6 +7,13 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 
 class MediaKeyOverlayTests(unittest.TestCase):
+    def test_declarative_bindings_use_shared_helper(self):
+        source = (ROOT / "goran/desktop/niri.nix").read_text()
+        for line in source.splitlines():
+            if "XF86Audio" in line:
+                self.assertIn("${mediaKeys}/bin/hp-os-media-key", line)
+        self.assertIn("pkgs.python3 mediaKeys", source)
+
     def test_actions_and_headless_fallback(self):
         for action, expected in [('volume-up', 'volume'), ('volume-down', 'volume'), ('mute', 'volume'), ('mic-mute', 'mic'), ('next', 'media next'), ('previous', 'media previous'), ('brightness-osd', 'brightnessValue 45')]:
             with self.subTest(action=action), tempfile.TemporaryDirectory() as d:

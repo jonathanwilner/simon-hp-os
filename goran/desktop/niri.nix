@@ -2,6 +2,7 @@
 let
   system = pkgs.stdenv.hostPlatform.system;
   niri = pkgs.niri;
+  mediaKeys = config.programs.hp-os-fleet.mediaKeys.package;
   hdrControl = pkgs.writeShellApplication {
     name = "goran-hdr";
     runtimeInputs = [ pkgs.python3 niri ];
@@ -12,7 +13,7 @@ let
   };
   brightness = pkgs.writeShellApplication {
     name = "goran-brightness";
-    runtimeInputs = [ pkgs.coreutils pkgs.util-linux pkgs.python3 ];
+    runtimeInputs = [ pkgs.coreutils pkgs.util-linux pkgs.python3 mediaKeys ];
     text = ''
       export GORAN_PANEL_SCRIPT=${./goran-panel.py}
       export GORAN_PANEL_PYTHON=${pkgs.python3}/bin/python3
@@ -164,14 +165,14 @@ in {
     spawn-at-startup "${xwayland-satellite.packages.${system}.default}/bin/xwayland-satellite"
     binds {
       // The OmniBook sends media keycodes directly; Fn+F1 sends plain F1.
-      XF86AudioMute allow-when-locked=true { spawn "${pkgs.wireplumber}/bin/wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle"; }
-      XF86AudioLowerVolume allow-when-locked=true { spawn "${pkgs.wireplumber}/bin/wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "10%-"; }
-      XF86AudioRaiseVolume allow-when-locked=true { spawn "${pkgs.wireplumber}/bin/wpctl" "set-volume" "-l" "1.0" "@DEFAULT_AUDIO_SINK@" "10%+"; }
-      XF86AudioMicMute allow-when-locked=true { spawn "${pkgs.wireplumber}/bin/wpctl" "set-mute" "@DEFAULT_AUDIO_SOURCE@" "toggle"; }
-      XF86AudioPlay allow-when-locked=true { spawn "${pkgs.playerctl}/bin/playerctl" "play-pause"; }
-      XF86AudioStop allow-when-locked=true { spawn "${pkgs.playerctl}/bin/playerctl" "stop"; }
-      XF86AudioNext allow-when-locked=true { spawn "${pkgs.playerctl}/bin/playerctl" "next"; }
-      XF86AudioPrev allow-when-locked=true { spawn "${pkgs.playerctl}/bin/playerctl" "previous"; }
+      XF86AudioMute allow-when-locked=true { spawn "${mediaKeys}/bin/hp-os-media-key" "mute"; }
+      XF86AudioLowerVolume allow-when-locked=true { spawn "${mediaKeys}/bin/hp-os-media-key" "volume-down"; }
+      XF86AudioRaiseVolume allow-when-locked=true { spawn "${mediaKeys}/bin/hp-os-media-key" "volume-up"; }
+      XF86AudioMicMute allow-when-locked=true { spawn "${mediaKeys}/bin/hp-os-media-key" "mic-mute"; }
+      XF86AudioPlay allow-when-locked=true { spawn "${mediaKeys}/bin/hp-os-media-key" "play-pause"; }
+      XF86AudioStop allow-when-locked=true { spawn "${mediaKeys}/bin/hp-os-media-key" "stop"; }
+      XF86AudioNext allow-when-locked=true { spawn "${mediaKeys}/bin/hp-os-media-key" "next"; }
+      XF86AudioPrev allow-when-locked=true { spawn "${mediaKeys}/bin/hp-os-media-key" "previous"; }
       XF86MonBrightnessUp allow-when-locked=true { spawn "${brightness}/bin/goran-brightness" "up"; }
       XF86MonBrightnessDown allow-when-locked=true { spawn "${brightness}/bin/goran-brightness" "down"; }
       // Slazenger desktop shortcuts, verified against its live config on 4 Oct 2026.
