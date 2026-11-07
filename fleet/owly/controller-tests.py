@@ -22,10 +22,13 @@ class ControllerTests(unittest.TestCase):
         self.env = patch.dict(os.environ, XDG_RUNTIME_DIR=self.temp.name)
         self.env.start()
         c.DEADLINE = None
+        self.preferences = patch.object(c, "PREFERRED_CHANNELS", [])
+        self.preferences.start()
         self.authorized_check = c.authorized
         self.authorization = patch.object(c, 'authorized', return_value=True)
         self.authorization.start()
     def tearDown(self):
+        self.preferences.stop()
         self.authorization.stop()
         self.env.stop()
         self.temp.cleanup()
@@ -36,6 +39,30 @@ class ControllerTests(unittest.TestCase):
     def test_same_network_security_and_best_supported_channel(self):
         wifi = self.scan('*:Qguest:aa:64::70\n:Qguest:bb:149::50\n:Qguest:cc:6::40\n:other:dd:44::100\n:Qguest:ee:44:WPA2:99\n:Qguest:ff:36::98')
         self.assertEqual(wifi['target']['bssid'], 'bb')
+    def test_preferred_channel_roams_from_compatible_ap(self):
+        rows = '*:saved:aa:44:WPA2:90\n:saved:bb:149:WPA2:40\n:saved:cc:149:WPA2:60'
+        with patch.object(c, 'ALLOW_STEERING', True), patch.object(c, 'PREFERRED_CHANNELS', [149]):
+            wifi = self.scan(rows)
+            self.assertEqual(wifi['target']['bssid'], 'cc')
+            c.mark_failed_target(wifi, wifi['target'])
+            self.assertEqual(self.scan(rows)['target']['bssid'], 'bb')
+            c.mark_failed_target(wifi, dict(wifi['target'], bssid='bb'))
+            self.assertEqual(self.scan(rows)['target']['bssid'], 'aa')
+
+    def test_preference_order_and_fallback(self):
+        with patch.object(c, 'ALLOW_STEERING', True), patch.object(c, 'PREFERRED_CHANNELS', [149, 6]):
+            self.assertEqual(self.scan('*:saved:aa:44::90\n:saved:bb:6::40')['target']['bssid'], 'bb')
+            self.assertEqual(self.scan('*:saved:aa:44::90')['target']['bssid'], 'aa')
+            self.assertEqual(self.scan('*:saved:aa:153::90\n:saved:bb:44::40')['target']['bssid'], 'bb')
+            self.assertEqual(self.scan('*:saved:aa:149::30\n:saved:bb:149::90')['target']['bssid'], 'aa')
+
+    def test_preference_preserves_disabled_roaming_and_default(self):
+        rows = '*:saved:aa:44::40\n:saved:bb:149::90'
+        with patch.object(c, 'ALLOW_STEERING', False), patch.object(c, 'PREFERRED_CHANNELS', [149]):
+            self.assertEqual(self.scan(rows)['target']['bssid'], 'aa')
+        with patch.object(c, 'ALLOW_STEERING', True):
+            self.assertEqual(self.scan(rows)['target']['bssid'], 'aa')
+
     def test_no_candidate(self):
         self.assertIsNone(self.scan('*:Qguest:aa:64::70')['target'])
     def test_failed_ap_cooldown_selects_next_same_network_candidate(self):

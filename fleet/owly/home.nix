@@ -12,6 +12,7 @@ let
   controller = pkgs.callPackage ./controller-package.nix {
     inherit omdrop owly;
     allowSteering = cfg.owly.automaticWifiSwitching;
+    preferredChannels = cfg.owly.preferredChannels;
   };
   gui = pkgs.callPackage ./gui-package.nix { inherit omdrop owly controller; };
 
@@ -27,6 +28,11 @@ in {
       type = lib.types.bool;
       default = true;
       description = "Temporarily roam to a compatible access point on the same saved Wi-Fi network when receiving with AirDrop. Restore the original connection on stop, expiry, or failure.";
+    };
+    preferredChannels = lib.mkOption {
+      type = lib.types.listOf (lib.types.enum [ 6 44 149 ]);
+      default = [];
+      description = "Preferred shared AirDrop Wi-Fi channels, in priority order. With automatic Wi-Fi switching enabled, prefer an available access point on these channels on the same saved network. Fall back to the current compatible access point or strongest available compatible access point.";
     };
     settings = lib.mkOption {
       inherit (toml) type;

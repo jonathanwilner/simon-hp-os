@@ -1,12 +1,13 @@
 { nixpkgs, home-manager, owly, standaloneGui }:
 let
   systems = [ "aarch64-linux" "x86_64-linux" ];
-  configuration = system: automatic: autostart: home-manager.lib.homeManagerConfiguration {
+  configuration = system: automatic: autostart: preferred: home-manager.lib.homeManagerConfiguration {
     pkgs = import nixpkgs { inherit system; config.allowUnfree = true; };
     modules = [
       { imports = [ ../../fleet/home.nix ]; _module.args.owlySource = owly; }
       { home.username = "fleet-test"; home.homeDirectory = "/home/fleet-test"; home.stateVersion = "26.05"; }
       (if automatic == null then {} else { programs.hp-os-fleet.owly.automaticWifiSwitching = automatic; })
+      { programs.hp-os-fleet.owly.preferredChannels = preferred; }
       (if autostart == null then {} else { programs.hp-os-fleet.owly.autostartReceiving = autostart; })
     ];
   };
@@ -14,9 +15,10 @@ let
     (p: (p.name or "") == "hp-os-omdrop-controller") config.config.home.packages);
   contract = system:
     let
-      enabled = configuration system null null;
-      disabled = configuration system false null;
-      persistent = configuration system null true;
+      enabled = configuration system null null [];
+      disabled = configuration system false null [];
+      persistent = configuration system null true [];
+      preferred = configuration system null null [ 149 ];
       p = enabled.pkgs;
       backend = p.callPackage ../../fleet/owly/omdrop-package.nix { owlySource = owly; };
       radio = p.callPackage "${owly}/nix/package.nix" {};
@@ -29,6 +31,8 @@ let
     in assert (standaloneGui system).drvPath == expectedGui.drvPath;
        assert enabled.config.programs.hp-os-fleet.owly.automaticWifiSwitching;
        assert !disabled.config.programs.hp-os-fleet.owly.automaticWifiSwitching;
+       assert enabled.config.programs.hp-os-fleet.owly.preferredChannels == [];
+       assert (controllerFor preferred).drvPath == (p.callPackage ../../fleet/owly/controller-package.nix { omdrop = backend; owly = radio; allowSteering = true; preferredChannels = [ 149 ]; }).drvPath;
        assert !enabled.config.programs.hp-os-fleet.owly.autostartReceiving;
        assert !(enabled.config.systemd.user.services ? hp-os-omdrop-auto);
        assert persistent.config.programs.hp-os-fleet.owly.autostartReceiving;
@@ -48,6 +52,7 @@ in builtins.listToAttrs (builtins.map (system:
     rendered = allowSteering: p.callPackage ../../fleet/owly/controller-package.nix {
       omdrop = "/test/omdrop"; owly = "/test/owly"; inherit allowSteering;
     };
+    preferredRendered = p.callPackage ../../fleet/owly/controller-package.nix { omdrop = "/test/omdrop"; owly = "/test/owly"; allowSteering = true; preferredChannels = [ 149 ]; };
     omdrop = p.callPackage ../../fleet/owly/omdrop-package.nix { owlySource = owly; };
   in {
     name = system;
@@ -60,6 +65,7 @@ in builtins.listToAttrs (builtins.map (system:
         RADIO_POLICY_SOURCE=${../../fleet/owly/radio-policy.rules} node --test ${../../fleet/owly/radio-policy-tests.cjs}
         python3 ${./rendered-controller.py} ${rendered true}/bin/hp-os-omdrop-controller true
         python3 ${./rendered-controller.py} ${rendered false}/bin/hp-os-omdrop-controller false
+        python3 ${./rendered-controller.py} ${preferredRendered}/bin/hp-os-omdrop-controller true '[149]'
         mkdir -p "$out"
         cp contracts.json "$out/"
       '';

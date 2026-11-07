@@ -1,4 +1,4 @@
-{ runCommand, python3, omdrop, owly, allowSteering ? false }:
+{ runCommand, python3, omdrop, owly, allowSteering ? false, preferredChannels ? [] }:
 runCommand "hp-os-omdrop-controller" {} ''
   mkdir -p $out/bin
   cp ${./controller.py} $out/bin/hp-os-omdrop-controller
@@ -6,6 +6,7 @@ runCommand "hp-os-omdrop-controller" {} ''
     --replace-fail '#!/usr/bin/env python3' '#!${python3}/bin/python3' \
     --replace-fail '@omdrop@' '${omdrop}' \
     --replace-fail '@allowSteering@' '${if allowSteering then "true" else "false"}' \
+    --replace-fail '@preferredChannels@' '${builtins.toJSON preferredChannels}' \
     --replace-fail '@owly@' '${owly}' \
     --replace-fail '@out@' "$out"
   CONTROLLER_SOURCE=$out/bin/hp-os-omdrop-controller ${python3}/bin/python3 ${./controller-tests.py}

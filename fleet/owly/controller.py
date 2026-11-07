@@ -22,6 +22,7 @@ SELF = "@out@/bin/hp-os-omdrop-controller"
 CHANNELS = {6, 44, 149}
 AP_RETRY_COOLDOWN = 15 * 60
 ALLOW_STEERING = "@allowSteering@" == "true"
+PREFERRED_CHANNELS = json.loads("@preferredChannels@") if not "@preferredChannels@".startswith("@") else []
 UNITS = "hp-os-omdrop"
 DEADLINE = None
 os.environ["LC_ALL"] = "C"
@@ -170,9 +171,19 @@ def snapshot():
     failed = failed_targets()
     available = [row for row in candidates
                  if target_key(interface, original_uuid, row["bssid"]) not in failed]
-    # An already connected compatible AP has proved usable, even if an earlier
-    # attempt failed. No roam is needed in that case.
-    target = current if current["channel"] in CHANNELS else max(available, key=lambda row: row["signal"], default=None)
+    # Keep a working AP unless an available preferred channel justifies roaming.
+    # Failed APs remain excluded; the connected AP has already proved usable.
+    compatible = current["channel"] in CHANNELS
+    target = current if compatible else max(available, key=lambda row: row["signal"], default=None)
+    if ALLOW_STEERING:
+        for channel in PREFERRED_CHANNELS:
+            if compatible and current["channel"] == channel:
+                target = current
+                break
+            preferred = [row for row in available if row["channel"] == channel]
+            if preferred:
+                target = max(preferred, key=lambda row: row["signal"])
+                break
     return {"interface": interface, "original_uuid": original_uuid, "original_bssid": current["bssid"], "current": current, "target": target,
             "ap_cooldown": bool(candidates) and target is None}
 

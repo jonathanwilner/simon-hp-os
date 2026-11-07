@@ -120,3 +120,7 @@ omdrop peers --json
 ```
 
 A successful service and peer scan establish radio startup and discovery. A file transfer requires a nearby sender and separate acceptance evidence. Flake check `omdrop-fleet-contract` tests authorization scope, both CPU architectures' configuration, lifecycle recovery, and explicit-stop behavior.
+
+### Preferred Wi-Fi channels
+
+Set `programs.hp-os-fleet.owly.preferredChannels = [ 149 ];` when a host receives Apple discovery traffic more reliably on channel 149. The default `[]` preserves the current compatible access point. With `automaticWifiSwitching` enabled, preferences are tried in order among access points on the same saved network with matching security. The strongest access point on the preferred channel wins; an already connected access point on that channel stays connected. Failed access points remain on cooldown. If preferred channels are unavailable, the controller retains a compatible current connection or selects the strongest compatible alternative. Stopping receiving restores the original connection. This option does not change router channels or use exclusive radio mode.

@@ -2,15 +2,18 @@
 import importlib.util
 from importlib.machinery import SourceFileLoader
 import sys
+import json
 import tempfile
 from unittest.mock import patch
 
-path, expected = sys.argv[1:]
+path, expected = sys.argv[1:3]
+preferences = json.loads(sys.argv[3]) if len(sys.argv) > 3 else []
 spec = importlib.util.spec_from_loader("controller", SourceFileLoader("controller", path))
 controller = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(controller)
 expected = expected == "true"
 assert controller.ALLOW_STEERING is expected
+assert controller.PREFERRED_CHANNELS == preferences
 wifi = dict(interface="wlan0", original_uuid="saved", original_bssid="aa",
             current={"channel": 153}, target={"bssid": "bb", "channel": 44})
 with tempfile.TemporaryDirectory() as runtime, patch.dict(controller.os.environ, XDG_RUNTIME_DIR=runtime), patch.object(controller, "snapshot", return_value=wifi):
