@@ -23,7 +23,7 @@ let
   '';
   shell = upstream.overrideAttrs (old: {
     pname = "hp-os-runtime";
-    patches = (old.patches or []) ++ [ ../patches/inir-hpos.patch ../patches/hpos-style.patch ../patches/hpos-wallpaper-startup.patch ../patches/hpos-desktop-labels.patch ../patches/hpos-portable-icons.patch ../patches/hpos-notification-banners.patch ../patches/hpos-unified-search.patch ../patches/hpos-pulse-cpu.patch ];
+    patches = (old.patches or []) ++ [ ../patches/inir-hpos.patch ../patches/hpos-style.patch ../patches/hpos-wallpaper-startup.patch ../patches/hpos-desktop-labels.patch ../patches/hpos-portable-icons.patch ../patches/hpos-notification-banners.patch ../patches/hpos-unified-search.patch ../patches/hpos-pulse-cpu.patch ../patches/hpos-media-key-osd.patch ];
     postPatch = (old.postPatch or "") + ''
       cp -r ${../overlay}/. .
       chmod -R u+w assets

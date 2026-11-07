@@ -36,3 +36,8 @@ nits=$(( 10 + (percent - 5) * 490 / 95 ))
 /usr/bin/sudo -n "$GORAN_PANEL_PYTHON" "$GORAN_PANEL_SCRIPT" "$(( nits * 1000 ))"
 printf '%s\n' "$percent" > "$state_dir/percent.tmp"
 mv "$state_dir/percent.tmp" "$state_dir/percent"
+
+# Preserve the HDR panel backend and report its real percentage to the shell.
+if [[ "${1:-}" != restore ]] && command -v hp-os-media-key >/dev/null 2>&1; then
+  hp-os-media-key brightness-osd "$percent" || true
+fi
