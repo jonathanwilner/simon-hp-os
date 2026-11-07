@@ -81,10 +81,20 @@
       packages.aarch64-linux.hp-os-aware-print = pkgs.callPackage ./fleet/printing/package.nix {};
       packages.x86_64-linux.hp-os-aware-supplicant = nixpkgs.legacyPackages.x86_64-linux.callPackage ./fleet/printing/supplicant.nix {};
       packages.aarch64-linux.hp-os-aware-supplicant = pkgs.callPackage ./fleet/printing/supplicant.nix {};
-      nixosModules.owly = { lib, pkgs, ... }: {
+      nixosModules.owly = { config, lib, pkgs, ... }: {
+        options.services.omdrop.authorizedUsers = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [];
+          description = "Users allowed to operate the OM Drop radio from desktop and background services without authentication.";
+        };
+        config = {
+          security.polkit.extraConfig = import ./fleet/owly/radio-policy.nix;
+          users.groups.omdrop = {};
+          users.users = lib.genAttrs config.services.omdrop.authorizedUsers (_: { extraGroups = [ "omdrop" ]; });
+          services.owly.enable = lib.mkDefault true;
+          environment.systemPackages = [ (pkgs.callPackage ./fleet/owly/omdrop-package.nix { owlySource = owly; }) ];
+        };
         imports = [ owly.nixosModules.default ];
-        services.owly.enable = lib.mkDefault true;
-        environment.systemPackages = [ (pkgs.callPackage ./fleet/owly/omdrop-package.nix { owlySource = owly; }) ];
       };
       packages.x86_64-linux.omdrop = nixpkgs.legacyPackages.x86_64-linux.callPackage ./fleet/owly/omdrop-package.nix { owlySource = owly; };
       packages.aarch64-linux.omdrop = pkgs.callPackage ./fleet/owly/omdrop-package.nix { owlySource = owly; };

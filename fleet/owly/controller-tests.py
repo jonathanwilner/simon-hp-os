@@ -22,7 +22,11 @@ class ControllerTests(unittest.TestCase):
         self.env = patch.dict(os.environ, XDG_RUNTIME_DIR=self.temp.name)
         self.env.start()
         c.DEADLINE = None
+        self.authorized_check = c.authorized
+        self.authorization = patch.object(c, 'authorized', return_value=True)
+        self.authorization.start()
     def tearDown(self):
+        self.authorization.stop()
         self.env.stop()
         self.temp.cleanup()
     def scan(self, rows):
@@ -41,6 +45,7 @@ class ControllerTests(unittest.TestCase):
     def test_escaped_fields(self):
         self.assertEqual(c.fields(r'Q\:guest:90\:56\:71'), ['Q:guest', '90:56:71'])
     def test_duration_bounds(self):
+        self.assertIsNone(c.duration('forever'))
         self.assertEqual(c.duration('20s'), 20)
         self.assertEqual(c.duration('30m'), 1800)
         for value in ['once', '31m', '0', ';touch /tmp/x']:
@@ -235,5 +240,101 @@ class ControllerTests(unittest.TestCase):
              patch.object(c, 'restore_locked') as restore:
             c.monitor()
             restore.assert_called_once()
+
+    def test_forever_preserves_startup_rollback_without_expiry(self):
+        wifi = dict(interface='wlo1', original_uuid='original', original_bssid='aa',
+                    current={'channel':149}, target={'bssid':'aa','channel':149})
+        with patch.object(c, 'snapshot', return_value=wifi), patch.object(c, 'systemctl'), \
+             patch.object(c, 'native', side_effect=lambda name: '/usr/bin/' + name), \
+             patch.object(c, 'run', return_value=result('{"receiving":true}')) as run, \
+             patch.object(c, 'arm_timer') as timer, patch.object(c, 'stop_timer') as stop:
+            c.enable('forever')
+        timer.assert_called_once_with('rollback', 90)
+        stop.assert_called_once_with('rollback')
+        self.assertIsNone(c.read_state()['expires'])
+        self.assertEqual(c.read_state()['phase'], 'receiving')
+        self.assertIn([c.OMDROP, 'on', 'forever'], [call.args[0] for call in run.call_args_list])
+
+    def test_forever_monitor_waits_without_expiry_and_restores_on_loss(self):
+        c.write_state(dict(token='window', expires=None))
+        with patch.object(c.sys, 'argv', ['controller', 'monitor', 'window']), \
+             patch.object(c, 'run', side_effect=[result('{"receiving":true}'), result('{"receiving":false}')]), \
+             patch.object(c.time, 'sleep') as sleep, patch.object(c, 'restore_locked') as restore:
+            c.monitor()
+        sleep.assert_called_once_with(3)
+        restore.assert_called_once()
+
+    def test_authorization_preflight_never_requests_interaction(self):
+        denied = subprocess.CompletedProcess([], 1, '', '')
+        with patch.object(c, 'native', return_value='/usr/bin/pkcheck'), \
+             patch.object(c, 'run', side_effect=[result(), denied]) as run:
+            self.assertFalse(self.authorized_check())
+        commands = [call.args[0] for call in run.call_args_list]
+        self.assertEqual([args[2] for args in commands],
+                         ['org.omarchy.omdrop.radio', 'io.github.t4t5.Owly.acquire'])
+        self.assertTrue(all('--allow-user-interaction' not in args for args in commands))
+
+    def test_automatic_missing_policy_does_not_start_receiver_or_restore(self):
+        with patch.object(c, 'authorized', return_value=False), \
+             patch.object(c, 'enable') as enable, patch.object(c, 'restore_locked') as restore:
+            with self.assertRaises(c.Failure): c.automatic_step()
+            enable.assert_not_called()
+            restore.assert_not_called()
+
+    def test_automatic_starts_forever_then_honors_manual_stop(self):
+        with patch.object(c, 'enable') as enable:
+            c.automatic_step()
+            enable.assert_called_once_with('forever', background=True)
+        with patch.object(c.sys, 'argv', ['controller', 'off']), patch.object(c, 'restore_locked'):
+            self.assertEqual(c.main(), 0)
+        with patch.object(c, 'enable') as enable:
+            c.automatic_step()
+            enable.assert_not_called()
+
+    def test_background_enable_rechecks_pause_under_lock(self):
+        (c.runtime() / 'automatic-paused').touch()
+        with patch.object(c, 'snapshot') as snapshot:
+            c.enable('forever', background=True)
+            snapshot.assert_not_called()
+
+    def test_automatic_does_not_replace_active_window(self):
+        c.write_state(dict(token='window', phase='receiving', expires=None))
+        with patch.object(c, 'enable') as enable, patch.object(c, 'restore_locked') as restore, \
+             patch.object(c, 'run', return_value=result('{"receiving":true}')), \
+             patch.object(c, 'systemctl', return_value=result()):
+            c.automatic_step()
+            enable.assert_not_called()
+            restore.assert_not_called()
+
+    def test_automatic_restarts_missing_monitor_without_roaming(self):
+        c.write_state(dict(token='window', phase='receiving', expires=None))
+        inactive = subprocess.CompletedProcess([], 3, '', '')
+        with patch.object(c, 'run', return_value=result('{"receiving":true}')), \
+             patch.object(c, 'systemctl', return_value=inactive), \
+             patch.object(c, 'start_monitor') as monitor, patch.object(c, 'enable') as enable:
+            c.automatic_step()
+        monitor.assert_called_once_with(c.read_state())
+        enable.assert_not_called()
+
+    def test_automatic_restores_stale_receiving_state_then_restarts(self):
+        c.write_state(dict(token='window', phase='receiving', expires=None))
+        events = []
+        with patch.object(c, 'run', return_value=result('{"receiving":false}')), \
+             patch.object(c, 'restore_locked', side_effect=lambda: events.append('restore')), \
+             patch.object(c, 'enable', side_effect=lambda value, **kwargs: events.append(value)):
+            c.automatic_step()
+        self.assertEqual(events, ['restore', 'forever'])
+
+    def test_automatic_finishes_failed_restore_before_restart(self):
+        c.write_state(dict(token='window', phase='restore_failed'))
+        events = []
+        with patch.object(c, 'restore_locked', side_effect=lambda: events.append('restore')), \
+             patch.object(c, 'enable', side_effect=lambda value, **kwargs: events.append(value)):
+            c.automatic_step()
+        self.assertEqual(events, ['restore', 'forever'])
+        with patch.object(c, 'restore_locked', side_effect=c.Failure('unavailable')), \
+             patch.object(c, 'enable') as enable:
+            with self.assertRaises(c.Failure): c.automatic_step()
+            enable.assert_not_called()
 
 if __name__ == '__main__': unittest.main()

@@ -1,4 +1,4 @@
-{ lib, writeShellApplication, callPackage, owly, owlySource, coreutils, radioConfig ? null
+{ lib, writeShellApplication, callPackage, owly, owlySource, coreutils, radioConfig ? null, desktopUser ? null
 , omdrop ? callPackage ./omdrop-package.nix { inherit owlySource; } }:
 writeShellApplication {
   name = "hp-os-owly-install-system";
@@ -10,6 +10,14 @@ writeShellApplication {
     # with its running NetworkManager; all Owly binaries remain Nix-owned.
     source /etc/os-release
     [[ "$ID" == ubuntu ]] || { echo 'Ubuntu only. NixOS uses desktop-fleet.nixosModules.owly.' >&2; exit 1; }
+    desktop_user=${lib.escapeShellArg (if desktopUser == null then "" else desktopUser)}
+    if [[ -z "$desktop_user" ]]; then desktop_user="''${SUDO_USER:-}"; fi
+    [[ -n "$desktop_user" && "$desktop_user" != root ]] || { echo 'Run through sudo as the desktop user.' >&2; exit 1; }
+    /usr/bin/id "$desktop_user" >/dev/null
+    /usr/sbin/groupadd -f omdrop
+    /usr/sbin/usermod -aG omdrop "$desktop_user"
+    install -d /etc/polkit-1/rules.d
+    install -m 0644 ${builtins.toFile "49-hp-os-omdrop.rules" (import ./radio-policy.nix)} /etc/polkit-1/rules.d/49-hp-os-omdrop.rules
     package=${owly}
     install -d /etc/systemd/system/owlyd.service.d /etc/dbus-1/system.d \
       /usr/share/dbus-1/system-services /usr/share/polkit-1/actions \

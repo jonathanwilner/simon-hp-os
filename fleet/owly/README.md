@@ -97,3 +97,26 @@ Hardware validation remains separate: verify the receive window, original
 connection restoration, visible Control Center contents and an actual file
 transfer on each supported device. A passing automated check does not prove
 radio performance or a successful Apple-device transfer.
+
+## OM Drop user authorization and automatic receiving
+
+The Ubuntu system installer adds the configured Home Manager user to `omdrop` and installs a root-owned Polkit rule. This group can invoke only `org.omarchy.omdrop.radio` and `io.github.t4t5.Owly.acquire` without authentication, including calls from user services without an active desktop seat. The existing action binds the radio helper to its immutable Nix store path. Other privilege requests retain their system policies.
+
+Run `sudo ~/.nix-profile/bin/hp-os-owly-install-system` once on Ubuntu. Both the desktop updater and Goran's Home Manager deploy refresh installed system integration. NixOS uses `desktop-fleet.nixosModules.owly` and `services.omdrop.authorizedUsers = [ "your-user" ];`.
+
+Set `programs.hp-os-fleet.owly.autostartReceiving = true;` in the host's Home Manager configuration for automatic receiving. The shared default is false. The managed `hp-os-omdrop-auto.service` starts with the user manager, starts an unlimited receive window, and retries failures every 60 seconds. It checks authorization without interaction before invoking the radio helper. The receiver still confirms incoming transfers through the existing application flow.
+
+Explicit **Stop receiving** pauses automatic startup until a restart of this service. Manual enable resumes it. Stopping the user service stops receiving and restores a temporary Wi-Fi selection. Compatible same-network Wi-Fi selection and startup rollback remain managed by the controller; permanent saved network preferences are preserved.
+
+Acceptance commands as the ordinary user:
+
+```sh
+pkcheck --action-id org.omarchy.omdrop.radio --process $$
+pkcheck --action-id io.github.t4t5.Owly.acquire --process $$
+systemctl --user is-active hp-os-omdrop-auto.service
+omdrop doctor --json
+omdrop status --json
+omdrop peers --json
+```
+
+A successful service and peer scan establish radio startup and discovery. A file transfer requires a nearby sender and separate acceptance evidence. Flake check `omdrop-fleet-contract` tests authorization scope, both CPU architectures' configuration, lifecycle recovery, and explicit-stop behavior.

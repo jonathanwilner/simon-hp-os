@@ -1,0 +1,13 @@
+// OM Drop's desktop controls run in the user manager, which has no active seat.
+// Membership is explicitly assigned by the system installer or NixOS config.
+// Authorize only the bounded radio APIs, never generic pkexec or systemd actions.
+// The radio action is bound to the immutable helper by its policy annotation.
+polkit.addRule(function(action, subject) {
+    if (action.id !== "org.omarchy.omdrop.radio" &&
+        action.id !== "io.github.t4t5.Owly.acquire") {
+        return;
+    }
+    if (subject.isInGroup("omdrop")) {
+        return polkit.Result.YES;
+    }
+});

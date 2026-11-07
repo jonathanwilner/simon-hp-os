@@ -5,6 +5,7 @@ let
   toml = pkgs.formats.toml {};
   systemInstaller = pkgs.callPackage ./ubuntu-system.nix {
     inherit owly owlySource;
+    desktopUser = config.home.username;
     radioConfig = if cfg.owly.settings == {} then null else toml.generate "owly-radio.toml" cfg.owly.settings;
   };
   omdrop = pkgs.callPackage ./omdrop-package.nix { inherit owlySource; };
@@ -17,6 +18,11 @@ let
 in {
   options.programs.hp-os-fleet.owly = {
     enable = lib.mkEnableOption "Owly AirDrop tools" // { default = true; };
+    autostartReceiving = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Start persistent AirDrop receiving with the user manager and retry failures. Stop receiving pauses automatic startup until the service restarts or receiving is enabled manually.";
+    };
     automaticWifiSwitching = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -31,6 +37,21 @@ in {
   config = lib.mkIf (cfg.enable && cfg.owly.enable) {
     # The root helper refuses NixOS; NixOS uses the exported system module.
     home.packages = [ owly omdrop controller gui systemInstaller ];
+    systemd.user.services.hp-os-omdrop-auto = lib.mkIf cfg.owly.autostartReceiving {
+      Unit = {
+        Description = "Keep Omdrop receiving while the user manager runs";
+        PartOf = [ "default.target" ];
+        StartLimitIntervalSec = 0;
+      };
+      Service = {
+        ExecStart = "${controller}/bin/hp-os-omdrop-controller automatic";
+        ExecStop = "${controller}/bin/hp-os-omdrop-controller off";
+        Restart = "on-failure";
+        RestartSec = "60s";
+        TimeoutStopSec = "90s";
+      };
+      Install.WantedBy = [ "default.target" ];
+    };
     xdg.configFile."hp-os/omdrop".source = "${gui}/share/omdrop";
     xdg.configFile."DankMaterialShell/plugins/omdrop".source = "${gui}/share/omdrop";
     # Merge the native DMS control into mutable user settings without replacing

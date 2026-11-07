@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bounded AirDrop window with temporary, same-network AP steering.
+"""AirDrop receive lifecycle with temporary, same-network AP steering.
 
 Only the active saved connection is cloned. No credentials are read, no saved
 profile is modified, and no exclusive radio mode is enabled. Independent user
@@ -252,19 +252,23 @@ def restore_locked():
 
 
 def duration(value):
+    if value == "forever":
+        return None
     match = re.fullmatch(r"([1-9][0-9]*)(s|m)?", value)
     if not match:
-        raise Failure("Use a bounded duration such as 10m.")
+        raise Failure("Use a duration such as 10m, or forever.")
     seconds = int(match[1]) * (1 if match[2] == "s" else 60)
     if seconds > 1800:
         raise Failure("AirDrop windows are limited to 30 minutes.")
     return seconds
 
 
-def enable(value):
+def enable(value, background=False):
     global DEADLINE
     seconds = duration(value)
     with locked():
+        if background and (runtime() / "automatic-paused").exists():
+            return
         if read_state():
             raise Failure("An AirDrop window or Wi-Fi restoration is already in progress.")
         systemctl("stop", f"{UNITS}-monitor.service", check=False)
@@ -277,7 +281,7 @@ def enable(value):
             raise Failure("Automatic Wi-Fi roaming is disabled. Connect on channel 6, 44 or 149 first.")
         peer_ip = health_baseline(wifi["interface"]) if steering else None
         state = {key: wifi[key] for key in ("interface", "original_uuid", "original_bssid")}
-        state.update(token=str(uuid.uuid4()), phase="starting", message="Preparing the AirDrop receive window.", clone_uuid=None, expires=time.time() + seconds)
+        state.update(token=str(uuid.uuid4()), phase="starting", message="Preparing the AirDrop receive window.", clone_uuid=None, expires=None if seconds is None else time.time() + seconds)
         state.update(notification_bus=os.environ.get("DBUS_SESSION_BUS_ADDRESS", ""),
                      notification_display=os.environ.get("DISPLAY", ""),
                      notification_wayland_display=os.environ.get("WAYLAND_DISPLAY", ""))
@@ -303,17 +307,18 @@ def enable(value):
                 health_check(wifi["interface"], peer_ip, retry=True)
             state.update(phase="starting", message="Starting the AirDrop receive window.")
             write_state(state)
-            run([OMDROP, "on", f"{seconds}s"], timeout=25)
+            run([OMDROP, "on", "forever" if seconds is None else f"{seconds}s"], timeout=25)
             live = json.loads(run([OMDROP, "status", "--json"]).stdout)
             if not live.get("receiving"):
                 raise Failure("AirDrop did not start receiving. Restoring the original connection.")
-            arm_timer("expiry", seconds + 10)
-            systemctl("reset-failed", f"{UNITS}-monitor.service", check=False)
-            run([native("systemd-run"), "--user", f"--unit={UNITS}-monitor", "--collect", "--property=Restart=on-failure", "--property=RestartSec=5s", SELF, "monitor", state["token"]], timeout=6)
-            state.update(expires=time.time() + seconds, phase="receiving", message="AirDrop is receiving. The original Wi-Fi connection will return when this window ends.")
+            if seconds is not None:
+                arm_timer("expiry", seconds + 10)
+            start_monitor(state)
+            state.update(expires=None if seconds is None else time.time() + seconds, phase="receiving", message="AirDrop is receiving until stopped. The original Wi-Fi connection will return when receiving stops." if seconds is None else "AirDrop is receiving. The original Wi-Fi connection will return when this window ends.")
             write_state(state)
             stop_timer("rollback")
             DEADLINE = None
+            (runtime() / "automatic-paused").unlink(missing_ok=True)
         except BaseException:
             # The independent rollback unit will retry if restoration fails.
             try:
@@ -322,6 +327,13 @@ def enable(value):
                 state.update(phase="restore_failed", message=f"Wi-Fi restoration will retry: {restore_error}")
                 write_state(state)
             raise
+
+
+def start_monitor(state):
+    systemctl("reset-failed", f"{UNITS}-monitor.service", check=False)
+    run([native("systemd-run"), "--user", f"--unit={UNITS}-monitor", "--collect",
+         "--property=Restart=on-failure", "--property=RestartSec=5s", SELF,
+         "monitor", state["token"]], timeout=6)
 
 
 def monitor():
@@ -335,12 +347,59 @@ def monitor():
             receiving = json.loads(live.stdout).get("receiving", False)
         except (ValueError, TypeError):
             receiving = False
-        if not receiving or time.time() >= state["expires"]:
+        if not receiving or (state.get("expires") is not None and time.time() >= state["expires"]):
             with locked():
                 if read_state() and read_state()["token"] == sys.argv[2]:
                     restore_locked()
             return
         time.sleep(3)
+
+
+def authorized():
+    # Never launch a pkexec prompt from an unattended retry loop. Package
+    # activation can precede the administrator's system-policy installation.
+    for action in ("org.omarchy.omdrop.radio", "io.github.t4t5.Owly.acquire"):
+        if run([native("pkcheck"), "--action-id", action, "--process", str(os.getpid())], check=False).returncode:
+            return False
+    return True
+
+
+def automatic_step():
+    """Ensure an automatic receiver, while honoring an explicit user stop."""
+    if (runtime() / "automatic-paused").exists():
+        return
+    if not authorized():
+        raise Failure("Waiting for the installed AirDrop user authorization policy.")
+    state = read_state()
+    if state:
+        if state.get("phase") == "receiving":
+            live = json.loads(run([OMDROP, "status", "--json"]).stdout)
+            if live.get("receiving"):
+                if systemctl("is-active", "--quiet", f"{UNITS}-monitor.service", check=False).returncode:
+                    with locked():
+                        if read_state() and read_state()["token"] == state["token"]:
+                            start_monitor(state)
+                return
+        elif state.get("phase") not in ("restoring", "restore_failed"):
+            # Startup has its own independent rollback deadline.
+            return
+        # Complete recovery before creating a new temporary profile.
+        with locked():
+            if read_state() and read_state()["token"] == state["token"]:
+                restore_locked()
+    enable("forever", background=True)
+
+
+def automatic():
+    # Each login/service start resumes the configured preference. A user's
+    # Stop receiving action pauses it for the remainder of this service run.
+    (runtime() / "automatic-paused").unlink(missing_ok=True)
+    while True:
+        try:
+            automatic_step()
+        except (Failure, ValueError, OSError) as exc:
+            print(json.dumps({"ok": False, "phase": "waiting", "message": str(exc)}), flush=True)
+        time.sleep(60)
 
 
 def main():
@@ -356,12 +415,16 @@ def main():
             with locked():
                 if command == "restore" and (not read_state() or len(sys.argv) < 3 or read_state()["token"] != sys.argv[2]):
                     return 0
-                if command == "off" and read_state():
-                    arm_timer("rollback", 5)
+                if command == "off":
+                    (runtime() / "automatic-paused").touch(mode=0o600)
+                    if read_state():
+                        arm_timer("rollback", 5)
                 restore_locked()
             result = {"phase": "idle", "message": "AirDrop stopped; original Wi-Fi restored.", "can_enable": True, "reason": "stopped"}
         elif command == "monitor":
             monitor(); return 0
+        elif command == "automatic":
+            automatic(); return 0
         else:
             raise Failure("Expected on, off or status --json.")
         print(json.dumps(dict(result, ok=True)))
