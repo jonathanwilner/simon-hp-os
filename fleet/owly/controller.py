@@ -59,7 +59,7 @@ def native(name):
 
 
 def nm(*args, timeout=8, check=True):
-    return run([native("nmcli"), "--wait", "15", *args], timeout, check)
+    return run([native("nmcli"), "--wait", str(max(1, int(timeout) - 2)), *args], timeout, check)
 
 
 def fields(line):
@@ -234,11 +234,11 @@ def restore_locked():
     write_state(state)
     if state.get("clone_uuid"):
         try:
-            nm("connection", "up", "uuid", state["original_uuid"], "ifname", state["interface"], "ap", state["original_bssid"], timeout=20)
+            nm("connection", "up", "uuid", state["original_uuid"], "ifname", state["interface"], "ap", state["original_bssid"], timeout=35)
         except Failure:
             # Original AP may disappear. The original saved network is still
             # the only fallback, and its persistent preferences are unchanged.
-            nm("connection", "up", "uuid", state["original_uuid"], "ifname", state["interface"], timeout=20)
+            nm("connection", "up", "uuid", state["original_uuid"], "ifname", state["interface"], timeout=35)
         existing = nm("-g", "UUID", "connection", "show").stdout.splitlines()
         if state["clone_uuid"] in existing:
             nm("connection", "delete", "uuid", state["clone_uuid"])
@@ -285,8 +285,8 @@ def enable(value):
         try:
             # This timer exists before any connection change. It survives
             # subprocess/GUI failure and the management connection dropping.
-            arm_timer("rollback", 60)
-            DEADLINE = time.monotonic() + 45
+            arm_timer("rollback", 90)
+            DEADLINE = time.monotonic() + 75
             if steering:
                 name = "hp-os-omdrop-" + str(uuid.uuid4())
                 state["clone_name"] = name
@@ -299,7 +299,7 @@ def enable(value):
                    "connection.autoconnect", "no", "802-11-wireless.bssid", target["bssid"],
                    "802-11-wireless.band", "bg" if target["channel"] == 6 else "a",
                    "802-11-wireless.channel", str(target["channel"]))
-                nm("connection", "up", "uuid", clone_uuid, "ifname", wifi["interface"], "ap", target["bssid"], timeout=20)
+                nm("connection", "up", "uuid", clone_uuid, "ifname", wifi["interface"], "ap", target["bssid"], timeout=35)
                 health_check(wifi["interface"], peer_ip, retry=True)
             state.update(phase="starting", message="Starting the AirDrop receive window.")
             write_state(state)

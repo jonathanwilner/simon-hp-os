@@ -92,6 +92,9 @@ in rustPlatform.buildRustPackage {
     #!${bash}/bin/bash
     export PATH=${commandPath}:\$PATH
     export OMDROP_IMPLEMENTATION=rust
+    # pkexec rejects inherited Nix shell paths absent from the host /etc/shells.
+    # The Rust CLI does not need SHELL; let the host privilege helper use its defaults.
+    unset SHELL
     if [[ \''${1:-} == install-core || \''${1:-} == install-driver ]]; then
       echo 'Omdrop and Owly are managed by the HP-OS Nix configuration.' >&2
       exit 2
