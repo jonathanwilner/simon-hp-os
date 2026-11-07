@@ -95,7 +95,7 @@ class ControllerTests(unittest.TestCase):
         with patch.object(c.sys,'argv',['controller','monitor','old']), patch.object(c,'run') as run:
             c.monitor()
             run.assert_not_called()
-    def test_default_gate_blocks_roam_before_any_network_change(self):
+    def test_opt_out_blocks_roam_before_any_network_change(self):
         wifi = dict(interface='wlo1', original_uuid='original', original_bssid='aa', current={'channel':64}, target={'bssid':'bb','channel':149})
         with patch.object(c,'ALLOW_STEERING',False), patch.object(c,'snapshot',return_value=wifi), patch.object(c,'systemctl'), patch.object(c,'nm') as nm, patch.object(c,'arm_timer') as timer:
             self.assertEqual(c.report()['reason'], 'steering_disabled')

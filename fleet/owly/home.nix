@@ -8,12 +8,20 @@ let
     radioConfig = if cfg.owly.settings == {} then null else toml.generate "owly-radio.toml" cfg.owly.settings;
   };
   omdrop = pkgs.callPackage ./omdrop-package.nix { inherit owlySource; };
-  controller = pkgs.callPackage ./controller-package.nix { inherit omdrop owly; };
+  controller = pkgs.callPackage ./controller-package.nix {
+    inherit omdrop owly;
+    allowSteering = cfg.owly.automaticWifiSwitching;
+  };
   gui = pkgs.callPackage ./gui-package.nix { inherit omdrop owly controller; };
 
 in {
   options.programs.hp-os-fleet.owly = {
     enable = lib.mkEnableOption "Owly AirDrop tools" // { default = true; };
+    automaticWifiSwitching = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Temporarily roam to a compatible access point on the same saved Wi-Fi network when receiving with AirDrop. Restore the original connection on stop, expiry, or failure.";
+    };
     settings = lib.mkOption {
       inherit (toml) type;
       default = {};

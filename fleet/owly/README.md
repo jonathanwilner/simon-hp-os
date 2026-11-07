@@ -34,6 +34,13 @@ shows visibility, destination folder, nearby devices and transfer status.
 Select a nearby device to choose files. On the Apple device, enable AirDrop
 Everyone for 10 minutes.
 
+Automatic Wi-Fi switching is enabled by default. Starting a receive window
+temporarily selects a compatible access point on the same saved network. The
+controller checks gateway and Tailscale connectivity, arms rollback before
+roaming, and restores the original connection on stop, expiry, or failure.
+Opening the panel alone does not change Wi-Fi. Hosts can opt out with
+`programs.hp-os-fleet.owly.automaticWifiSwitching = false`.
+
 Radio compatibility depends on the Wi-Fi card and channel. `owly doctor`
 reports support. Shared mode can retain Wi-Fi on supported channels; exclusive
 mode disconnects Wi-Fi until the radio stops. Do not enable exclusive mode over
