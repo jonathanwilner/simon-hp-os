@@ -20,6 +20,7 @@ OMDROP = "@omdrop@/bin/omdrop"
 OWLY = "@owly@/bin/owly"
 SELF = "@out@/bin/hp-os-omdrop-controller"
 CHANNELS = {6, 44, 149}
+AP_RETRY_COOLDOWN = 15 * 60
 ALLOW_STEERING = "@allowSteering@" == "true"
 UNITS = "hp-os-omdrop"
 DEADLINE = None
@@ -112,6 +113,34 @@ def locked():
         yield
 
 
+def failed_targets():
+    try:
+        records = json.loads((runtime() / "failed-aps.json").read_text())
+    except (FileNotFoundError, ValueError):
+        return {}
+    if not isinstance(records, dict):
+        return {}
+    now = time.time()
+    return {key: expiry for key, expiry in records.items()
+            if isinstance(expiry, (int, float)) and expiry > now}
+
+
+def target_key(interface, original_uuid, bssid):
+    return json.dumps([interface, original_uuid, bssid.lower()])
+
+
+def mark_failed_target(wifi, target):
+    # Retain failures across controller subprocesses so the next automatic
+    # attempt can select another same-network AP after restoration completes.
+    records = failed_targets()
+    records[target_key(wifi["interface"], wifi["original_uuid"], target["bssid"])] = time.time() + AP_RETRY_COOLDOWN
+    path = runtime() / "failed-aps.json"
+    temporary = path.with_suffix(".tmp")
+    temporary.write_text(json.dumps(records))
+    temporary.chmod(0o600)
+    temporary.replace(path)
+
+
 def snapshot():
     radio = json.loads(run([OWLY, "doctor", "--json"], check=False).stdout)
     if radio.get("mode") != "shared" or not radio.get("hardware"):
@@ -138,8 +167,14 @@ def snapshot():
         raise Failure("The current Wi-Fi access point is absent from NetworkManager's scan results.")
     candidates = [row for row in rows if row["ssid"] == current["ssid"]
                   and row["security"] == current["security"] and row["channel"] in CHANNELS]
-    target = current if current["channel"] in CHANNELS else max(candidates, key=lambda row: row["signal"], default=None)
-    return {"interface": interface, "original_uuid": original_uuid, "original_bssid": current["bssid"], "current": current, "target": target}
+    failed = failed_targets()
+    available = [row for row in candidates
+                 if target_key(interface, original_uuid, row["bssid"]) not in failed]
+    # An already connected compatible AP has proved usable, even if an earlier
+    # attempt failed. No roam is needed in that case.
+    target = current if current["channel"] in CHANNELS else max(available, key=lambda row: row["signal"], default=None)
+    return {"interface": interface, "original_uuid": original_uuid, "original_bssid": current["bssid"], "current": current, "target": target,
+            "ap_cooldown": bool(candidates) and target is None}
 
 
 def report():
@@ -150,6 +185,8 @@ def report():
         wifi = snapshot()
         target = wifi["target"]
         if not target:
+            if wifi.get("ap_cooldown"):
+                return {"can_enable": False, "reason": "ap_cooldown", "message": "Compatible access points recently failed. Waiting before retrying them; Wi-Fi is unchanged.", "phase": "idle"}
             return {"can_enable": False, "reason": "no_compatible_ap", "message": "No access point on channels 6, 44 or 149 is available for this saved Wi-Fi network. Exclusive radio mode is disabled.", "phase": "idle"}
         steering = target["bssid"] != wifi["original_bssid"]
         if steering and not ALLOW_STEERING:
@@ -275,6 +312,8 @@ def enable(value, background=False):
         wifi = snapshot()
         target = wifi["target"]
         if not target:
+            if wifi.get("ap_cooldown"):
+                raise Failure("Compatible access points recently failed. Waiting before retrying them; Wi-Fi is unchanged.")
             raise Failure("No compatible access point exists on this saved Wi-Fi network. Wi-Fi was left unchanged.")
         steering = target["bssid"] != wifi["original_bssid"]
         if steering and not ALLOW_STEERING:
@@ -303,8 +342,12 @@ def enable(value, background=False):
                    "connection.autoconnect", "no", "802-11-wireless.bssid", target["bssid"],
                    "802-11-wireless.band", "bg" if target["channel"] == 6 else "a",
                    "802-11-wireless.channel", str(target["channel"]))
-                nm("connection", "up", "uuid", clone_uuid, "ifname", wifi["interface"], "ap", target["bssid"], timeout=35)
-                health_check(wifi["interface"], peer_ip, retry=True)
+                try:
+                    nm("connection", "up", "uuid", clone_uuid, "ifname", wifi["interface"], "ap", target["bssid"], timeout=35)
+                    health_check(wifi["interface"], peer_ip, retry=True)
+                except Failure:
+                    mark_failed_target(wifi, target)
+                    raise
             state.update(phase="starting", message="Starting the AirDrop receive window.")
             write_state(state)
             run([OMDROP, "on", "forever" if seconds is None else f"{seconds}s"], timeout=25)

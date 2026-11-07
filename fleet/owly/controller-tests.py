@@ -38,6 +38,48 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(wifi['target']['bssid'], 'bb')
     def test_no_candidate(self):
         self.assertIsNone(self.scan('*:Qguest:aa:64::70')['target'])
+    def test_failed_ap_cooldown_selects_next_same_network_candidate(self):
+        rows = '*:saved:aa:153:WPA2:70\n:saved:bb:6:WPA2:50\n:saved:cc:44:WPA2:35'
+        wifi = self.scan(rows)
+        self.assertEqual(wifi['target']['bssid'], 'bb')
+        c.mark_failed_target(wifi, wifi['target'])
+        retry = self.scan(rows)
+        self.assertEqual(retry['target']['bssid'], 'cc')
+        self.assertFalse(retry['ap_cooldown'])
+        self.assertEqual((c.runtime() / 'failed-aps.json').stat().st_mode & 0o777, 0o600)
+
+    def test_failed_ap_cooldown_expires_and_is_profile_scoped(self):
+        rows = '*:saved:aa:153:WPA2:70\n:saved:bb:6:WPA2:50'
+        wifi = self.scan(rows)
+        with patch.object(c.time, 'time', return_value=100):
+            c.mark_failed_target(wifi, wifi['target'])
+            self.assertTrue(self.scan(rows)['ap_cooldown'])
+            # An unrelated saved network on the same adapter remains eligible.
+            other = dict(wifi, original_uuid='another-profile')
+            self.assertNotIn(c.target_key(other['interface'], other['original_uuid'], 'bb'), c.failed_targets())
+        with patch.object(c.time, 'time', return_value=100 + c.AP_RETRY_COOLDOWN):
+            self.assertEqual(self.scan(rows)['target']['bssid'], 'bb')
+
+    def test_connected_supported_ap_is_usable_despite_prior_failure(self):
+        wifi = self.scan('*:saved:aa:153:WPA2:70\n:saved:bb:6:WPA2:50')
+        c.mark_failed_target(wifi, wifi['target'])
+        connected = self.scan(':saved:aa:153:WPA2:70\n*:saved:bb:6:WPA2:50')
+        self.assertEqual(connected['target']['bssid'], 'bb')
+        self.assertFalse(connected['ap_cooldown'])
+
+    def test_all_candidates_cooling_down_leave_wifi_unchanged(self):
+        rows = '*:saved:aa:153:WPA2:70\n:saved:bb:6:WPA2:50'
+        wifi = self.scan(rows)
+        c.mark_failed_target(wifi, wifi['target'])
+        unavailable = self.scan(rows)
+        with patch.object(c, 'snapshot', return_value=unavailable), patch.object(c, 'systemctl'), \
+             patch.object(c, 'nm') as nm, patch.object(c, 'arm_timer') as timer:
+            self.assertEqual(c.report()['reason'], 'ap_cooldown')
+            with self.assertRaises(c.Failure): c.enable('forever')
+            nm.assert_not_called()
+            timer.assert_not_called()
+            self.assertIsNone(c.read_state())
+
     def test_exclusive_refused_before_network_commands(self):
         with patch.object(c, 'run', return_value=result('{"mode":"exclusive","hardware":true}')), patch.object(c, 'nm') as nm:
             with self.assertRaises(c.Failure): c.snapshot()
@@ -83,8 +125,13 @@ class ControllerTests(unittest.TestCase):
                     events.append(('restore',))
                     (c.runtime() / 'controller.json').unlink(missing_ok=True)
                     c.DEADLINE = None
-                with patch.object(c,'ALLOW_STEERING',True), patch.object(c,'snapshot',return_value=wifi), patch.object(c,'health_baseline',return_value='100.1.2.3'), patch.object(c,'health_check',side_effect=health), patch.object(c,'systemctl'), patch.object(c,'arm_timer',side_effect=lambda *args: events.append(('timer',))), patch.object(c,'nm',side_effect=nm), patch.object(c,'run',side_effect=run), patch.object(c,'restore_locked',side_effect=restore):
+                with patch.object(c,'ALLOW_STEERING',True), patch.object(c,'snapshot',return_value=wifi), patch.object(c,'health_baseline',return_value='100.1.2.3'), patch.object(c,'health_check',side_effect=health), patch.object(c,'systemctl'), patch.object(c,'arm_timer',side_effect=lambda *args: events.append(('timer',))), patch.object(c,'nm',side_effect=nm), patch.object(c,'run',side_effect=run), patch.object(c,'restore_locked',side_effect=restore), patch.object(c,'mark_failed_target') as failed:
+
                     with self.assertRaises(c.Failure): c.enable('20s')
+                if stage in ('activation', 'health'):
+                    failed.assert_called_once_with(wifi, wifi['target'])
+                else:
+                    failed.assert_not_called()
                 self.assertEqual(events[0], ('timer',))
                 self.assertEqual(events[-1], ('restore',))
                 self.assertTrue(any(x[:3] == ('connection','clone','--temporary') for x in events))
