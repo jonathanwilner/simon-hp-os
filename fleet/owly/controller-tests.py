@@ -119,4 +119,121 @@ class ControllerTests(unittest.TestCase):
             self.assertNotIn('shell', run.call_args.kwargs)
             self.assertEqual(run.call_args.args[0][1], '$(touch /tmp/evil)')
 
+    def test_receive_window_roams_temporarily_then_restores_original_profile(self):
+        # Exercise the full successful lifecycle, including persisted recovery
+        # state and expiry protection. Only external commands are replaced.
+        for channel, band in [(6, 'bg'), (44, 'a'), (149, 'a')]:
+            with self.subTest(channel=channel):
+                events = []
+                wifi = dict(interface='wlo1', original_uuid='original', original_bssid='aa',
+                            current={'channel':153}, target={'bssid':'bb', 'channel':channel})
+                def nm(*args, **kwargs):
+                    events.append(('nm', args, kwargs))
+                    if args[:2] == ('connection', 'up') and args[3] == 'clone':
+                        state = c.read_state()
+                        self.assertEqual(state['original_uuid'], 'original')
+                        self.assertEqual(state['clone_uuid'], 'clone')
+                        self.assertEqual(state['phase'], 'steering')
+                        self.assertGreater(kwargs['timeout'], 15)
+                    return result('clone')
+                def run(args, **kwargs):
+                    events.append(('run', args))
+                    return result('{"receiving":true}' if args[1:3] == ['status', '--json'] else '')
+                def timer(suffix, seconds):
+                    self.assertTrue(c.read_state()['token'])
+                    events.append(('timer', suffix, seconds))
+                with patch.object(c, 'ALLOW_STEERING', True), patch.object(c, 'snapshot', return_value=wifi), \
+                     patch.object(c, 'health_baseline', return_value='100.1.2.3'), \
+                     patch.object(c, 'health_check', side_effect=lambda *a, **k: events.append(('health',))), \
+                     patch.object(c, 'systemctl'), patch.object(c, 'native', side_effect=lambda name: '/usr/bin/' + name), \
+                     patch.object(c, 'nm', side_effect=nm), patch.object(c, 'run', side_effect=run), \
+                     patch.object(c, 'arm_timer', side_effect=timer), \
+                     patch.object(c, 'stop_timer', side_effect=lambda suffix: events.append(('stop', suffix))):
+                    c.enable('20s')
+                    self.assertEqual(c.report()['phase'], 'receiving')
+                    self.assertIsNone(c.DEADLINE)
+                    c.restore_locked()
+                self.assertIsNone(c.read_state())
+                self.assertEqual(events[0][0:2], ('timer', 'rollback'))
+                commands = [e[1] for e in events if e[0] == 'nm']
+                self.assertEqual(commands[0][:5], ('connection', 'clone', '--temporary', 'uuid', 'original'))
+                modify = next(args for args in commands if args[:2] == ('connection', 'modify'))
+                self.assertEqual(modify[2:5], ('--temporary', 'uuid', 'clone'))
+                self.assertEqual(modify[modify.index('connection.autoconnect') + 1], 'no')
+                self.assertEqual(modify[modify.index('802-11-wireless.band') + 1], band)
+                self.assertEqual(commands[-1], ('connection', 'delete', 'uuid', 'clone'))
+                self.assertIn(('connection', 'up', 'uuid', 'original', 'ifname', 'wlo1', 'ap', 'aa'), commands)
+                start = next(i for i, event in enumerate(events) if event == ('run', [c.OMDROP, 'on', '20s']))
+                self.assertLess(events.index(('health',)), start)
+                self.assertLess(events.index(('timer', 'expiry', 30)), events.index(('stop', 'rollback')))
+
+    def test_unrelated_or_incompatible_access_points_never_change_wifi(self):
+        wifi = self.scan('*:saved:aa:153:WPA2:70\n:other:bb:44:WPA2:99\n:saved:cc:6::98\n:saved:dd:36:WPA2:97')
+        with patch.object(c, 'ALLOW_STEERING', True), patch.object(c, 'snapshot', return_value=wifi), \
+             patch.object(c, 'systemctl'), patch.object(c, 'nm') as nm, \
+             patch.object(c, 'run') as run, patch.object(c, 'arm_timer') as timer:
+            self.assertEqual(c.report()['reason'], 'no_compatible_ap')
+            with self.assertRaises(c.Failure): c.enable('20s')
+            nm.assert_not_called()
+            run.assert_not_called()
+            timer.assert_not_called()
+            self.assertIsNone(c.read_state())
+
+    def test_unreachable_management_baseline_never_changes_wifi(self):
+        wifi = dict(interface='wlo1', original_uuid='original', original_bssid='aa',
+                    current={'channel':153}, target={'bssid':'bb', 'channel':44})
+        with patch.object(c, 'ALLOW_STEERING', True), patch.object(c, 'snapshot', return_value=wifi), \
+             patch.object(c, 'systemctl'), patch.object(c, 'health_baseline', side_effect=c.Failure('peer unreachable')), \
+             patch.object(c, 'nm') as nm, patch.object(c, 'arm_timer') as timer:
+            with self.assertRaises(c.Failure): c.enable('20s')
+            nm.assert_not_called()
+            timer.assert_not_called()
+            self.assertIsNone(c.read_state())
+
+    def test_network_manager_wait_allows_slow_roam_inside_process_deadline(self):
+        # Goran needed longer than the former fixed 15-second nmcli limit.
+        with patch.object(c, 'native', return_value='/usr/bin/nmcli'), \
+             patch.object(c.subprocess, 'run', return_value=result()) as run:
+            c.nm('connection', 'up', 'uuid', 'clone', timeout=35)
+            args = run.call_args.args[0]
+            wait = int(args[args.index('--wait') + 1])
+            self.assertGreater(wait, 15)
+            self.assertLess(wait, run.call_args.kwargs['timeout'])
+            self.assertEqual(run.call_args.kwargs['timeout'], 35)
+            c.DEADLINE = c.time.monotonic() + 4
+            c.nm('connection', 'up', 'uuid', 'clone', timeout=35)
+            self.assertGreater(run.call_args.kwargs['timeout'], 0)
+            self.assertLessEqual(run.call_args.kwargs['timeout'], 4)
+
+    def test_missing_original_ap_falls_back_only_to_original_saved_network(self):
+        c.write_state(dict(clone_uuid='clone', original_uuid='original', original_bssid='aa', interface='wlo1'))
+        def nm(*args, **kwargs):
+            if 'ap' in args: raise c.Failure('original AP disappeared')
+            return result('clone')
+        with patch.object(c, 'nm', side_effect=nm) as calls, patch.object(c, 'run', return_value=result()), \
+             patch.object(c, 'stop_timer'):
+            c.restore_locked()
+        activations = [call for call in calls.call_args_list if call.args[:2] == ('connection', 'up')]
+        self.assertEqual(len(activations), 2)
+        self.assertEqual(activations[1].args, ('connection', 'up', 'uuid', 'original', 'ifname', 'wlo1'))
+        self.assertTrue(all(call.kwargs['timeout'] > 15 for call in activations))
+        self.assertIsNone(c.read_state())
+
+    def test_failed_restoration_keeps_recovery_state_and_timer(self):
+        c.write_state(dict(token='recover', clone_uuid='clone', original_uuid='original', original_bssid='aa', interface='wlo1'))
+        with patch.object(c, 'nm', side_effect=c.Failure('NetworkManager unavailable')), \
+             patch.object(c, 'run', return_value=result()), patch.object(c, 'stop_timer') as stop:
+            with self.assertRaises(c.Failure): c.restore_locked()
+            stop.assert_not_called()
+            self.assertEqual(c.read_state()['original_uuid'], 'original')
+            self.assertEqual(c.read_state()['token'], 'recover')
+
+    def test_invalid_backend_status_triggers_monitor_restore(self):
+        c.write_state(dict(token='window', expires=c.time.time() + 100))
+        with patch.object(c.sys, 'argv', ['controller', 'monitor', 'window']), \
+             patch.object(c, 'run', return_value=result('service restarting')), \
+             patch.object(c, 'restore_locked') as restore:
+            c.monitor()
+            restore.assert_called_once()
+
 if __name__ == '__main__': unittest.main()

@@ -1,4 +1,4 @@
-{ runtimeShell, runCommand, quickshell, omdrop, owly, controller, callPackage }:
+{ runtimeShell, runCommand, quickshell, omdrop, owly, controller, callPackage, python3 }:
 let
   printingClient = callPackage ../printing/package.nix {};
   printingGui = callPackage ../printing/gui-package.nix { client = printingClient; };
@@ -12,16 +12,11 @@ runCommand "hp-os-omdrop-gui" {} ''
     --replace-fail '@owly@' '${owly}' \
     --replace-fail '@controller@' '${controller}' \
     --replace-fail '@printingGui@' '${printingGui}'
-  cat > "$out/bin/hp-os-omdrop" <<SCRIPT
-  #!${runtimeShell}
-  export QT_QUICK_CONTROLS_STYLE=Basic
-  if command -v hp-os >/dev/null 2>&1 && hp-os ipc hpos sharing 2>/dev/null; then
-    exit 0
-  fi
-  if ${quickshell}/bin/quickshell ipc -p "$out/share/omdrop" call omdrop open 2>/dev/null; then
-    exit 0
-  fi
-  exec ${quickshell}/bin/quickshell -p "$out/share/omdrop" --no-duplicate
-  SCRIPT
+  cp ${./launcher.sh} "$out/bin/hp-os-omdrop"
+  substituteInPlace "$out/bin/hp-os-omdrop" \
+    --replace-fail '@shell@' '${runtimeShell}' \
+    --replace-fail '@quickshell@' '${quickshell}/bin/quickshell' \
+    --replace-fail '@panel@' "$out/share/omdrop"
+  LAUNCHER_SOURCE=${./launcher.sh} BASH=${runtimeShell} ${python3}/bin/python3 ${./launcher-tests.py}
   chmod +x "$out/bin/hp-os-omdrop"
 ''

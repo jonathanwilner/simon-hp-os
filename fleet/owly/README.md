@@ -49,8 +49,11 @@ prove an over-the-air file transfer.
 
 ## Graphical Omdrop
 
-The **Omdrop AirDrop** launcher opens a standalone Quickshell window in HP-OS
-and other Linux desktops. Existing Owly launcher IDs open the same window.
+The **Omdrop AirDrop** launcher opens the native HP-OS Control Center sharing
+card. Other desktops use the standalone Quickshell window. An unavailable
+shell IPC command falls back to that window, including commands that print
+an error while returning exit status zero. Existing Owly launcher IDs use
+the same launcher.
 The same panel is installed as the optional `omdrop` widget under
 `DankMaterialShell/plugins`; it does not change an existing bar layout.
 
@@ -65,3 +68,32 @@ The native control-center layout follows Huawei Share's icon-toggle and
 details-card pattern. It uses HP-OS theme colors and displays the real radio
 state. Design references: [Huawei control center](https://consumer.huawei.com/cn/support/content/zh-cn16046674/)
 and [Huawei Share visibility](https://consumer.huawei.com/cn/support/content/zh-cn16093654/).
+
+
+## Regression checks
+
+GitHub Actions runs `Omdrop fleet regression` on native x86-64 and ARM64
+runners for every push and pull request. Run the same checks locally with:
+
+```sh
+nom-tmux test-omdrop-fleet -- nix build \
+  .#checks.x86_64-linux.omdrop-fleet-contract \
+  .#checks.x86_64-linux.omdrop-package-contract --no-link
+```
+
+Use `aarch64-linux` on ARM64. The checks cover:
+
+- Actual Home Manager default and explicit opt-out wiring on both architectures,
+  plus the standalone GUI package's enabled controller.
+- Rendered controller readiness, rollback before network changes, connection
+  failures, expiry, restoration and bounded NetworkManager waits.
+- The real launcher's integrated-shell success and fallback when IPC reports
+  failure with either zero or nonzero exit status.
+- The installed Omdrop wrapper removing an inherited Nix `SHELL`, preserving
+  arguments and refusing upstream's mutable installer commands.
+
+The tests use simulated radio responses and never change a runner's Wi-Fi.
+Hardware validation remains separate: verify the receive window, original
+connection restoration, visible Control Center contents and an actual file
+transfer on each supported device. A passing automated check does not prove
+radio performance or a successful Apple-device transfer.

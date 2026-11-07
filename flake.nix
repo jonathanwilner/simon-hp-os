@@ -11,7 +11,7 @@
     dms-plugin-registry = { url = "github:AvengeMedia/dms-plugin-registry/bd0adca992b502178e70cc015f2a34f2b7031186"; inputs.nixpkgs.follows = "nixpkgs"; };
     xwayland-satellite = { url = "github:Supreeeme/xwayland-satellite/8d135d3b2854b30fd01ea6cd6c27e523dd50a839"; inputs.nixpkgs.follows = "nixpkgs"; };
   };
-  outputs = { owly, nixpkgs, home-manager, hp-os, codex-fleet, ghostty-upstream, dank-material-shell, dms-plugin-registry, xwayland-satellite, ... }:
+  outputs = { self, owly, nixpkgs, home-manager, hp-os, codex-fleet, ghostty-upstream, dank-material-shell, dms-plugin-registry, xwayland-satellite, ... }:
     let
       system = "aarch64-linux";
       ghosttyCpuPresentation = ghostty-upstream.packages.${system}.default.overrideAttrs (old: {
@@ -28,6 +28,10 @@
         ];
       };
     in {
+      checks = import ./tests/omdrop/fleet-checks.nix {
+        inherit nixpkgs home-manager owly;
+        standaloneGui = system: self.packages.${system}.omdrop-gui;
+      };
       apps.x86_64-linux.update-chrome-channels = let
         p = nixpkgs.legacyPackages.x86_64-linux;
         updater = p.writeShellApplication {
@@ -86,8 +90,8 @@
       packages.aarch64-linux.omdrop = pkgs.callPackage ./fleet/owly/omdrop-package.nix { owlySource = owly; };
       packages.x86_64-linux.owly = nixpkgs.legacyPackages.x86_64-linux.callPackage "${owly}/nix/package.nix" {};
       packages.aarch64-linux.owly = pkgs.callPackage "${owly}/nix/package.nix" {};
-      packages.x86_64-linux.omdrop-gui = let p = nixpkgs.legacyPackages.x86_64-linux; in p.callPackage ./fleet/owly/gui-package.nix { controller = p.callPackage ./fleet/owly/controller-package.nix { owly = p.callPackage "${owly}/nix/package.nix" {}; omdrop = p.callPackage ./fleet/owly/omdrop-package.nix { owlySource = owly; }; }; omdrop = p.callPackage ./fleet/owly/omdrop-package.nix { owlySource = owly; }; owly = p.callPackage "${owly}/nix/package.nix" {}; };
-      packages.aarch64-linux.omdrop-gui = pkgs.callPackage ./fleet/owly/gui-package.nix { controller = pkgs.callPackage ./fleet/owly/controller-package.nix { owly = pkgs.callPackage "${owly}/nix/package.nix" {}; omdrop = pkgs.callPackage ./fleet/owly/omdrop-package.nix { owlySource = owly; }; }; omdrop = pkgs.callPackage ./fleet/owly/omdrop-package.nix { owlySource = owly; }; owly = pkgs.callPackage "${owly}/nix/package.nix" {}; };
+      packages.x86_64-linux.omdrop-gui = let p = nixpkgs.legacyPackages.x86_64-linux; in p.callPackage ./fleet/owly/gui-package.nix { controller = p.callPackage ./fleet/owly/controller-package.nix { allowSteering = true; owly = p.callPackage "${owly}/nix/package.nix" {}; omdrop = p.callPackage ./fleet/owly/omdrop-package.nix { owlySource = owly; }; }; omdrop = p.callPackage ./fleet/owly/omdrop-package.nix { owlySource = owly; }; owly = p.callPackage "${owly}/nix/package.nix" {}; };
+      packages.aarch64-linux.omdrop-gui = pkgs.callPackage ./fleet/owly/gui-package.nix { controller = pkgs.callPackage ./fleet/owly/controller-package.nix { allowSteering = true; owly = pkgs.callPackage "${owly}/nix/package.nix" {}; omdrop = pkgs.callPackage ./fleet/owly/omdrop-package.nix { owlySource = owly; }; }; omdrop = pkgs.callPackage ./fleet/owly/omdrop-package.nix { owlySource = owly; }; owly = pkgs.callPackage "${owly}/nix/package.nix" {}; };
       packages.x86_64-linux.owly-ubuntu-system = nixpkgs.legacyPackages.x86_64-linux.callPackage ./fleet/owly/ubuntu-system.nix { owlySource = owly; owly = nixpkgs.legacyPackages.x86_64-linux.callPackage "${owly}/nix/package.nix" {}; };
       packages.aarch64-linux.owly-ubuntu-system = pkgs.callPackage ./fleet/owly/ubuntu-system.nix { owlySource = owly; owly = pkgs.callPackage "${owly}/nix/package.nix" {}; };
       packages.x86_64-linux.upscayl = let p = import nixpkgs { system = "x86_64-linux"; config.allowUnfree = true; }; in p.callPackage ./goran/desktop/upscayl/package.nix {};
