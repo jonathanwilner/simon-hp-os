@@ -210,9 +210,9 @@ interactive user SSH access alone does not prove daemon access.
 
 ### Optional x86 build store
 
-Set `FLEET_X86_STORE=ssh-ng://jonathan@slazenger` on the local release controller
-when Armstrong lacks build-store space. Slazenger has capacity for the generic
-x86 closure downloads and builds. The router accepts only the `slazenger` SSH
+Set `FLEET_X86_STORE=ssh-ng://jonathan@edberg` on the local release controller
+for generic x86 closure downloads and builds. Edberg is the selected wired
+x86 builder with more memory and storage capacity. The router accepts only the `edberg` SSH
 alias for this override, uses `--eval-store auto`, and disables onward builders.
 An unset variable preserves local Armstrong builds. An empty or invalid value
 fails validation instead of silently falling back to Armstrong.

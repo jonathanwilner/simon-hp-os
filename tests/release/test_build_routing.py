@@ -40,11 +40,11 @@ class Routing(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'Armstrong'):
                 router.plan(graph, ['app'], 'x86_64-linux', {}, hostname=host, machine=machine)
 
-    def test_remote_x86_uses_slazenger_without_delegation(self):
+    def test_remote_x86_uses_edberg_without_delegation(self):
         routes = router.plan({'app': drv('hello')}, ['app'], 'x86_64-linux',
-                             {'FLEET_X86_STORE': 'ssh-ng://jonathan@slazenger'})
-        self.assertEqual(routes, [('slazenger', ['nix', 'build', '--no-link',
-            '--eval-store', 'auto', '--store', 'ssh-ng://jonathan@slazenger',
+                             {'FLEET_X86_STORE': 'ssh-ng://jonathan@edberg'})
+        self.assertEqual(routes, [('edberg', ['nix', 'build', '--no-link',
+            '--eval-store', 'auto', '--store', 'ssh-ng://jonathan@edberg',
             '--option', 'builders', '', 'app^*'])])
 
     def test_remote_x86_rejects_transitive_nvidia_before_route(self):
@@ -54,8 +54,8 @@ class Routing(unittest.TestCase):
                         {'FLEET_X86_STORE': 'invalid'})
 
     def test_remote_x86_rejects_unapproved_or_empty_endpoints(self):
-        for store in ['', 'ssh-ng://github-runner', 'ssh-ng://goran',
-                      'ssh-ng://slazenger?remote-store=ssh-ng://elsewhere']:
+        for store in ['', 'ssh-ng://github-runner', 'ssh-ng://goran', 'ssh-ng://slazenger',
+                      'ssh-ng://edberg?remote-store=ssh-ng://elsewhere']:
             with self.assertRaises(ValueError):
                 router.plan({'app': drv('hello')}, ['app'], 'x86_64-linux',
                             {'FLEET_X86_STORE': store}, hostname='armstrong', machine='x86_64')

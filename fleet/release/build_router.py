@@ -68,7 +68,7 @@ def classify(graph, roots):
 
 def endpoint(value, lane):
     parsed = urlsplit(value)
-    allowed = {'arm': ARM_ALIASES, 'nvidia': {'goran'}, 'x86': {'slazenger'}}[lane]
+    allowed = {'arm': ARM_ALIASES, 'nvidia': {'goran'}, 'x86': {'edberg'}}[lane]
     if (parsed.scheme != 'ssh-ng' or parsed.hostname not in allowed or
             parsed.port is not None or parsed.path not in ('', '/') or
             parsed.query or parsed.fragment or parsed.password):
@@ -88,7 +88,7 @@ def plan(graph, roots, system, environ=None, hostname=None, machine=None):
         if 'FLEET_X86_STORE' in environ:
             store = endpoint(environ['FLEET_X86_STORE'], 'x86')
             if generic:
-                commands.append(('slazenger', ['nix', 'build', '--no-link', '--eval-store', 'auto',
+                commands.append(('edberg', ['nix', 'build', '--no-link', '--eval-store', 'auto',
                     '--store', store, '--option', 'builders', '', *[path + '^*' for path in generic]]))
         else:
             hostname = socket.gethostname().split('.')[0] if hostname is None else hostname
