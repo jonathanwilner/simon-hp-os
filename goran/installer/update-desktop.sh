@@ -120,12 +120,16 @@ if [[ "$pull" == true ]]; then
   cp "$run_dir/recovery/release-channel" "$run_dir/release-channel"
 fi
 [[ -z $(git status --porcelain) ]] || fail 'Build-only source must be committed; normal updates preserve and commit local edits automatically'
+git ls-files --error-unmatch fleet/release/client_build.py fleet/release/build_router.py >/dev/null \
+  || fail 'The selected release lacks the required NVIDIA build guard'
 revision=$(git rev-parse HEAD)
 # shellcheck source=desktop-update-guards.sh
 source "$checkout/goran/installer/desktop-update-guards.sh"
 printf '%s\n' "$revision" > "$run_dir/source-revision"
-nix build .#homeConfigurations.simon-daytona.activationPackage \
-  --no-update-lock-file --out-link "$run_dir/candidate"
+# The public bootstrap and installed updater share this gate. It rejects
+# NVIDIA-dependent closures away from Goran before any build can start.
+python3 "$checkout/fleet/release/client_build.py" .#homeConfigurations.simon-daytona.activationPackage \
+  --out-link "$run_dir/candidate"
 candidate=$(readlink -f "$run_dir/candidate")
 [[ -x "$candidate/activate" ]] || fail 'Built output has no Home Manager activation script'
 require_stable_checkout "$revision" || exit 1

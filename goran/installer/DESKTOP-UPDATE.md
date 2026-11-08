@@ -163,3 +163,12 @@ local dashboard reporting; central dashboard upload needs a separately authorize
 reporting account. The profile includes no dashboard upload credentials. A successful
 build establishes package integrity. Physical desktop acceptance still requires
 checks on Simon's laptop.
+
+### Temporary NVIDIA build restriction
+
+The public bootstrap and installed updater use the same dependency guard before
+building an activation. Evaluation disables import-from-derivation. The guard
+checks the full dependency graph and permits NVIDIA/CUDA-dependent builds only
+on the host named `goran`. Other hosts receive a clear error before building.
+Generic desktop closures can build locally without private fleet credentials.
+All guarded builds disable remote delegation, including builds on Goran.

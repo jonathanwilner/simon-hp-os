@@ -18,6 +18,10 @@ class DesktopUpdateTest(unittest.TestCase):
         (self.repo / 'goran/installer').mkdir(parents=True)
         (self.repo / 'goran/installer/simon-home.nix').touch()
         shutil.copyfile(SCRIPT.parent / 'desktop-update-guards.sh', self.repo / 'goran/installer/desktop-update-guards.sh')
+        (self.repo / 'fleet/release').mkdir(parents=True)
+        release = SCRIPT.parents[2] / 'fleet/release'
+        for name in ('client_build.py', 'build_router.py'):
+            shutil.copyfile(release / name, self.repo / 'fleet/release' / name)
         (self.repo / 'flake.nix').touch()
         (self.repo / 'flake.lock').touch()
         self.bin = self.root / 'bin'
@@ -30,7 +34,11 @@ status) printf '%s' "${TEST_DIRTY:-}" ;;
 rev-parse) echo aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ;;
 *) exit 2 ;;
 esac''')
-        self.stub('nix', '''printf '%s\\n' "$@" > "$TEST_NIX_ARGS"
+        self.stub('nix', '''case "$1" in
+eval) printf '%s\\n' /nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-test.drv; exit 0 ;;
+derivation) printf '%s\\n' '{"/nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-test.drv":{"env":{"name":"generic-desktop"},"inputDrvs":{}}}'; exit 0 ;;
+esac
+printf '%s\\n' "$@" > "$TEST_NIX_ARGS"
 while [ "$#" -gt 0 ]; do
  if [ "$1" = --out-link ]; then shift; ln -s "$TEST_CANDIDATE" "$1"; exit 0; fi
  shift
@@ -60,7 +68,9 @@ exit 2''')
         result = self.run_update('--worker', '--build-only', '--no-pull')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('No profile activated', result.stdout)
-        self.assertIn('.#homeConfigurations.simon-daytona.activationPackage', (self.root / 'nix-args').read_text())
+        self.assertIn('/nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-test.drv^*', (self.root / 'nix-args').read_text())
+        self.assertIn('allow-import-from-derivation\nfalse', (self.root / 'nix-args').read_text())
+        self.assertIn('builders\n\n', (self.root / 'nix-args').read_text())
         self.assertIn('--no-update-lock-file', (self.root / 'nix-args').read_text())
         self.assertFalse((self.root / 'activated').exists())
         self.assertEqual(len(list((self.root / 'state/simon-desktop-update').glob('*/source-revision'))), 1)
