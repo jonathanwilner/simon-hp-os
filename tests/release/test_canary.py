@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -72,13 +73,13 @@ class CanaryTests(unittest.TestCase):
         with self.assertRaises(canary.ProbeError):
             canary.wayland_peer('', 100, '/run/user/1000/wayland-1', 42)
 
-    def run_probe(self, windows, evidence=None):
+    def run_probe(self, windows, evidence=None, required_windows=None):
         with patch.object(canary.platform, 'machine', return_value='x86_64'), \
              patch.object(canary.platform, 'system', return_value='Linux'), \
              patch.object(canary, 'niri_windows', return_value=(windows, 42)), \
              patch.object(canary.subprocess, 'run', return_value=SimpleNamespace(stdout='')), \
              patch.object(canary, 'process_evidence', side_effect=evidence or (lambda *args: {'window_registered': True})):
-            return canary.probe(self.args)
+            return canary.probe(self.args, required_windows=required_windows)
 
     def test_missing_window_never_passes(self):
         with self.assertRaisesRegex(canary.ProbeError, 'No accepted ghostty'):
@@ -97,6 +98,42 @@ class CanaryTests(unittest.TestCase):
         self.assertTrue(result['passed'])
         self.assertEqual(set(result['apps']), {'ghostty', 'moonlight'})
         self.assertIn('excludes visual rendering', result['scope'])
+
+    def test_fresh_selection_ignores_existing_wrong_generation_windows(self):
+        old = {'id': 1, 'pid': 10, 'app_id': 'com.mitchellh.ghostty'}
+        fresh = {'ghostty': {'id': 2, 'pid': 20, 'app_id': 'com.mitchellh.ghostty'},
+                 'moonlight': {'id': 3, 'pid': 30, 'app_id': 'com.moonlight_stream.Moonlight'}}
+        observed = []
+        def evidence(window, *args):
+            observed.append(window['id'])
+            if window['id'] == 1:
+                raise canary.ProbeError('Existing window has old package')
+            return {'window_id': window['id']}
+        result = self.run_probe([old, *fresh.values()], evidence, fresh)
+        self.assertTrue(result['passed'])
+        self.assertEqual(observed, [2, 3])
+
+    def test_disappeared_fresh_window_cannot_fall_back_to_existing_window(self):
+        old = {'id': 1, 'pid': 10, 'app_id': 'com.mitchellh.ghostty'}
+        with self.assertRaisesRegex(canary.ProbeError, 'No accepted ghostty'):
+            self.run_probe([old], required_windows={'ghostty': {'id': 2, 'pid': 20}})
+
+    def test_stale_systemd_socket_falls_back_to_only_live_session(self):
+        def inventory(path):
+            if str(path) != '/run/user/1000/niri.live.sock':
+                raise OSError('stale socket')
+            return [], 42
+        with patch.dict(os.environ, {'NIRI_SOCKET': '/stale.sock'}), \
+             patch.object(canary.Path, 'glob', return_value=[Path('/run/user/1000/niri.old.sock'), Path('/run/user/1000/niri.live.sock')]), \
+             patch.object(canary, 'niri_windows', side_effect=inventory):
+            self.assertEqual(canary.session_socket(), '/run/user/1000/niri.live.sock')
+
+    def test_multiple_live_sessions_require_explicit_socket(self):
+        with patch.dict(os.environ, {'NIRI_SOCKET': ''}), \
+             patch.object(canary.Path, 'glob', return_value=[Path('/one'), Path('/two')]), \
+             patch.object(canary, 'niri_windows', return_value=([], 42)):
+            with self.assertRaisesRegex(canary.ProbeError, 'exactly one live'):
+                canary.session_socket()
 
     def test_wrong_architecture_fails_before_ui_probe(self):
         self.args.system = 'aarch64-linux'

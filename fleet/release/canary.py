@@ -53,6 +53,27 @@ def niri_windows(path):
     return windows, pid
 
 
+def session_socket(explicit=None):
+    if explicit:
+        return str(explicit)
+    inherited = os.environ.get('NIRI_SOCKET')
+    if inherited:
+        try:
+            niri_windows(inherited)
+            return inherited
+        except (ProbeError, OSError, ValueError):
+            pass
+    live = []
+    for candidate in Path(f'/run/user/{os.getuid()}').glob('niri.*.sock'):
+        try:
+            niri_windows(candidate)
+            live.append(str(candidate))
+        except (ProbeError, OSError, ValueError):
+            continue
+    require(len(live) == 1, 'Specify --niri-socket: expected exactly one live Niri session')
+    return live[0]
+
+
 def wayland_peer(ss_output, pid, display, compositor_pid):
     rows = [line.split() for line in ss_output.splitlines()]
     rows = [row for row in rows if len(row) >= 9]
@@ -94,15 +115,11 @@ def process_evidence(window, command, generation, compositor_pid, sockets):
     return result
 
 
-def probe(args):
+def probe(args, required_windows=None):
     system = platform.machine() + '-linux'
     require(platform.system() == 'Linux' and system == args.system, f'Expected {args.system}, observed {system}')
     generation = installed_generation(args.installed_record, args.active_generation, args.revision)
-    socket_path = args.niri_socket or os.environ.get('NIRI_SOCKET')
-    if not socket_path:
-        candidates = list(Path(f'/run/user/{os.getuid()}').glob('niri.*.sock'))
-        require(len(candidates) == 1, 'Specify --niri-socket for the active Niri session')
-        socket_path = str(candidates[0])
+    socket_path = session_socket(args.niri_socket)
     windows, compositor_pid = niri_windows(socket_path)
     sockets = subprocess.run(['ss', '-xnpH'], capture_output=True, text=True, check=True, timeout=10).stdout
     apps = {}
@@ -111,6 +128,10 @@ def probe(args):
         for window in windows:
             if window.get('app_id') != app_id:
                 continue
+            if required_windows is not None:
+                expected_window = required_windows.get(command, {})
+                if (window.get('id'), window.get('pid')) != (expected_window.get('id'), expected_window.get('pid')):
+                    continue
             try:
                 apps[command] = process_evidence(window, command, generation, compositor_pid, sockets)
                 break

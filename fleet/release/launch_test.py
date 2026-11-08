@@ -81,11 +81,7 @@ def close_owned(socket_path, baseline_ids, baseline_pids, token, known):
 
 def launch_test(args):
     generation = canary.installed_generation(args.installed_record, args.active_generation, args.revision)
-    socket_path = args.niri_socket or os.environ.get('NIRI_SOCKET')
-    if not socket_path:
-        candidates = list(Path(f'/run/user/{os.getuid()}').glob('niri.*.sock'))
-        canary.require(len(candidates) == 1, 'Specify --niri-socket for the active session')
-        socket_path = str(candidates[0])
+    socket_path = canary.session_socket(args.niri_socket)
     args.niri_socket = str(socket_path)
     launcher = Path.home() / '.local/bin/fuzzel-launch'
     expected = generation / 'home-files/.local/bin/fuzzel-launch'
@@ -127,12 +123,8 @@ def launch_test(args):
             time.sleep(0.25)
         canary.require(len(selected) == len(APPS),
                        'Fresh tagged windows were not created for both applications; existing windows cannot pass')
-        sockets = subprocess.run(['ss', '-xnpH'], capture_output=True, text=True, check=True, timeout=10).stdout
-        fresh_apps = {command: canary.process_evidence(window, command, generation, compositor_pid, sockets)
-                      for command, window in selected.items()}
-        # Reuse revision, generation, architecture and live-package validation.
-        result = canary.probe(args)
-        result['apps'] = fresh_apps
+        # Validate only this test's fresh windows; preserve all existing applications.
+        result = canary.probe(args, required_windows=selected)
         result['fresh_launch'] = True
         result['launcher'] = {'path': str(launcher), 'source_sha256': launcher_hash,
                               'generation_source': str(expected.resolve(strict=True))}

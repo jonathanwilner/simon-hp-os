@@ -87,7 +87,7 @@ class LaunchTests(unittest.TestCase):
              mock.patch.object(launch, 'token_matches', return_value=True), \
              mock.patch.object(launch, 'action') as action, \
              mock.patch.object(launch.canary, 'process_evidence', side_effect=lambda w, *args: {'pid': w['pid'], 'window_id': w['id']}), \
-             mock.patch.object(launch.canary, 'probe', return_value={'passed': True, 'revision': args.revision, 'apps': {'old': {}}}), \
+             mock.patch.object(launch.canary, 'probe', side_effect=lambda args, required_windows: {'passed': True, 'revision': args.revision, 'apps': {key: {'pid': value['pid']} for key, value in required_windows.items()}}), \
              mock.patch.object(launch.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, stdout='')), \
              mock.patch.object(launch, 'close_owned', return_value=[]) as cleanup:
             result = launch.launch_test(args)
