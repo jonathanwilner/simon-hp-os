@@ -11,6 +11,18 @@ let
     export XDG_SESSION_TYPE=wayland
     unset GBM_BACKEND __GLX_VENDOR_LIBRARY_NAME
   '';
+  panelResume = pkgs.writeShellScriptBin "snapdragon-panel-resume" ''
+    exec 9>"$XDG_RUNTIME_DIR/snapdragon-panel-resume.lock"
+    ${pkgs.util-linux}/bin/flock -n 9 || exit 0
+    ${pkgs.coreutils}/bin/timeout 5 ${pkgs.niri}/bin/niri msg action power-off-monitors || exit 1
+    ${pkgs.coreutils}/bin/sleep 2
+    ${pkgs.coreutils}/bin/timeout 5 ${pkgs.niri}/bin/niri msg action power-on-monitors
+  '';
+  resumeWatcher = pkgs.writeShellScriptBin "snapdragon-resume-watch" ''
+    exec 9>"$XDG_RUNTIME_DIR/snapdragon-resume-watch.lock"
+    ${pkgs.util-linux}/bin/flock -n 9 || exit 0
+    exec ${pkgs.swayidle}/bin/swayidle -w after-resume ${panelResume}/bin/snapdragon-panel-resume
+  '';
   hpSession = pkgs.writeShellScriptBin "hp-os-session" ''
     ${environment}
     export HP_OS_PAM_SERVICE=hp-os-snapdragon
@@ -24,6 +36,7 @@ let
 in {
   options.programs.hp-os-snapdragon = {
     enable = lib.mkEnableOption "Ubuntu Snapdragon HP-OS and Niri/DMS sessions";
+    resumePanelRetrain = lib.mkEnableOption "OmniBook panel power cycle after resume";
     device = lib.mkOption {
       type = lib.types.enum [ "generic" "hp-omnibook-ultra-14-kg0xxx" ];
       default = "generic";
@@ -42,7 +55,17 @@ in {
       systemd.enable = false;
     };
     fonts.fontconfig.enable = true;
-    home.packages = [ (pkgs.writeTextFile { name = "hp-os-ubuntu-account-check"; destination = "/bin/hp-os-ubuntu-account-check"; executable = true; text = builtins.readFile ./account-check.py; }) (pkgs.callPackage ../../pkgs/nom-dashboard.nix {}) snapdragonHpOs snapdragonHpOsFonts snapdragonDms hpSession dmsSession pkgs.niri pkgs.xwayland-satellite pkgs.foot pkgs.brightnessctl pkgs.wireplumber ];
+    home.packages = [ (pkgs.writeTextFile { name = "hp-os-ubuntu-account-check"; destination = "/bin/hp-os-ubuntu-account-check"; executable = true; text = builtins.readFile ./account-check.py; }) (pkgs.callPackage ../../pkgs/nom-dashboard.nix {}) snapdragonHpOs snapdragonHpOsFonts snapdragonDms hpSession dmsSession pkgs.niri pkgs.xwayland-satellite pkgs.foot pkgs.brightnessctl pkgs.wireplumber ] ++ lib.optionals cfg.resumePanelRetrain [ panelResume resumeWatcher ];
+    # Preserve HP-OS's editable startup file and unrelated startup entries.
+    home.activation.snapdragonResumeStartup = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      startup="$HOME/.config/hp-os/niri/config.d/50-startup.kdl"
+      mkdir -p "$(dirname "$startup")"
+      touch "$startup"
+      ${pkgs.gnused}/bin/sed -i '/\/\/ snapdragon-panel-resume$/d' "$startup"
+      ${lib.optionalString cfg.resumePanelRetrain ''
+        printf '%s\n' 'spawn-at-startup "${resumeWatcher}/bin/snapdragon-resume-watch" // snapdragon-panel-resume' >> "$startup"
+      ''}
+    '';
     xdg.configFile."hp-os/snapdragon-device".text = cfg.device + "\n";
     xdg.configFile."niri/snapdragon.kdl".text = ''
       input {
@@ -51,6 +74,7 @@ in {
       }
       layout { gaps 8; default-column-width { proportion 0.5; }; }
       spawn-at-startup "${snapdragonDms}/bin/dms" "run"
+      ${lib.optionalString cfg.resumePanelRetrain ''spawn-at-startup "${resumeWatcher}/bin/snapdragon-resume-watch"''}
       prefer-no-csd
       screenshot-path "~/Pictures/Screenshot-%Y-%m-%d-%H-%M-%S.png"
       binds {
