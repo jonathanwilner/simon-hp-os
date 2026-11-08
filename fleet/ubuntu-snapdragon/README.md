@@ -4,7 +4,8 @@
 Material Shell (DMS), using the same fleet application module. Ubuntu retains
 its kernel, device tree, firmware, NetworkManager, PipeWire and login manager.
 Home Manager supplies Mesa userspace through `targets.genericLinux.gpu`.
-No NVIDIA environment, N1X brightness patch, host keys or credentials are copied.
+The terminal uses the pinned upstream Ghostty without Goran's N1X frame-import
+workaround. Host keys and credentials stay in each host configuration.
 
 Set `home.username`, `home.homeDirectory`, and `home.stateVersion` in the consumer.
 `programs.hp-os-snapdragon.device` defaults to `generic`; the HP profile identifies

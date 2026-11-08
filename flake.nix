@@ -82,6 +82,8 @@
         _module.args.snapdragonHpOsFonts = pkgs.callPackage (hp-os + "/packaging/fonts") { };
         _module.args.snapdragonDms = dank-material-shell.packages.${pkgs.stdenv.hostPlatform.system}.default;
         programs.hp-os-snapdragon.enable = true;
+        # Goran's N1X CPU presentation workaround is specific to its NVIDIA GPU.
+        programs.hp-os-fleet.ghostty.package = ghostty-upstream.packages.${pkgs.stdenv.hostPlatform.system}.default;
       };
       homeManagerModules.default = self.homeModules.fleetApps;
       packages.x86_64-linux.google-chrome = let p = import nixpkgs { system = "x86_64-linux"; config.allowUnfree = true; overlays = [ (import ./fleet/chrome-channels/overlay.nix) ]; }; in p.google-chrome;
