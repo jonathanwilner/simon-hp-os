@@ -8,7 +8,7 @@ def run(*args, **kw):
     return subprocess.check_output(args, text=True, **kw)
 def evaluate(source, system):
     expression = 'import '+str(ROOT/'tests/release/evaluate.nix')+' { source = '+json.dumps(str(source))+'; system = '+json.dumps(system)+'; }'
-    return json.loads(run('nix','eval','--impure','--json','--expr',expression))
+    return json.loads(run('nix','eval','--option','allow-import-from-derivation','false','--impure','--json','--expr',expression))
 def launcher_test(text):
     with tempfile.TemporaryDirectory() as tmp:
         p=pathlib.Path(tmp)
