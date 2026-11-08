@@ -33,8 +33,8 @@ def build(installable, out_link):
          installable + '.drvPath'], text=True).strip()
     if not re.fullmatch(r'/nix/store/[a-z0-9]{32}-[^/\n]+\.drv', derivation):
         raise ValueError('Evaluation did not return a valid derivation path')
-    graph = json.loads(subprocess.check_output(
-        ['nix', 'derivation', 'show', '--recursive', *NO_IFD, derivation], text=True))
+    graph = build_router.normalize_graph(json.loads(subprocess.check_output(
+        ['nix', 'derivation', 'show', '--recursive', *NO_IFD, derivation], text=True)))
     authorize(graph, derivation, socket.gethostname())
     # Build the exact inspected derivation, avoiding a second flake evaluation
     # and keeping a change between evaluation and build from bypassing the gate.

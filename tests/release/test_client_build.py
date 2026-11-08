@@ -21,6 +21,15 @@ def graph(gpu=False):
     return values
 
 
+def version4(gpu=False):
+    return {'version': 4, 'derivations': {
+        Path(path).name: {'version': 4, 'name': item['env']['name'], 'env': {},
+            'structuredAttrs': {'cudaSupport': True} if path == GPU else None,
+            'inputs': {'drvs': {Path(child).name: {'outputs': outputs, 'dynamicOutputs': {}}
+                               for child, outputs in item['inputDrvs'].items()}}}
+        for path, item in graph(gpu).items()}}
+
+
 class ClientBuild(unittest.TestCase):
     def test_nvidia_rejected_before_build_on_other_clients(self):
         with patch.object(client_build.socket, 'gethostname', return_value='simon'), \
@@ -52,6 +61,37 @@ class ClientBuild(unittest.TestCase):
         del incomplete[GPU]
         with self.assertRaisesRegex(ValueError, 'Incomplete'):
             client_build.authorize(incomplete, DRV, 'goran')
+
+    def test_v4_generic_build_and_nvidia_rejection(self):
+        for gpu in [False, True]:
+            with patch.object(client_build.socket, 'gethostname', return_value='slazenger'), \
+                 patch.object(client_build.subprocess, 'check_output', side_effect=[DRV, json.dumps(version4(gpu))]), \
+                 patch.object(client_build.subprocess, 'run') as build:
+                if gpu:
+                    with self.assertRaisesRegex(ValueError, 'Goran-only'):
+                        client_build.build('.#activation', '/tmp/result')
+                    build.assert_not_called()
+                else:
+                    client_build.build('.#activation', '/tmp/result')
+                    build.assert_called_once()
+
+    def test_router_build_normalizes_v4_before_routing(self):
+        router = client_build.build_router
+        with patch.object(router.subprocess, 'check_output', return_value=json.dumps(version4())), \
+             patch.object(router.subprocess, 'run') as build, \
+             patch.dict(router.os.environ, {'FLEET_ARM_STORE': 'ssh-ng://builder@dropshot-arm-linux'}):
+            self.assertEqual(router.build([DRV], 'aarch64-linux'), ['dropshot'])
+            build.assert_called_once()
+
+    def test_v4_unknown_and_dynamic_graphs_fail_closed(self):
+        values = []
+        unknown = version4(); unknown['version'] = 5; values.append(unknown)
+        dynamic = version4(True)
+        dynamic['derivations'][Path(DRV).name]['inputs']['drvs'][Path(GPU).name]['dynamicOutputs'] = {'out': {}}
+        values.append(dynamic)
+        for value in values:
+            with self.assertRaises(ValueError):
+                client_build.build_router.normalize_graph(value)
 
     def test_invalid_eval_result_cannot_be_built(self):
         with patch.object(client_build.subprocess, 'check_output', return_value='bogus'), \

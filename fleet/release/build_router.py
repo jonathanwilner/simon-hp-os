@@ -18,6 +18,46 @@ TRUE_VALUES = {'1', 'true', 'yes', 'on', 'enabled'}
 ARM_ALIASES = {'dropshot-arm-linux', 'dropshot-arm-test', 'dropshot-linux-builder'}
 
 
+def normalize_graph(graph):
+    """Accept legacy absolute-path maps and Nix JSON v4, failing closed."""
+    if not isinstance(graph, dict):
+        raise ValueError('Invalid derivation graph')
+    if 'version' not in graph and 'derivations' not in graph:
+        return graph
+    if type(graph.get('version')) is not int or graph['version'] != 4:
+        raise ValueError('Unsupported derivation graph version')
+    if set(graph) != {'version', 'derivations'} or not isinstance(graph['derivations'], dict):
+        raise ValueError('Invalid versioned derivation graph')
+    def absolute(name):
+        if not isinstance(name, str) or not re.fullmatch(r'[a-z0-9]{32}-[^/\n]+\.drv', name):
+            raise ValueError('Invalid derivation basename')
+        return '/nix/store/' + name
+    result = {}
+    for name, drv in graph['derivations'].items():
+        path = absolute(name)
+        if (not isinstance(drv, dict) or type(drv.get('version')) is not int
+                or drv['version'] != 4 or not isinstance(drv.get('env'), dict)
+                or not isinstance(drv.get('inputs'), dict)
+                or not isinstance(drv['inputs'].get('drvs'), dict)):
+            raise ValueError('Invalid v4 derivation entry')
+        dependencies = {}
+        for child, info in drv['inputs']['drvs'].items():
+            if (not isinstance(info, dict) or set(info) != {'outputs', 'dynamicOutputs'}
+                    or not isinstance(info['outputs'], list)
+                    or not all(isinstance(output, str) for output in info['outputs'])
+                    or info['dynamicOutputs'] != {}):
+                raise ValueError('Unsupported dynamic or malformed derivation dependency')
+            dependencies[absolute(child)] = info['outputs']
+        env = dict(drv['env'])
+        structured = drv.get('structuredAttrs')
+        if structured is not None:
+            if not isinstance(structured, dict):
+                raise ValueError('Invalid structured derivation attributes')
+            env['__json'] = json.dumps(structured)
+        result[path] = dict(drv, env=env, inputDrvs=dependencies)
+    return result
+
+
 def is_nvidia(drv):
     env = drv.get('env', {})
     if '__json' in env:
@@ -115,8 +155,8 @@ def build(roots, system):
     roots = sorted(set(roots))
     if not roots:
         return []
-    graph = json.loads(subprocess.check_output(
-        ['nix', 'derivation', 'show', '--recursive', *roots], text=True))
+    graph = normalize_graph(json.loads(subprocess.check_output(
+        ['nix', 'derivation', 'show', '--recursive', *roots], text=True)))
     commands = plan(graph, roots, system)
     # Resolve and validate every route before starting any build.
     for host, command in commands:
