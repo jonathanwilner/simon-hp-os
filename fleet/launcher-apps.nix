@@ -46,6 +46,10 @@ in {
         #!${pkgs.bash}/bin/bash
         set -euo pipefail
         (( $# )) || exit 0
+        # Standalone HP-OS sessions have a private D-Bus, without a user manager.
+        if [[ "''${HP_OS_OWNED_SESSION:-}" == 1 ]]; then
+          exec "$@"
+        fi
         exec ${pkgs.systemd}/bin/systemd-run --user --scope --collect --quiet \
           --unit="fuzzel-launched-$(${pkgs.coreutils}/bin/date +%s%N)-$RANDOM" -- "$@"
       '';
