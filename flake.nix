@@ -77,7 +77,7 @@
         programs.hp-os-fleet.ghostty.package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.ghostty;
       };
       homeModules.ubuntuSnapdragon = { pkgs, ... }: {
-        imports = [ self.homeModules.fleetApps ./fleet/ubuntu-snapdragon/home.nix ];
+        imports = [ self.homeModules.fleetApps dank-material-shell.homeModules.dank-material-shell ./fleet/ubuntu-snapdragon/home.nix ];
         _module.args.snapdragonHpOs = hp-os.packages.${pkgs.stdenv.hostPlatform.system}.default;
         _module.args.snapdragonHpOsFonts = pkgs.callPackage (hp-os + "/packaging/fonts") { };
         _module.args.snapdragonDms = dank-material-shell.packages.${pkgs.stdenv.hostPlatform.system}.default;

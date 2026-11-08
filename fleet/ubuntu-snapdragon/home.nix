@@ -35,6 +35,12 @@ in {
     targets.genericLinux.enable = true;
     targets.genericLinux.gpu.enable = true;
     programs.home-manager.enable = true;
+    programs.dank-material-shell = {
+      enable = true;
+      package = snapdragonDms;
+      # Niri starts DMS within its own session.
+      systemd.enable = false;
+    };
     fonts.fontconfig.enable = true;
     home.packages = [ (pkgs.writeTextFile { name = "hp-os-ubuntu-account-check"; destination = "/bin/hp-os-ubuntu-account-check"; executable = true; text = builtins.readFile ./account-check.py; }) (pkgs.callPackage ../../pkgs/nom-dashboard.nix {}) snapdragonHpOs snapdragonHpOsFonts snapdragonDms hpSession dmsSession pkgs.niri pkgs.xwayland-satellite pkgs.foot pkgs.brightnessctl pkgs.wireplumber ];
     xdg.configFile."hp-os/snapdragon-device".text = cfg.device + "\n";
