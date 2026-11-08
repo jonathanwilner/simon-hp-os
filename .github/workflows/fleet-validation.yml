@@ -25,6 +25,12 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           fetch-depth: 0
+      - name: Reserve hosted runner disk for Nix closures
+        run: |
+          df -h /
+          # Disposable GitHub-hosted image SDKs are unrelated to this Nix build.
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
       - uses: cachix/install-nix-action@d9186cbdca7adedf113a159fa91f725a27866771
       - name: Evaluate wiring, test launcher, and build changed packages
         run: nix shell --inputs-from . nixpkgs#nix-output-monitor nixpkgs#tmux nixpkgs#python3 --command bash tests/release/ci.sh '${{ matrix.system }}'
