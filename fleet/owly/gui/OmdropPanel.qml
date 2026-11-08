@@ -10,6 +10,7 @@ Pane {
     id: root
     property bool compact: false
     property string cli: "@omdrop@/bin/omdrop"
+    property string identityCli: "@identity@/bin/hp-os-omdrop-identity"
     property string radioCli: "@owly@/bin/owly"
     property string controllerCli: "@controller@/bin/hp-os-omdrop-controller"
     property string printingCli: "@printingGui@/bin/hp-os-aware-print-gui"
@@ -20,7 +21,8 @@ Pane {
     property var radio: ({})
     property var peers: []
     property var identity: ({})
-    readonly property bool contactsConfigured: ((identity.apple_files_on_disk || []).length === 3 || identity.onepassword_configured === true) && (state.senders || 0) > 0
+    property bool identityChecked: false
+    readonly property bool contactsConfigured: (state.senders || 0) > 0
     property bool checked: false
     property bool statusChecked: false
     property string errorText: ""
@@ -29,13 +31,13 @@ Pane {
     onReceivingChanged: { if (!receiving) peers = []; }
     readonly property string radioIssue: radio.missing ? radio.missing.map(x => x.say).join("\n") : ""
     readonly property string blocker: !controlChecked ? "Checking AirDrop readiness…" : (control.can_enable === true || (receiving && control.phase === "receiving")) ? "" : (control.message || "AirDrop cannot be enabled on the current connection.")
-    readonly property bool busy: action.running || send.running || ["starting", "steering", "restoring", "restore_failed"].indexOf(control.phase) >= 0
+    readonly property bool busy: action.running || send.running || appleSetup.busy || ["starting", "steering", "restoring", "restore_failed"].indexOf(control.phase) >= 0
     padding: compact ? 12 : 18
     function refresh() {
         if (!controlPoll.running) controlPoll.running = true;
         if (!status.running) status.running = true;
         if (!doctor.running) doctor.running = true;
-        if (!identityPoll.running) identityPoll.running = true;
+        if (!identityPoll.running && !appleSetup.busy) identityPoll.running = true;
         if (receiving && !peerPoll.running) peerPoll.running = true;
     }
     function run(args) {
@@ -81,9 +83,10 @@ Pane {
     }
     Process {
         id: identityPoll
-        command: [root.cli, "identity", "status", "--json"]
+        command: [root.identityCli, "status", "--json"]
         stdout: StdioCollector { onStreamFinished: {
-            try { root.identity = JSON.parse(text); } catch (e) { root.identity = {}; }
+            try { root.identity = JSON.parse(text); root.identityChecked = true; }
+            catch (e) { root.identity = {}; root.identityChecked = false; }
         } }
     }
     Process {
@@ -205,8 +208,19 @@ Pane {
             }
             Label {
                 visible: !root.contactsConfigured
-                text: "Contacts only requires a configured Apple identity and known senders. Everyone works without an Apple identity."
+                text: "Receiving in Contacts Only requires known senders in OM Drop. Your Apple identity controls sending to other devices in Contacts Only."
                 Layout.fillWidth: true; wrapMode: Text.WordWrap
+            }
+            AppleIdentitySetup {
+                id: appleSetup
+                Layout.fillWidth: true
+                cli: root.identityCli
+                identity: root.identity
+                checked: root.identityChecked
+                receiving: root.receiving
+                externalBusy: action.running || send.running || ["starting", "steering", "restoring", "restore_failed"].indexOf(root.control.phase) >= 0
+                onStatusUpdated: value => { root.identity = value; root.identityChecked = true; }
+                onRefreshRequested: root.refresh()
             }
             RowLayout {
                 Layout.fillWidth: true

@@ -31,8 +31,9 @@ Open **Omdrop AirDrop**, or open the HP-OS control center and select the
 **Omdrop · AirDrop** tile. The round icon starts a 10-minute receive window;
 the rest of the tile opens device and transfer details. The details panel
 shows visibility, destination folder, nearby devices and transfer status.
-Select a nearby device to choose files. On the Apple device, enable AirDrop
-Everyone for 10 minutes.
+Select a nearby device to choose files. For the default self-signed identity,
+set the Apple recipient to Everyone for 10 Minutes. To send to Contacts Only
+recipients, use the Apple Account setup described below.
 
 Automatic Wi-Fi switching is enabled by default. Starting a receive window
 temporarily selects a compatible access point on the same saved network. The
@@ -70,6 +71,33 @@ state. Design references: [Huawei control center](https://consumer.huawei.com/cn
 and [Huawei Share visibility](https://consumer.huawei.com/cn/support/content/zh-cn16093654/).
 
 
+## Apple Account setup
+
+The same OM Drop panel includes Apple Account identity setup on ARM64 and
+x86-64 Linux. Standalone users can install the flake's `omdrop-identity` package
+for either architecture. It imports an existing AirDrop certificate, matching private key
+and Apple-signed validation record. The panel shows validation and expiry
+status and provides a return to the self-signed identity. Credentials stay in
+the user's home directory and are never flake inputs or Nix store contents.
+
+This is identity import, not an Apple Account sign-in service. The optional Mac
+export helper needs an existing development environment that allows private
+Apple entitlements. Ordinary protected Macs are not promised an automatic
+export. Users without an identity can continue with self-signed AirDrop.
+
+See [Apple Account identity setup](identity/README.md) for the graphical and
+command-line workflows, advanced Mac exporter, Contacts Only setup, expiry,
+fallback and transfer verification. Sending to an Apple's Contacts Only
+recipient requires an Apple identity recognized by that recipient. Restricting
+incoming transfers to OM Drop's known senders is a separate setting.
+
+Home Manager enables the daily `hp-os-omdrop-identity-check.timer` by default.
+It notifies when the selected disk identity is invalid or has seven days or
+less remaining. Disable notifications with
+`programs.hp-os-fleet.owly.identityExpiryNotifications = false;`.
+This check does not renew credentials. An identity imported through the panel is
+local user state, so deployment does not require an account-specific flake edit.
+
 ## Regression checks
 
 GitHub Actions runs `Omdrop fleet regression` on native x86-64 and ARM64
@@ -104,7 +132,7 @@ The Ubuntu system installer adds the configured Home Manager user to `omdrop` an
 
 Run `sudo ~/.nix-profile/bin/hp-os-owly-install-system` once on Ubuntu. Both the desktop updater and Goran's Home Manager deploy refresh installed system integration. NixOS uses `desktop-fleet.nixosModules.owly` and `services.omdrop.authorizedUsers = [ "your-user" ];`.
 
-Set `programs.hp-os-fleet.owly.autostartReceiving = true;` in the host's Home Manager configuration for automatic receiving. The shared default is false. The managed `hp-os-omdrop-auto.service` starts with the user manager, starts an unlimited receive window, and retries failures every 60 seconds. It checks authorization without interaction before invoking the radio helper. The receiver still confirms incoming transfers through the existing application flow.
+Set `programs.hp-os-fleet.owly.autostartReceiving = true;` in the host's Home Manager configuration for automatic receiving. The shared default is false. The managed `hp-os-omdrop-auto.service` starts with the user manager, starts an unlimited receive window, and retries failures every 60 seconds. It checks authorization without interaction before invoking the radio helper. The existing receiver audience policy controls incoming transfers; automatic receiving does not add a per-file confirmation dialog.
 
 Explicit **Stop receiving** pauses automatic startup until a restart of this service. Manual enable resumes it. Stopping the user service stops receiving and restores a temporary Wi-Fi selection. Compatible same-network Wi-Fi selection and startup rollback remain managed by the controller; permanent saved network preferences are preserved.
 

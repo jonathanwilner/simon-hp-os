@@ -14,6 +14,7 @@ let
     allowSteering = cfg.owly.automaticWifiSwitching;
     preferredChannels = cfg.owly.preferredChannels;
   };
+  identity = pkgs.callPackage ./identity/package.nix { inherit omdrop; };
   gui = pkgs.callPackage ./gui-package.nix { inherit omdrop owly controller; };
 
 in {
@@ -34,6 +35,11 @@ in {
       default = [];
       description = "Preferred shared AirDrop Wi-Fi channels, in priority order. With automatic Wi-Fi switching enabled, prefer an available access point on these channels on the same saved network. Fall back to the current compatible access point or strongest available compatible access point.";
     };
+    identityExpiryNotifications = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Check imported Apple identity validity daily and notify when renewal is needed. Credentials remain in the user home, outside the Nix store. This does not renew credentials automatically.";
+    };
     settings = lib.mkOption {
       inherit (toml) type;
       default = {};
@@ -42,7 +48,7 @@ in {
   };
   config = lib.mkIf (cfg.enable && cfg.owly.enable) {
     # The root helper refuses NixOS; NixOS uses the exported system module.
-    home.packages = [ owly omdrop controller gui systemInstaller ];
+    home.packages = [ owly omdrop controller identity gui systemInstaller ];
     systemd.user.services.hp-os-omdrop-auto = lib.mkIf cfg.owly.autostartReceiving {
       Unit = {
         Description = "Keep Omdrop receiving while the user manager runs";
@@ -57,6 +63,18 @@ in {
         TimeoutStopSec = "90s";
       };
       Install.WantedBy = [ "default.target" ];
+    };
+    systemd.user.services.hp-os-omdrop-identity-check = lib.mkIf cfg.owly.identityExpiryNotifications {
+      Unit.Description = "Check OM Drop Apple identity expiry";
+      Service = {
+        Type = "oneshot";
+        ExecStart = "${identity}/bin/hp-os-omdrop-identity check --notify --json";
+      };
+    };
+    systemd.user.timers.hp-os-omdrop-identity-check = lib.mkIf cfg.owly.identityExpiryNotifications {
+      Unit.Description = "Daily OM Drop Apple identity expiry check";
+      Timer = { OnCalendar = "daily"; Persistent = true; RandomizedDelaySec = "15m"; };
+      Install.WantedBy = [ "timers.target" ];
     };
     xdg.configFile."hp-os/omdrop".source = "${gui}/share/omdrop";
     xdg.configFile."DankMaterialShell/plugins/omdrop".source = "${gui}/share/omdrop";

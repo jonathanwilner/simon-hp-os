@@ -33,6 +33,9 @@ let
        assert !disabled.config.programs.hp-os-fleet.owly.automaticWifiSwitching;
        assert enabled.config.programs.hp-os-fleet.owly.preferredChannels == [];
        assert (controllerFor preferred).drvPath == (p.callPackage ../../fleet/owly/controller-package.nix { omdrop = backend; owly = radio; allowSteering = true; preferredChannels = [ 149 ]; }).drvPath;
+       assert enabled.config.programs.hp-os-fleet.owly.identityExpiryNotifications;
+       assert enabled.config.systemd.user.timers.hp-os-omdrop-identity-check.Timer.Persistent;
+       assert enabled.config.systemd.user.timers.hp-os-omdrop-identity-check.Timer.OnCalendar == "daily";
        assert !enabled.config.programs.hp-os-fleet.owly.autostartReceiving;
        assert !(enabled.config.systemd.user.services ? hp-os-omdrop-auto);
        assert persistent.config.programs.hp-os-fleet.owly.autostartReceiving;
