@@ -8,10 +8,11 @@ in stdenvNoCC.mkDerivation {
   installPhase = ''
     mkdir -p $out/lib $out/bin
     cp *.py $out/lib/
-    for entry in status publish consumers canary controller report; do
+    for entry in status publish consumers canary controller report launch_test; do
       makeWrapper ${python3}/bin/python3 $out/bin/fleet-$entry \
         --add-flags $out/lib/$entry.py \
         --prefix PATH : ${lib.makeBinPath [ git gh nix coreutils iproute2 tmux dashboard ]}
     done
+    ln -s fleet-launch_test $out/bin/fleet-launch-test
   '';
 }

@@ -131,3 +131,28 @@ same reconciliation every 15 minutes. Credentials and private repository names
 stay in that host's configuration. Activation remains a separate, host-specific
 operation. The generation records its fleet revision under
 `~/.local/state/hp-os-fleet/installed.json` for drift checks and canary evidence.
+
+## Automatic promotion controller
+
+A trusted writer sets `programs.hp-os-fleet.release.controller` with exactly two
+`canaries`, keyed by `aarch64-linux` and `x86_64-linux`. Each supplies a consumer
+registration, synchronous `deploy` command, `probe` command invoking
+`fleet-launch-test --revision {revision} --system SYSTEM`, and `evidence_url`.
+Optional `rollback` runs after a failed deployment or probe. Commands are argument
+arrays; the controller replaces only `{revision}`. `consumers` lists remaining
+lock consumers to update after promotion.
+
+The controller waits for successful CI on the exact current main SHA. It updates
+and validates each canary pin, deploys, and checks fresh Ghostty and Moonlight
+windows through the installed Fuzzel helper. It closes only its tagged test
+windows and never starts media playback. Successful evidence is retained under
+`~/.local/state/hp-os-fleet/controller/SHA/` and written into the tracked job log
+before commit status publication. A failed attempt records a `.failed` file and
+stops until the failure is inspected and that marker is cleared. No failed
+candidate reaches the stable updater channel.
+
+The controller then requests promotion and waits for `fleet-stable` to match
+before reconciling the remaining consumers. Its timer checks every ten minutes.
+The report timer runs every thirty minutes and writes `latest-report.json` with
+separate publication, release pin and activation states. Both jobs publish logs
+and status through the existing build dashboard.
