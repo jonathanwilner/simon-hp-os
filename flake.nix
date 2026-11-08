@@ -48,14 +48,30 @@
           text = ''exec python3 ${./fleet/chrome-channels/update.py} --output "$PWD/fleet/chrome-channels/sources.json" "$@"'';
         };
       in { type = "app"; program = "${updater}/bin/update-chrome-channels"; };
+      overlays.ghostty = final: prev: {
+        ghostty = (ghostty-upstream.packages.${prev.stdenv.hostPlatform.system}.default.overrideAttrs (old: {
+          patches = (old.patches or [ ]) ++ nixpkgs.lib.optionals prev.stdenv.hostPlatform.isAarch64 [
+            ./goran/desktop/ghostty-n1x-cpu-presentation.patch
+          ];
+          preFixup = (old.preFixup or "") + ''
+            gappsWrapperArgs+=(--set GDK_BACKEND wayland)
+          '';
+        }));
+      };
+      packages.x86_64-linux.ghostty = (self.overlays.ghostty null nixpkgs.legacyPackages.x86_64-linux).ghostty;
+      packages.aarch64-linux.ghostty = (self.overlays.ghostty null nixpkgs.legacyPackages.aarch64-linux).ghostty;
       overlays.chromeChannels = import ./fleet/chrome-channels/overlay.nix;
       homeModules.chromeChannels = ./fleet/chrome-channels/home.nix;
       nixosConfigurations.hp-os-test = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         modules = [ (import ./tests/desktop-vm/configuration.nix { inherit hp-os home-manager owly; }) ];
       };
-      homeModules.fleetApps = { imports = [ ./fleet/home.nix ]; _module.args.owlySource = owly; };
-      homeManagerModules.default = { imports = [ ./fleet/home.nix ]; _module.args.owlySource = owly; };
+      homeModules.fleetApps = { pkgs, lib, ... }: {
+        imports = [ ./fleet/home.nix ];
+        _module.args.owlySource = owly;
+        programs.hp-os-fleet.ghostty.package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.ghostty;
+      };
+      homeManagerModules.default = self.homeModules.fleetApps;
       packages.x86_64-linux.google-chrome = let p = import nixpkgs { system = "x86_64-linux"; config.allowUnfree = true; overlays = [ (import ./fleet/chrome-channels/overlay.nix) ]; }; in p.google-chrome;
       packages.x86_64-linux.google-chrome-stable = let p = import nixpkgs { system = "x86_64-linux"; config.allowUnfree = true; overlays = [ (import ./fleet/chrome-channels/overlay.nix) ]; }; in p.google-chrome-stable;
       packages.x86_64-linux.google-chrome-beta = let p = import nixpkgs { system = "x86_64-linux"; config.allowUnfree = true; overlays = [ (import ./fleet/chrome-channels/overlay.nix) ]; }; in p.google-chrome-beta;

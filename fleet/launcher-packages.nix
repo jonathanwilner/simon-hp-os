@@ -1,6 +1,6 @@
 # Shared with Home Manager and NixOS environment.systemPackages so launchers
 # work for every normal account. Never add personal data or hardware overrides.
-{ pkgs }:
+{ pkgs, ghostty ? pkgs.ghostty }:
 let
   cosmicFiles = pkgs.symlinkJoin {
     name = "cosmic-files-gvfs";
@@ -14,7 +14,9 @@ let
   moonlight = pkgs.callPackage ./pkgs/moonlight-qt-foundation { };
   openfreebudsCompatible = import ./pkgs/openfreebuds { inherit pkgs; };
 in with pkgs; [
-  ghostty alacritty foot cosmic-term cosmicFiles fuzzel swaylock
+  # Prefer the shared release over legacy host lists that still include
+  # Nixpkgs Ghostty. This also selects its matching desktop and D-Bus files.
+  (lib.hiPrio ghostty) alacritty foot cosmic-term cosmicFiles fuzzel swaylock
   # Managed Emacs modules supply their own commands and desktop entries.
   # Keep the standalone editor as the lower-priority fleet fallback.
   (lib.lowPrio emacs-pgtk) (lib.lowPrio bluebubbles) kdePackages.kdeconnect-kde librepods openfreebudsCompatible

@@ -15,7 +15,7 @@ let
     layer=overlay
     keyboard-focus=exclusive
     exit-on-keyboard-focus-loss=no
-    terminal=${pkgs.ghostty}/bin/ghostty -e
+    terminal=${config.programs.hp-os-fleet.ghostty.package}/bin/ghostty -e
     launch-prefix=${config.home.homeDirectory}/.local/bin/fuzzel-launch
 
     [colors]
@@ -37,6 +37,11 @@ let
     selection-radius=8
   '';
 in {
+  options.programs.hp-os-fleet.ghostty.package = lib.mkOption {
+    type = lib.types.package;
+    default = pkgs.ghostty;
+    description = "Ghostty 1.4 native Wayland package. Hosts can supply the shared overlay with their GPU overrides.";
+  };
   config = lib.mkIf config.programs.hp-os-fleet.enable {
     # A scope inherits the calling desktop environment. A transient service
     # instead uses the user manager environment, which can be stale or empty.
@@ -54,7 +59,7 @@ in {
           --unit="fuzzel-launched-$(${pkgs.coreutils}/bin/date +%s%N)-$RANDOM" -- "$@"
       '';
     };
-    home.packages = import ./launcher-packages.nix { inherit pkgs; };
+    home.packages = import ./launcher-packages.nix { inherit pkgs; ghostty = config.programs.hp-os-fleet.ghostty.package; };
     # Goran's theme service maintains its existing writable file. Seed the same
     # launcher appearance only for new accounts, without replacing user edits.
     home.activation.hpOsFleetLauncherDefaults = lib.hm.dag.entryAfter [ "writeBoundary" ] ''

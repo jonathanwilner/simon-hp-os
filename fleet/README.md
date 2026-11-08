@@ -60,3 +60,11 @@ copying their desktop files would create launchers without their dependencies.
 Windows 365 uses the public RDPiO flake and user authentication. Its package is
 host-integrated independently of this package list. Goran's DMS wallpaper
 launchers require the corresponding DMS plugins, supplied by the session module.
+
+Ghostty is pinned to the shared upstream 1.4 release and launches with native
+Wayland. `homeModules.fleetApps` supplies this package even when the consumer's
+Nixpkgs has an older Ghostty. The `overlays.ghostty` export makes the same package
+available to host configuration. A host with GPU overrides sets
+`programs.hp-os-fleet.ghostty.package = pkgs.ghostty` after applying that overlay.
+ARM64 includes the verified CPU frame presentation fallback for NVIDIA N1X;
+Ghostty's OpenGL renderer stays active. GPU vendor paths remain host settings.
