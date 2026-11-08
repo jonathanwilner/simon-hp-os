@@ -59,9 +59,9 @@ class BootstrapTests(unittest.TestCase):
         seed = shlex.quote(str(self.checkout))
         wrapper = self.home / 'bin/git'
         wrapper.write_text('#!/usr/bin/env bash\nset -e\nif [[ "$1" == clone ]]; then\n'
-                           '  [[ "$3" == https://github.com/jonathanwilner/simon-hp-os.git ]]\n'
-                           f'  {git} clone -- {seed} "$4"\n'
-                           f'  {git} -C "$4" remote set-url origin "$3"\n'
+                           '  [[ "$2" == --branch && "$3" == fleet-stable && "$5" == https://github.com/jonathanwilner/simon-hp-os.git ]]\n'
+                           f'  {git} clone -- {seed} "$6"\n'
+                           f'  {git} -C "$6" remote set-url origin "$5"\n'
                            f'elif [[ "$3" == fetch ]]; then exit 0;\n'
                            'elif [[ "$3" == show ]]; then printf "exit 0\\n";\n'
                            f'else exec {git} "$@"; fi\n')
@@ -109,6 +109,20 @@ class BootstrapTests(unittest.TestCase):
         self.assertIn('--build-only', args)
         self.assertIn('--attach', args)
         self.assertFalse((self.home / 'migrated').exists())
+
+    def test_explicit_development_forwarded(self):
+        result = self.run_script('--development', '--build-only')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('--development', (self.home / 'invoked').read_text())
+
+    def test_missing_release_refuses_main_fallback(self):
+        self.git_wrapper.write_text('#!/usr/bin/env bash\n'
+            'if [[ "$3" == fetch ]]; then exit 1; fi\n'
+            f'exec {shlex.quote(self.real_git)} "$@"\n')
+        result = self.run_script('--build-only')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('no fallback', result.stderr)
+        self.assertFalse((self.home / 'invoked').exists())
 
     def test_wrong_origin_stops_before_updater(self):
         subprocess.run(['git', '-C', str(self.checkout), 'remote', 'set-url', 'origin', 'https://example.com/other.git'], check=True)

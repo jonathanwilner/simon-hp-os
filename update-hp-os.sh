@@ -5,11 +5,12 @@ fail() { printf 'update-hp-os: %s\n' "$*" >&2; exit 1; }
 usage() {
   cat <<'EOF'
 Usage: bash update-hp-os.sh [--checkout PATH] [--from LEGACY] [--legacy-base REV]
-                          [--build-only] [--attach | --no-attach]
+                          [--build-only] [--development] [--attach | --no-attach]
 Clone the public HP-OS configuration, preserve local configuration changes, and
 run its desktop updater. The existing Ubuntu installation stays in place.
 --from selects the old checkout. Otherwise ~/src/nixos-amd is detected only
 when it contains the Simon profile. --legacy-base identifies its clean baseline.
+--development explicitly selects unpromoted main; the default is fleet-stable.
 --build-only builds without activation. --attach displays the tracked task.
 EOF
 }
@@ -18,12 +19,14 @@ legacy=
 base=
 build_only=false
 attach=false
+channel=fleet-stable
 while (($#)); do
   case "$1" in
     --checkout|--from|--legacy-base)
       (($# >= 2)) && [[ -n "$2" ]] || fail "$1 requires a value"
       case "$1" in --checkout) checkout=$2;; --from) legacy=$2;; --legacy-base) base=$2;; esac
       shift 2 ;;
+    --development) channel=main; shift ;;
     --build-only) build_only=true; shift ;;
     --attach) attach=true; shift ;;
     --no-attach) attach=false; shift ;;
@@ -60,7 +63,7 @@ fi
 public_url=https://github.com/jonathanwilner/simon-hp-os.git
 if [[ ! -e "$checkout" ]]; then
   mkdir -p -- "$(dirname -- "$checkout")"
-  git clone -- "$public_url" "$checkout"
+  git clone --branch "$channel" -- "$public_url" "$checkout"
 fi
 [[ $(git -C "$checkout" rev-parse --show-toplevel 2>/dev/null) == "$checkout" ]] || fail '--checkout must name the public repository root'
 origin=$(git -C "$checkout" remote get-url origin)
@@ -75,13 +78,13 @@ state="${XDG_STATE_HOME:-$HOME/.local/state}/simon-desktop-update"
 mkdir -p -- "$state"
 exec 9>"$state/update.lock"
 flock -n 9 || fail 'Another Simon desktop update is running'
-git -C "$checkout" fetch origin main
+git -C "$checkout" fetch origin "refs/heads/$channel" || fail "Release channel $channel is unavailable; no fallback to main is permitted"
 tools_dir=$(mktemp -d)
 trap 'rm -rf -- "$tools_dir"' EXIT
 git -C "$checkout" show FETCH_HEAD:goran/installer/merge-desktop-update.sh > "$tools_dir/merge-desktop-update.sh" \
   || fail 'The public branch does not contain the configuration-preserving update tool'
 record="${XDG_STATE_HOME:-$HOME/.local/state}/simon-desktop-update/bootstrap-$(date -u +%Y%m%dT%H%M%SZ)-$$"
-bash "$tools_dir/merge-desktop-update.sh" "$checkout" "$record"
+bash "$tools_dir/merge-desktop-update.sh" "$checkout" "$record" "$channel"
 rm -rf -- "$tools_dir"
 trap - EXIT
 [[ -f "$checkout/goran/installer/update-desktop.sh" ]] || fail 'The public desktop updater is missing'
@@ -94,6 +97,7 @@ if [[ -n "$legacy" ]]; then
   python3 "$helper" "${args[@]}"
 fi
 args=(--checkout "$checkout")
+[[ "$channel" == fleet-stable ]] || args+=(--development)
 [[ "$build_only" == false ]] || args+=(--build-only)
 [[ "$attach" == false ]] || args+=(--attach)
 flock -u 9

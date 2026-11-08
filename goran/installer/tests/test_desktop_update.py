@@ -65,6 +65,30 @@ exit 2''')
         self.assertFalse((self.root / 'activated').exists())
         self.assertEqual(len(list((self.root / 'state/simon-desktop-update').glob('*/source-revision'))), 1)
 
+    def test_worker_fetches_release_merge_tool_and_records_provenance(self):
+        self.stub('git', '\n'.join([
+            'case "$1" in',
+            'ls-files|status) exit 0 ;;',
+            'rev-parse) echo aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ;;',
+            'fetch) printf "%s\\n" "$@" > "$TEST_FETCH_ARGS" ;;',
+            'show) cat "$TEST_MERGE_HELPER" ;;',
+            '*) exit 2 ;;',
+            'esac',
+        ]))
+        helper = self.root / 'merge-helper'
+        helper.write_text('mkdir -p "$2"\nprintf "%s\\n" "$3" > "$2/release-channel"\n'
+                          'echo bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb > "$2/published-revision"\n')
+        self.env['TEST_MERGE_HELPER'] = str(helper)
+        self.env['TEST_FETCH_ARGS'] = str(self.root / 'fetch-args')
+        result = self.run_update('--worker', '--build-only')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('refs/heads/fleet-stable', (self.root / 'fetch-args').read_text())
+        records = list((self.root / 'state/simon-desktop-update').glob('*/published-revision'))
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0].read_text().strip(), 'b' * 40)
+        self.assertEqual((records[0].parent / 'release-channel').read_text().strip(), 'fleet-stable')
+        self.assertFalse((self.root / 'activated').exists())
+
     def test_untracked_required_source_rejected(self):
         self.env['TEST_UNTRACKED'] = '1'
         result = self.run_update('--worker', '--build-only', '--no-pull')

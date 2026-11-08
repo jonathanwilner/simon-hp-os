@@ -4,12 +4,13 @@ set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-Usage: simon-desktop-update [--checkout PATH] [--build-only] [--no-pull] [--attach]
+Usage: simon-desktop-update [--checkout PATH] [--build-only] [--no-pull] [--development] [--attach]
        simon-desktop-update --status | --status-window
 
-Merge published main with preserved local changes, build the locked Simon flake in nom-tmux,
+Merge the tested fleet-stable release with preserved local changes, build in nom-tmux,
 and activate it as simon. --build-only never activates; --no-pull is allowed
 only with --build-only for validating a committed integration branch.
+--development explicitly selects unpromoted main instead of the tested release.
 USAGE
 }
 fail() { echo "simon-desktop-update: $*" >&2; exit 1; }
@@ -17,8 +18,17 @@ status() {
   printf 'Application source: %s\n' "$checkout"
   local record="${XDG_STATE_HOME:-$HOME/.local/state}/simon-desktop-update/current"
   if [[ -r "$record/source-revision" ]]; then
+    if [[ -r "$record/published-revision" ]]; then
+      printf 'Installed published release: '; cat "$record/published-revision"
+      printf 'Release channel: '; cat "$record/release-channel"
+    fi
     printf 'Last successful desktop revision: '; cat "$record/source-revision"
     printf 'Desktop generation: %s\n' "$(readlink -f "$record/candidate")"
+  fi
+  local reporter="${HP_OS_FLEET_STATUS:-$checkout/fleet/release/status.py}"
+  if [[ -r "$reporter" ]]; then
+    python3 "$reporter" --checkout "$checkout" --installed-record "$record" \
+      --active-generation "${XDG_STATE_HOME:-$HOME/.local/state}/nix/profiles/home-manager" || true
   fi
   printf '\nNix applications follow the published flake.lock.\n'
   printf '\nFlatpak applications in this account:\n'
@@ -39,10 +49,12 @@ build_only=false
 pull=true
 worker=false
 attach=false
+channel=fleet-stable
 status_mode=
 while (($#)); do
   case "$1" in
     --checkout) (($# >= 2)) || fail '--checkout requires a path'; checkout="$2"; shift 2 ;;
+    --development) channel=main; shift ;;
     --build-only) build_only=true; shift ;;
     --no-pull) pull=false; shift ;;
     --worker) worker=true; shift ;;
@@ -76,13 +88,14 @@ if [[ "$worker" == false ]]; then
   args=(--worker --checkout "$checkout")
   [[ "$build_only" == false ]] || args+=(--build-only)
   [[ "$pull" == true ]] || args+=(--no-pull)
+  [[ "$channel" == fleet-stable ]] || args+=(--development)
   if command -v nom-tmux >/dev/null; then
     tracker=$(command -v nom-tmux)
   else
     tracker="$checkout/pkgs/nom-dashboard/nom-tmux.sh"
   fi
   export NOM_DASHBOARD_ASSET_DIR="$checkout/pkgs/nom-dashboard/web"
-  bash "$tracker" update-simon-desktop -- bash "$checkout/goran/installer/update-desktop.sh" "${args[@]}"
+  bash "$tracker" update-simon-desktop -- bash "${BASH_SOURCE[0]}" "${args[@]}"
   if [[ "$attach" == true ]]; then exec tmux attach -t update-simon-desktop; fi
   exit 0
 fi
@@ -98,7 +111,13 @@ stamp=$(date -u +%Y%m%dT%H%M%SZ)-$$
 run_dir="$state/$stamp"
 mkdir -p "$run_dir"
 if [[ "$pull" == true ]]; then
-  bash "$checkout/goran/installer/merge-desktop-update.sh" "$checkout" "$run_dir/recovery"
+  # Load the channel's merge tool before running checkout code. The checkout
+  # may predate tested releases, while this installed updater already supports them.
+  git fetch origin "refs/heads/$channel" || fail "Release channel $channel is unavailable; no fallback to main is permitted"
+  git show FETCH_HEAD:goran/installer/merge-desktop-update.sh > "$run_dir/merge-desktop-update.sh"
+  bash "$run_dir/merge-desktop-update.sh" "$checkout" "$run_dir/recovery" "$channel"
+  cp "$run_dir/recovery/published-revision" "$run_dir/published-revision"
+  cp "$run_dir/recovery/release-channel" "$run_dir/release-channel"
 fi
 [[ -z $(git status --porcelain) ]] || fail 'Build-only source must be committed; normal updates preserve and commit local edits automatically'
 revision=$(git rev-parse HEAD)

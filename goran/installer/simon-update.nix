@@ -5,6 +5,7 @@ let
     name = "simon-desktop-update";
     runtimeInputs = [ pkgs.bash pkgs.coreutils pkgs.git pkgs.nix pkgs.python3 pkgs.util-linux dashboard ];
     text = ''
+      export HP_OS_FLEET_STATUS=${../../fleet/release/status.py}
       exec bash ${./update-desktop.sh} "$@"
     '';
   };
@@ -21,7 +22,7 @@ in {
   dconf.settings."com/ubuntu/update-notifier".no-show-notifications = true;
   xdg.desktopEntries.simon-updates = {
     name = "Update Applications";
-    comment = "Apply the published desktop and update your Flatpak applications";
+    comment = "Apply the tested fleet release and update your Flatpak applications";
     exec = "${updater}/bin/simon-desktop-update --attach";
     icon = "system-software-update";
     terminal = true;
