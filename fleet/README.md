@@ -89,3 +89,39 @@ Plain `timeout` creates a separate process group. Terminal job control can
 suspend Mosh and its SSH child during startup, producing an apparent hang
 after authentication. Use `timeout --foreground` for this check. Normal
 interactive use is simply `mosh HOST`.
+
+### Explicit Mosh access paths
+
+The fleet also installs `fleet-mosh` and `fleet-mosh-server`. Standard `mosh`
+keeps its usual behavior. A private consumer declares destinations:
+
+```nix
+programs.hp-os-fleet.mosh.hosts.example = {
+  private = "example-private.example.org";
+  tailscale = "example-tailnet.example.org";
+  hostKeyAlias = "example";
+  user = "operator";
+};
+```
+
+`fleet-mosh example -- tmux new-session -A -s work` checks the private address,
+then Tailscale, using a real short Mosh UDP session before starting the terminal.
+`fleet-mosh --path private --check example` tests only the private destination;
+use `--path tailscale` for the independent tailnet destination. Probes require
+existing SSH trust and noninteractive authentication. They never accept new
+host keys or print captured terminal output. Failed probes expire remotely after
+15 seconds of network absence. Interactive sessions explicitly receive the
+seven-day timeout, including SSH launches that do not source shell profiles.
+
+The helper uses UDP 60000–60019 and disables SSH ProxyJump/ProxyCommand for these
+direct destinations. The route to the private address still determines whether
+LAN, WARP or WireGuard carries the traffic. DNS does not select among those
+routes. Existing Cloudflare Access SSH and jump-host recovery remain separate.
+Changing paths starts a new Mosh session; reattach the same tmux session to retain
+work. The helper never changes routes or tears down an established session.
+
+For a focused installation, build `.#fleet-mosh` on ARM64 or x86-64. Its config is
+`~/.config/fleet-mosh/hosts.json`, or pass `--config FILE`. Home Manager writes this
+file from the host mapping. Host addresses and identity remain outside this
+public module. `fleet-mosh-server` is available as an explicit server executable;
+ordinary `mosh` users can select it with `--server=fleet-mosh-server`.
