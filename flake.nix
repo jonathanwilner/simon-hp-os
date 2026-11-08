@@ -85,6 +85,7 @@
         # Goran's N1X CPU presentation workaround is specific to its NVIDIA GPU.
         programs.hp-os-fleet.ghostty.package = ghostty-upstream.packages.${pkgs.stdenv.hostPlatform.system}.default;
       };
+      packages.aarch64-linux.hp-os-steam-arm64 = import ./fleet/steam/package.nix { inherit pkgs; };
       homeManagerModules.default = self.homeModules.fleetApps;
       packages.x86_64-linux.google-chrome = let p = import nixpkgs { system = "x86_64-linux"; config.allowUnfree = true; overlays = [ (import ./fleet/chrome-channels/overlay.nix) ]; }; in p.google-chrome;
       packages.x86_64-linux.google-chrome-stable = let p = import nixpkgs { system = "x86_64-linux"; config.allowUnfree = true; overlays = [ (import ./fleet/chrome-channels/overlay.nix) ]; }; in p.google-chrome-stable;
