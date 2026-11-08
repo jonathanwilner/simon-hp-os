@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Evaluate complete fleet wiring and build every changed exported derivation."""
-import json, os, pathlib, re, shutil, subprocess, sys, tempfile
+import argparse, json, os, pathlib, re, shutil, subprocess, sys, tempfile
 ROOT = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "fleet/release"))
+import build_router
 def run(*args, **kw):
     return subprocess.check_output(args, text=True, **kw)
 def evaluate(source, system):
@@ -25,8 +27,11 @@ def launcher_test(text):
         stub.write_text('#!'+shutil.which('bash')+'\nexit 99\n')
         assert run(str(script),*command,env=env)=='wayland-ci::42'
 def main():
-    system=sys.argv[1]
-    if system not in ('x86_64-linux','aarch64-linux'): raise ValueError('Unsupported system')
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('system', choices=('x86_64-linux', 'aarch64-linux'))
+    parser.add_argument('--evaluate-only', action='store_true')
+    args = parser.parse_args()
+    system = args.system
     current=evaluate(ROOT,system)
     launcher_test(current['launcher'])
     baseline={}
@@ -44,9 +49,9 @@ def main():
     exported_drvs = {current['packages'][name] for name in changed}
     home_drvs = sorted(set(changed_home.values()) - exported_drvs)
     print(json.dumps({'system':system,'changedPackages':changed,'changedHomePackages':list(changed_home),'baseline':stable},indent=2),flush=True)
-    targets=[f'.#packages.{system}.{name}' for name in changed]
-    targets += [drv+'^*' for drv in home_drvs]
-    targets += [f'.#checks.{system}.{name}' for name in current['checks']]
-    if targets: subprocess.run(['nix','build','--no-link',*targets],check=True)
-    (pathlib.Path(os.environ.get('RUNNER_TEMP', tempfile.gettempdir())) / ('fleet-validation-'+system+'.json')).write_text(json.dumps({'system':system,'revision':run('git','rev-parse','HEAD').strip(),'changedPackages':changed,'changedHomePackages':list(changed_home),'launcher':'passed','evaluation':'passed','build':'passed'},indent=2))
+    targets = [current['packages'][name] for name in changed]
+    targets += home_drvs
+    targets += list(current['checks'].values())
+    hosts = [] if args.evaluate_only else build_router.build(targets, system)
+    (pathlib.Path(os.environ.get('RUNNER_TEMP', tempfile.gettempdir())) / ('fleet-validation-'+system+'.json')).write_text(json.dumps({'system':system,'revision':run('git','rev-parse','HEAD').strip(),'changedPackages':changed,'changedHomePackages':list(changed_home),'launcher':'passed','evaluation':'passed','build':'not-run' if args.evaluate_only else 'passed','buildHosts':hosts},indent=2))
 if __name__=='__main__': main()
