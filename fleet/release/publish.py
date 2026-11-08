@@ -88,7 +88,7 @@ if [ "$(git branch --show-current)" = main ]; then
   fleet_root=$(git rev-parse --show-toplevel)
   fleet_state="${XDG_STATE_HOME:-$HOME/.local/state}/hp-os-fleet"
   mkdir -p "$fleet_state"
-  (unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE; nohup ''' + command + ''' "$fleet_root" >> "$fleet_state/submit.log" 2>&1 </dev/null &) 
+  (unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE; nohup ''' + command + ''' "$fleet_root" >> "$fleet_state/submit.log" 2>&1 </dev/null &)
 fi
 '''
     hook.write_text(text)
