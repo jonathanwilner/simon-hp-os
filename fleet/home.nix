@@ -2,7 +2,7 @@
 { config, lib, pkgs, ... }:
 let cfg = config.programs.hp-os-fleet;
 in {
-  imports = [ ./chrome-channels/home.nix ../goran/desktop/upscayl/home.nix ./launcher-apps.nix ./media-keys.nix ./owly/home.nix ./relay/home.nix ./printing/home.nix ];
+  imports = [ ./release/home.nix ./chrome-channels/home.nix ../goran/desktop/upscayl/home.nix ./launcher-apps.nix ./media-keys.nix ./owly/home.nix ./relay/home.nix ./printing/home.nix ];
   options.programs.hp-os-fleet = {
     enable = lib.mkEnableOption "shared HP-OS fleet desktop defaults" // { default = true; };
     upscayl.enable = lib.mkEnableOption "native Upscayl" // { default = true; };

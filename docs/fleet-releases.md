@@ -104,3 +104,30 @@ If a check fails, retain its logs and fix the candidate before promotion. If a
 machine fails activation, keep or restore its previous generation using that
 host's guarded deployment path. A release channel must not silently fall back to
 an untested development branch when the stable branch is unavailable.
+
+## Submission and consumer automation
+
+Run `fleet-publish submit --checkout PATH` from a clean shared checkout. The
+command runs native architecture validation through `nom-tmux`, verifies the
+source stayed unchanged, then fast-forward pushes main. Hosted CI validates both
+architectures. `fleet-publish install-hook --checkout PATH` adds this action to
+main-branch commits while preserving the existing hook. Feature branches require
+explicit submission. Shared Home Manager installations install the hook when the
+configured `programs.hp-os-fleet.release.checkout` exists. A commit on a host-only
+repository remains a host change; edit shared features in the shared repository.
+
+After both canaries accept the exact revision, `fleet-publish promote FULL_SHA`
+requests the gated release workflow. A request is not a successful release.
+
+`fleet-consumers --config FILE` runs through `nom-tmux` and reads a JSON object
+with a `consumers` array. Each entry names `checkout`, `branch`, `flakes` (relative
+directories), and `checks` (nonempty arrays of command arguments). It fetches the
+stable SHA, updates only the registered lock files, runs all checks, commits and
+pushes. Dirty work, unpublished commits, wrong branches, and failed checks stop
+that consumer. Inspect and resolve the preserved checkout before retrying.
+
+Configure `programs.hp-os-fleet.release.consumers` on a trusted writer to run the
+same reconciliation every 15 minutes. Credentials and private repository names
+stay in that host's configuration. Activation remains a separate, host-specific
+operation. The generation records its fleet revision under
+`~/.local/state/hp-os-fleet/installed.json` for drift checks and canary evidence.

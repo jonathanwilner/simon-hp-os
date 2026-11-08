@@ -69,6 +69,7 @@
       homeModules.fleetApps = { pkgs, lib, ... }: {
         imports = [ ./fleet/home.nix ];
         _module.args.owlySource = owly;
+        programs.hp-os-fleet.release.revision = self.rev or "unknown";
         programs.hp-os-fleet.ghostty.package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.ghostty;
       };
       homeManagerModules.default = self.homeModules.fleetApps;
@@ -136,6 +137,7 @@
         };
         modules = [
           ./fleet/home.nix
+          { programs.hp-os-fleet.release.revision = self.rev or "unknown"; }
           ./goran/installer/simon-home.nix
           ./goran/remote-access/simon.nix
           ./goran/installer/simon-apps.nix
