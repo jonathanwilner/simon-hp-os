@@ -45,3 +45,8 @@ that import to avoid competing launcher packages. Existing `~/.local/bin/steam`
 may remain on PATH ahead of the profile; update that symlink to the shared
 profile launcher during migration after verifying the client still starts.
 Never copy Goran's Steam filesystem UUID or mount configuration to another host.
+
+For automated provisioning, run `sudo hp-os-steam-prepare-system USER` first,
+then run `hp-os-steam-bootstrap --user-only` as that desktop user under
+`nom-tmux`. Both phases accept `--client-only`. This keeps authentication
+outside the tracked user download/build process and avoids password files.

@@ -20,7 +20,7 @@ in pkgs.runCommand "hp-os-steam-arm64" {} ''
   cp -r ${./.}/* "$out/share/hp-os-steam/"
   ln -s ${launcher} "$out/bin/steam"
   cp ${desktop}/share/applications/steam.desktop "$out/share/applications/"
-  for entry in bootstrap gpu-check; do
+  for entry in bootstrap gpu-check prepare-system; do
     cat > "$out/bin/hp-os-steam-$entry" <<EOF
 #!${pkgs.bash}/bin/bash
 exec /usr/bin/env bash "$out/share/hp-os-steam/$entry.sh" "\$@"
