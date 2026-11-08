@@ -9,6 +9,7 @@ status="$NOM_DASHBOARD_STATE_DIR/$session.status"
 deadline=$((SECONDS + 10800))
 while [[ ! -f "$status" ]]; do
   if (( SECONDS >= deadline )) || ! tmux has-session -t "=$session" 2>/dev/null; then
+    [[ ! -f "$status" ]] || break
     cat "$NOM_DASHBOARD_STATE_DIR/$session.log" >&2 || true
     echo 'Fleet validation stopped without a result or exceeded three hours.' >&2
     exit 1

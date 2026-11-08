@@ -9,10 +9,10 @@ let
     installPhase = ''
       mkdir -p $out/lib $out/bin
       cp *.py $out/lib/
-      for entry in status publish consumers canary; do
+      for entry in status publish consumers canary controller report; do
         makeWrapper ${pkgs.python3}/bin/python3 $out/bin/fleet-$entry \
           --add-flags $out/lib/$entry.py \
-          --prefix PATH : ${lib.makeBinPath [ pkgs.git pkgs.gh pkgs.nix pkgs.coreutils pkgs.iproute2 pkgs.tmux ]}
+          --prefix PATH : ${lib.makeBinPath [ pkgs.git pkgs.gh pkgs.nix pkgs.coreutils pkgs.iproute2 pkgs.tmux dashboard ]}
       done
     '';
   };
@@ -23,6 +23,8 @@ in {
     revision = lib.mkOption { type = lib.types.str; default = "unknown"; description = "Exact shared fleet revision included in this generation."; };
     checkout = lib.mkOption { type = lib.types.str; default = "${config.home.homeDirectory}/src/simon-hp-os"; description = "Shared fleet source checkout for release status."; };
     autoSubmit = lib.mkOption { type = lib.types.bool; default = true; description = "Install a preserving post-commit hook in an existing shared checkout; main commits validate before push."; };
+    consumerLock = lib.mkOption { type = lib.types.nullOr lib.types.str; default = null; description = "Consumer lock file used for release drift reporting."; };
+    controller = lib.mkOption { type = lib.types.nullOr lib.types.attrs; default = null; description = "Trusted writer canary and consumer registration; never include secrets."; };
     consumers = lib.mkOption { type = lib.types.listOf lib.types.attrs; default = []; description = "Explicit consumer checkouts, branches, flakes, and validation commands to reconcile."; };
   };
   config = lib.mkIf config.programs.hp-os-fleet.enable {
@@ -46,6 +48,30 @@ PY
         ${tools}/bin/fleet-publish install-hook --checkout ${lib.escapeShellArg cfg.checkout}
       fi
     '');
+    systemd.user.services.fleet-release-report = {
+      Unit.Description = "Report desktop fleet release and activation drift";
+      Service = {
+        Type = "oneshot";
+        ExecStart = "${dashboard}/bin/nom-tmux fleet-release-report -- ${tools}/bin/fleet-report --checkout ${lib.escapeShellArg cfg.checkout}" + lib.optionalString (cfg.consumerLock != null) " --consumer-lock ${lib.escapeShellArg cfg.consumerLock}";
+      };
+    };
+    systemd.user.timers.fleet-release-report = {
+      Unit.Description = "Refresh desktop fleet release status";
+      Timer = { OnBootSec = "5m"; OnUnitActiveSec = "30m"; Persistent = true; };
+      Install.WantedBy = [ "timers.target" ];
+    };
+    systemd.user.services.fleet-release-controller = lib.mkIf (cfg.controller != null) {
+      Unit.Description = "Promote tested desktop releases through canary acceptance";
+      Service = {
+        Type = "oneshot";
+        ExecStart = "${dashboard}/bin/nom-tmux fleet-release-controller -- ${tools}/bin/fleet-controller --config ${pkgs.writeText "fleet-controller.json" (builtins.toJSON cfg.controller)}";
+      };
+    };
+    systemd.user.timers.fleet-release-controller = lib.mkIf (cfg.controller != null) {
+      Unit.Description = "Check validated desktop candidates for canary deployment";
+      Timer = { OnBootSec = "5m"; OnUnitActiveSec = "10m"; Persistent = true; };
+      Install.WantedBy = [ "timers.target" ];
+    };
     systemd.user.services.fleet-consumers = lib.mkIf (cfg.consumers != []) {
       Unit.Description = "Validate and publish tested desktop fleet consumer pins";
       Service = {
