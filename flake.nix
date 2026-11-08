@@ -76,6 +76,12 @@
         programs.hp-os-fleet.release.revision = self.rev or "unknown";
         programs.hp-os-fleet.ghostty.package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.ghostty;
       };
+      homeModules.ubuntuSnapdragon = { pkgs, ... }: {
+        imports = [ self.homeModules.fleetApps ./fleet/ubuntu-snapdragon/home.nix ];
+        _module.args.snapdragonHpOs = hp-os.packages.${pkgs.stdenv.hostPlatform.system}.default;
+        _module.args.snapdragonDms = dank-material-shell.packages.${pkgs.stdenv.hostPlatform.system}.default;
+        programs.hp-os-snapdragon.enable = true;
+      };
       homeManagerModules.default = self.homeModules.fleetApps;
       packages.x86_64-linux.google-chrome = let p = import nixpkgs { system = "x86_64-linux"; config.allowUnfree = true; overlays = [ (import ./fleet/chrome-channels/overlay.nix) ]; }; in p.google-chrome;
       packages.x86_64-linux.google-chrome-stable = let p = import nixpkgs { system = "x86_64-linux"; config.allowUnfree = true; overlays = [ (import ./fleet/chrome-channels/overlay.nix) ]; }; in p.google-chrome-stable;
