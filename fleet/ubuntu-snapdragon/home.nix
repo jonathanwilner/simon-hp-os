@@ -35,10 +35,10 @@ in {
     xdg.configFile."hp-os/snapdragon-device".text = cfg.device + "\n";
     xdg.configFile."niri/snapdragon.kdl".text = ''
       input {
-        keyboard { xkb {} }
+        keyboard { xkb {}; }
         touchpad { tap; natural-scroll; }
       }
-      layout { gaps 8; default-column-width { proportion 0.5; } }
+      layout { gaps 8; default-column-width { proportion 0.5; }; }
       spawn-at-startup "${snapdragonDms}/bin/dms" "run"
       prefer-no-csd
       screenshot-path "~/Pictures/Screenshot-%Y-%m-%d-%H-%M-%S.png"
