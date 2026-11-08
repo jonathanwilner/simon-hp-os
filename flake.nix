@@ -58,6 +58,8 @@
           '';
         }));
       };
+      packages.x86_64-linux.fleet-release-tools = nixpkgs.legacyPackages.x86_64-linux.callPackage ./fleet/release/package.nix {};
+      packages.aarch64-linux.fleet-release-tools = nixpkgs.legacyPackages.aarch64-linux.callPackage ./fleet/release/package.nix {};
       packages.x86_64-linux.ghostty = (self.overlays.ghostty null nixpkgs.legacyPackages.x86_64-linux).ghostty;
       packages.aarch64-linux.ghostty = (self.overlays.ghostty null nixpkgs.legacyPackages.aarch64-linux).ghostty;
       overlays.chromeChannels = import ./fleet/chrome-channels/overlay.nix;

@@ -1,21 +1,7 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.programs.hp-os-fleet.release;
-  tools = pkgs.stdenvNoCC.mkDerivation {
-    pname = "hp-os-fleet-release";
-    version = "1";
-    src = ./.;
-    nativeBuildInputs = [ pkgs.makeWrapper ];
-    installPhase = ''
-      mkdir -p $out/lib $out/bin
-      cp *.py $out/lib/
-      for entry in status publish consumers canary controller report; do
-        makeWrapper ${pkgs.python3}/bin/python3 $out/bin/fleet-$entry \
-          --add-flags $out/lib/$entry.py \
-          --prefix PATH : ${lib.makeBinPath [ pkgs.git pkgs.gh pkgs.nix pkgs.coreutils pkgs.iproute2 pkgs.tmux dashboard ]}
-      done
-    '';
-  };
+  tools = pkgs.callPackage ./package.nix {};
   consumerConfig = pkgs.writeText "fleet-consumers.json" (builtins.toJSON { consumers = cfg.consumers; });
   dashboard = pkgs.callPackage ../../pkgs/nom-dashboard.nix {};
 in {
