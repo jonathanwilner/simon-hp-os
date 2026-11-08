@@ -68,8 +68,10 @@ that were pushed but omitted from the deployed release.
 
 ## Activation evidence contract
 
-An activation wrapper writes this JSON only after successful activation and host
-health checks. Write a temporary file and rename it atomically:
+The shared Home Manager activation records its fleet revision and generation.
+Host wrappers can also record the source revision after their health checks.
+Write a temporary file and rename it atomically. This record establishes
+provenance; the canary probe separately establishes application acceptance:
 
 ```json
 {
@@ -123,8 +125,9 @@ requests the gated release workflow. A request is not a successful release.
 with a `consumers` array. Each entry names `checkout`, `branch`, `flakes` (relative
 directories), and `checks` (nonempty arrays of command arguments). It fetches the
 stable SHA, updates only the registered lock files, runs all checks, commits and
-pushes. Dirty work, unpublished commits, wrong branches, and failed checks stop
-that consumer. Inspect and resolve the preserved checkout before retrying.
+pushes from an isolated worktree based on the registered remote branch. Dirty
+source checkouts and failed checks stop that consumer. Local source branches
+remain unchanged. A failed push retains the validated commit for a later retry.
 
 Configure `programs.hp-os-fleet.release.consumers` on a trusted writer to run the
 same reconciliation every 15 minutes. Credentials and private repository names

@@ -1,4 +1,4 @@
-{ lib, stdenvNoCC, makeWrapper, python3, git, gh, nix, coreutils, iproute2, tmux, callPackage }:
+{ lib, stdenvNoCC, makeWrapper, python3, git, gh, nix, coreutils, iproute2, tmux, niri, callPackage }:
 let dashboard = callPackage ../../pkgs/nom-dashboard.nix {};
 in stdenvNoCC.mkDerivation {
   pname = "hp-os-fleet-release";
@@ -11,7 +11,7 @@ in stdenvNoCC.mkDerivation {
     for entry in status publish consumers canary controller report launch_test; do
       makeWrapper ${python3}/bin/python3 $out/bin/fleet-$entry \
         --add-flags $out/lib/$entry.py \
-        --prefix PATH : ${lib.makeBinPath [ git gh nix coreutils iproute2 tmux dashboard ]}
+        --prefix PATH : ${lib.makeBinPath [ git gh nix coreutils iproute2 tmux niri dashboard ]}
     done
     ln -s fleet-launch_test $out/bin/fleet-launch-test
   '';
