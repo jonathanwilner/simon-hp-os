@@ -77,3 +77,15 @@ Mosh service is required. The destination needs direct UDP connectivity on
 60000–61000, or a selected range such as `mosh -p 60000:60019 HOST`.
 Host modules own SSH and firewall policy. An SSH-only proxy does not carry
 Mosh UDP traffic.
+
+For a bounded interactive connection check, allocate a terminal and keep Mosh
+in its foreground process group:
+
+```sh
+TERM=xterm-256color timeout --foreground 20 mosh HOST -- sh -c 'echo MOSH_OK; sleep 2'
+```
+
+Plain `timeout` creates a separate process group. Terminal job control can
+suspend Mosh and its SSH child during startup, producing an apparent hang
+after authentication. Use `timeout --foreground` for this check. Normal
+interactive use is simply `mosh HOST`.
