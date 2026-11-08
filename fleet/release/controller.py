@@ -81,7 +81,8 @@ def publish_evidence(host, evidence, revision, system):
     for attempt in range(3):
         try:
             run(command)
-            with urllib.request.urlopen(url, timeout=15) as response:
+            request = urllib.request.Request(url, headers={'User-Agent': 'hp-os-fleet/1'})
+            with urllib.request.urlopen(request, timeout=15) as response:
                 downloaded = response.read(len(payload.encode()) + 1)
             if downloaded != payload.encode():
                 raise ValueError('Published evidence bytes do not match accepted canary evidence')
