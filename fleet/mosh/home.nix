@@ -16,11 +16,7 @@ in {
     description = "Private fleet destinations. Host identities stay in consumer configuration.";
   };
   config = lib.mkIf config.programs.hp-os-fleet.enable {
-    home.packages = [ pkgs.mosh (pkgs.callPackage ./package.nix {})
-      (pkgs.writeShellScriptBin "fleet-mosh-server" ''
-        export MOSH_SERVER_NETWORK_TMOUT=604800
-        exec ${pkgs.mosh}/bin/mosh-server "$@"
-      '') ];
+    home.packages = [ pkgs.mosh (pkgs.callPackage ./package.nix {}) ];
     home.sessionVariables.MOSH_SERVER_NETWORK_TMOUT = "604800";
     xdg.configFile."fleet-mosh/hosts.json".text = builtins.toJSON cfg.hosts;
   };
