@@ -25,12 +25,13 @@
         "do_not_enforce_on_create": false,
         "required_status_checks": [
           {
-            "context": "validate (ubuntu-24.04, x86_64-linux)",
-            "integration_id": 15368
+            "context": "fleet/validation/aarch64-linux"
           },
           {
-            "context": "validate (ubuntu-24.04-arm, aarch64-linux)",
-            "integration_id": 15368
+            "context": "fleet/validation/x86_64-linux"
+          },
+          {
+            "context": "fleet/validation/nvidia"
           },
           {
             "context": "fleet/canary/aarch64-linux"

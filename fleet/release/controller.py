@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Advance CI-tested revisions through registered canaries and release promotion.
+"""Validate revisions on owned builders, accept hardware canaries, and promote locally.
 
 Run through nom-tmux on a trusted writer. Host commands are explicit argument
 arrays in private local configuration. No SSH identities ship in the fleet.
 """
 import argparse
-import datetime
 import hashlib
 import fcntl
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -29,14 +29,45 @@ def api(path, payload=None):
         command += ['--method', 'POST', '--input', '-']
     return json.loads(run(command, input=json.dumps(payload) if payload else None) or '{}')
 
-def tested_head():
-    revision = api('git/ref/heads/main')['object']['sha']
-    runs = api(f'actions/workflows/fleet-validation.yml/runs?head_sha={revision}&event=push&per_page=100')['workflow_runs']
-    matching = [r for r in runs if r['head_sha'] == revision and r['head_branch'] == 'main' and r['event'] == 'push']
-    latest = max(matching, key=lambda r: r['id']) if matching else {}
-    if latest.get('conclusion') != 'success':
-        return revision, None
-    return revision, latest
+VALIDATIONS = ('aarch64-linux', 'x86_64-linux', 'nvidia')
+
+def head():
+    return api('git/ref/heads/main')['object']['sha']
+
+def full_revision(revision):
+    if not re.fullmatch(r'[0-9a-f]{40}', revision):
+        raise ValueError('A full commit SHA is required')
+
+def accept_validation(evidence, revision, lane, host):
+    expected_system = 'aarch64-linux' if lane == 'nvidia' else lane
+    if evidence.get('revision') != revision or evidence.get('system') != expected_system:
+        raise ValueError('Validation evidence is for a different revision or architecture')
+    if evidence.get('source_clean') is not True:
+        raise ValueError('Validation requires a clean exact-revision source checkout')
+    if evidence.get('host') != host:
+        raise ValueError('Validation evidence is from a different host')
+    if lane == 'aarch64-linux' and host != 'dropshot':
+        raise ValueError('Ordinary ARM validation must run on Dropshot')
+    if lane == 'nvidia':
+        if host != 'goran' or evidence.get('capability') != 'nvidia' or evidence.get('passed') is not True:
+            raise ValueError('NVIDIA acceptance must pass on Goran')
+    elif any(evidence.get(key) != 'passed' for key in ('evaluation', 'launcher', 'build')):
+        raise ValueError('Local validation did not pass all gates')
+
+def validate_config(config):
+    if set(config.get('validation', {})) != set(VALIDATIONS):
+        raise ValueError('Register ARM, x86-64 and Goran NVIDIA validation lanes')
+    if config['validation']['aarch64-linux'].get('host') != 'dropshot':
+        raise ValueError('Ordinary ARM validation must run on Dropshot')
+    if config['validation']['nvidia'].get('host') != 'goran':
+        raise ValueError('NVIDIA validation must run on Goran')
+    if set(config.get('canaries', {})) != set(SYSTEMS):
+        raise ValueError('Register one canary for each supported architecture')
+    if config['canaries']['aarch64-linux'].get('host') != 'goran':
+        raise ValueError('ARM NVIDIA desktop canary must run on Goran')
+    if not config.get('checkout'):
+        raise ValueError('Register the trusted promotion checkout')
+
 
 def expand(argv, revision):
     if not isinstance(argv, list) or not argv or not all(isinstance(s, str) for s in argv):
@@ -93,69 +124,68 @@ def publish_evidence(host, evidence, revision, system):
     raise ValueError(f'Canary evidence publication could not be verified: {last_error}')
 
 
-def promotion(release, revision, now=None):
-    now = time.time() if now is None else now
-    marker = release / 'promotion-requested'
-    if not marker.exists():
-        record = {'revision': revision, 'requested_at': now, 'attempts': 1}
-        # Persist intent first. If the client disconnects after dispatch, the next
-        # cycle observes Actions instead of creating a duplicate request.
-        marker.write_text(json.dumps(record) + '\n')
-        run(['gh', 'workflow', 'run', 'fleet-promote.yml', '--repo', REPO, '--ref', 'main', '-f', f'revision={revision}'])
-        return {'state': 'waiting-for-promotion', 'revision': revision}
-    value = json.loads(marker.read_text())
-    # Migrate the former timestamp marker without submitting another workflow.
-    record = value if isinstance(value, dict) else {'revision': revision, 'requested_at': value, 'attempts': 1}
-    if record['revision'] != revision:
-        raise ValueError('Promotion request marker belongs to a different revision')
-    if record.get('run_id'):
-        workflow = api(f'actions/runs/{record["run_id"]}')
-    else:
-        runs = api('actions/workflows/fleet-promote.yml/runs?event=workflow_dispatch&per_page=100')['workflow_runs']
-        matches = [item for item in runs if item.get('display_title') == f'Promote fleet {revision}'
-                   and item.get('head_sha') == revision and item.get('event') == 'workflow_dispatch'
-                   and datetime.datetime.fromisoformat(item['created_at'].replace('Z', '+00:00')).timestamp() >= record['requested_at'] - 5]
-        if not matches:
-            return {'state': 'promotion-unobserved' if now - record['requested_at'] > 600 else 'waiting-for-promotion',
-                    'revision': revision, 'error': 'No matching workflow run observed; inspect Actions before retrying the dispatch.'}
-        workflow = min(matches, key=lambda item: item['id'])
-        record['run_id'] = workflow['id']
-    if (workflow.get('head_sha') != revision or workflow.get('display_title') != f'Promote fleet {revision}'
-            or workflow.get('event') != 'workflow_dispatch'):
-        raise ValueError('Promotion workflow identity does not match the exact requested revision')
-    attempt = workflow.get('run_attempt', 1)
-    requested_attempt = record.get('requested_attempt', 1)
-    result = {'state': 'waiting-for-promotion', 'revision': revision, 'run_id': workflow['id'], 'url': workflow.get('html_url')}
-    if attempt < requested_attempt:
-        # GitHub may briefly return the completed previous attempt after rerun.
-        if now - record.get('retry_at', now) > 600:
-            result.update(state='promotion-unobserved', error='Requested workflow rerun was not observed; inspect Actions before retrying.')
-    elif workflow.get('status') == 'completed':
-        if workflow.get('conclusion') == 'success':
-            record.setdefault('success_seen_at', now)
-            result.update(state='promotion-ref-missing' if now - record['success_seen_at'] > 600 else 'promotion-succeeded-awaiting-ref')
-        elif record['attempts'] >= 3:
-            result.update(state='promotion-failed', conclusion=workflow.get('conclusion'), attempts=record['attempts'])
-        elif now - record.get('retry_at', record['requested_at']) < 60:
-            result.update(state='promotion-retry-backoff', conclusion=workflow.get('conclusion'))
-        else:
-            # Rerunning the observed run retains its exact workflow inputs and SHA.
-            record.update(attempts=record['attempts'] + 1, requested_attempt=attempt + 1, retry_at=now)
-            marker.write_text(json.dumps(record) + '\n')
-            run(['gh', 'run', 'rerun', str(workflow['id']), '--repo', REPO])
-            result.update(state='promotion-retrying', attempts=record['attempts'])
-    marker.write_text(json.dumps(record) + '\n')
+def promotion(config, release, revision):
+    """Publish idempotently from retained exact-revision evidence, never Actions."""
+    full_revision(revision)
+    validate_config(config)
+    for lane in VALIDATIONS:
+        evidence = json.loads((release / ('validation-' + lane + '.json')).read_text())
+        accept_validation(evidence, revision, lane, config['validation'][lane]['host'])
+    for system in SYSTEMS:
+        accept(json.loads((release / (system + '.json')).read_text()), revision, system)
+    checkout = str(Path(config['checkout']).expanduser().resolve())
+    git = ['git', '-C', checkout]
+    run(git + ['fetch', 'origin', 'main'])
+    if run(git + ['rev-parse', 'origin/main']) != revision:
+        raise ValueError('Promotion requires the exact current main revision')
+    stable = run(git + ['ls-remote', 'origin', 'refs/heads/fleet-stable'])
+    if stable:
+        run(git + ['fetch', 'origin', 'fleet-stable'])
+        run(git + ['merge-base', '--is-ancestor', stable.split()[0], revision])
+    tag = 'fleet-' + revision
+    existing = run(git + ['ls-remote', 'origin', 'refs/tags/' + tag])
+    if existing and existing.split()[0] != revision:
+        raise ValueError('Immutable release tag already points elsewhere')
+    # A lost client connection is safe to retry: identical refs are up to date.
+    run(git + ['push', '--atomic', 'origin', f'{revision}:refs/tags/{tag}',
+               f'{revision}:refs/heads/fleet-stable'])
+    observed = run(git + ['ls-remote', 'origin', 'refs/heads/fleet-stable', 'refs/tags/' + tag])
+    refs = {line.split()[1]: line.split()[0] for line in observed.splitlines()}
+    if refs.get('refs/heads/fleet-stable') != revision or refs.get('refs/tags/' + tag) != revision:
+        raise ValueError('Published release references could not be verified')
+    result = {'state': 'promoted', 'revision': revision, 'tag': tag}
+    (release / 'promotion.json').write_text(json.dumps(result) + '\n')
     return result
 
 
-def cycle(config, state):
-    revision, ci = tested_head()
-    if ci is None:
-        return {'state': 'waiting-for-ci', 'revision': revision}
-    if set(config['canaries']) != set(SYSTEMS):
-        raise ValueError('Register one canary for each supported architecture')
+def cycle(config, state, revision=None, promote_only=False):
+    validate_config(config)
+    revision = revision or head()
+    full_revision(revision)
     release = state / revision
     release.mkdir(parents=True, exist_ok=True)
+    if promote_only:
+        return promotion(config, release, revision)
+    for lane in VALIDATIONS:
+        host = config['validation'][lane]
+        evidence_file = release / ('validation-' + lane + '.json')
+        marker = release / ('validation-' + lane + '.failed')
+        if evidence_file.exists():
+            evidence = json.loads(evidence_file.read_text())
+            accept_validation(evidence, revision, lane, host['host'])
+        else:
+            if marker.exists():
+                raise ValueError(f'{lane}: previous validation failed; inspect {marker} and clear it to retry')
+            try:
+                evidence = json.loads(run(expand(host['command'], revision), env=dict(os.environ, FLEET_REVISION=revision)))
+                accept_validation(evidence, revision, lane, host['host'])
+                evidence_file.write_text(json.dumps(evidence, indent=2) + '\n')
+            except Exception as error:
+                marker.write_text(str(error) + '\n')
+                raise
+        url = publish_evidence(host, evidence, revision, 'validation-' + lane)
+        api(f'statuses/{revision}', {'state': 'success', 'context': 'fleet/validation/' + lane,
+            'description': 'Owned-host exact-revision validation passed', 'target_url': url})
     for system in SYSTEMS:
         host = config['canaries'][system]
         evidence_file = release / (system + '.json')
@@ -169,8 +199,6 @@ def cycle(config, state):
             try:
                 consumers.reconcile(host['consumer'], revision)
                 env = dict(os.environ, FLEET_REVISION=revision)
-                # Commands must return only after the host deployment/launch test finishes.
-                # The whole controller is already tracked in nom-tmux.
                 run(expand(host['deploy'], revision), env=env)
                 evidence = json.loads(run(expand(host['probe'], revision), env=env))
                 accept(evidence, revision, system)
@@ -184,17 +212,17 @@ def cycle(config, state):
         print(json.dumps(evidence), flush=True)
         api(f'statuses/{revision}', {'state': 'success', 'context': 'fleet/canary/' + system,
             'description': 'Activated revision and fresh launcher acceptance passed', 'target_url': url})
-    remote = run(['git', 'ls-remote', 'https://github.com/' + REPO + '.git', 'refs/heads/fleet-stable'])
-    stable = remote.split()[0] if remote else None
-    if stable != revision:
-        return dict(promotion(release, revision), stable=stable)
+    promotion(config, release, revision)
     results = [consumers.reconcile(entry, revision) for entry in config.get('consumers', [])]
     return {'state': 'published', 'revision': revision, 'consumers': results}
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--config', type=Path, required=True)
     parser.add_argument('--state', type=Path, default=Path.home() / '.local/state/hp-os-fleet/controller')
+    parser.add_argument('--revision', help='Exact full main revision; defaults to current main')
+    parser.add_argument('--promote-only', action='store_true', help='Promote only from retained successful local evidence')
     args = parser.parse_args()
     if not os.environ.get('NOM_DASHBOARD_PROGRESS_FILE'):
         parser.error('Run through nom-tmux')
@@ -203,7 +231,7 @@ def main():
         try: fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError: return 0
         try:
-            result = cycle(json.loads(args.config.read_text()), args.state)
+            result = cycle(json.loads(args.config.read_text()), args.state, args.revision, args.promote_only)
             (args.state / 'latest.json').write_text(json.dumps(result, indent=2) + '\n')
             print(json.dumps(result, indent=2))
             return 0
