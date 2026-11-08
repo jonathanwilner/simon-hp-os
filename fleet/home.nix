@@ -9,6 +9,9 @@ in {
     wallpapers.enable = lib.mkEnableOption "original HP-OS wallpaper collection" // { default = true; };
   };
   config = lib.mkIf cfg.enable {
+    # Both client and SSH-launched server must be on every user PATH.
+    home.packages = [ pkgs.mosh ];
+    home.sessionVariables.MOSH_SERVER_NETWORK_TMOUT = "604800";
     home.file."Pictures/Wallpapers/HP-OS" = lib.mkIf cfg.wallpapers.enable {
       source = ../goran/desktop/wallpapers/images;
       recursive = true;

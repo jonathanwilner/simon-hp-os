@@ -68,3 +68,12 @@ available to host configuration. A host with GPU overrides sets
 `programs.hp-os-fleet.ghostty.package = pkgs.ghostty` after applying that overlay.
 ARM64 includes the verified CPU frame presentation fallback for NVIDIA N1X;
 Ghostty's OpenGL renderer stays active. GPU vendor paths remain host settings.
+
+Mosh is installed by `homeModules.fleetApps` on ARM64 and x86-64, including
+both `mosh` and `mosh-server`. Installer and updater generations consume this
+same module. Sessions allow one week of network absence. Connect with
+`mosh HOST -- tmux new-session -A -s work`. SSH starts the server; no persistent
+Mosh service is required. The destination needs direct UDP connectivity on
+60000–61000, or a selected range such as `mosh -p 60000:60019 HOST`.
+Host modules own SSH and firewall policy. An SSH-only proxy does not carry
+Mosh UDP traffic.
