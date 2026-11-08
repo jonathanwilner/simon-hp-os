@@ -9,10 +9,10 @@ let
     installPhase = ''
       mkdir -p $out/lib $out/bin
       cp *.py $out/lib/
-      for entry in status publish consumers; do
+      for entry in status publish consumers canary; do
         makeWrapper ${pkgs.python3}/bin/python3 $out/bin/fleet-$entry \
           --add-flags $out/lib/$entry.py \
-          --prefix PATH : ${lib.makeBinPath [ pkgs.git pkgs.gh pkgs.nix pkgs.coreutils ]}
+          --prefix PATH : ${lib.makeBinPath [ pkgs.git pkgs.gh pkgs.nix pkgs.coreutils pkgs.iproute2 pkgs.tmux ]}
       done
     '';
   };
