@@ -10,14 +10,19 @@ selection policy.
 
 1. Commit a change in a dedicated branch. Push it to the fleet repository so the
    commit can be tested and reviewed on another machine.
-2. Run the release checks for ARM64 and x86-64. Build the affected packages and
-   validate the shared Home Manager configuration and launcher behavior.
+2. The trusted local controller runs release checks for ARM64 and x86-64 at the
+   exact submitted SHA. Ordinary ARM Linux builds run in Dropshot's Apple
+   Virtualization guest. NVIDIA-specific builds and hardware checks run only on
+   Goran for now. The configured x86-64 fleet host builds ordinary x86-64 packages.
+   Validate the shared Home Manager configuration and launcher behavior.
 3. Deploy that exact candidate revision to an ARM64 and x86-64 canary. Record
    application launch, the required display backend, and the active generation.
    A build result alone does not establish desktop acceptance.
 4. Promote only the revision with successful checks and both canary results.
    Keep an immutable release tag. `fleet-stable` points to the promoted commit.
-5. Simon's updater fetches `fleet-stable`. Consumer repositories update their
+5. GitHub stores source commits, release refs and status evidence. GitHub-hosted
+   runners do not build, test, or promote fleet releases.
+6. Simon's updater fetches `fleet-stable`. Consumer repositories update their
    `desktop-fleet` lock input to the same commit, validate the resulting
    configuration, and push the lock changes. Activation follows each machine's
    documented deployment procedure.
@@ -110,16 +115,32 @@ an untested development branch when the stable branch is unavailable.
 ## Submission and consumer automation
 
 Run `fleet-publish submit --checkout PATH` from a clean shared checkout. The
-command runs native architecture validation through `nom-tmux`, verifies the
-source stayed unchanged, then fast-forward pushes main. Hosted CI validates both
-architectures. `fleet-publish install-hook --checkout PATH` adds this action to
-main-branch commits while preserving the existing hook. Feature branches require
+command runs unit tests and native architecture evaluation through `nom-tmux`,
+verifies the source stayed unchanged, then fast-forward pushes main. Submission
+uses `--evaluate-only`; it never builds package outputs on an arbitrary submitting
+machine. The trusted local controller then runs the full build matrix on the
+registered builders. Passing submission alone does not qualify a release.
+`fleet-publish install-hook --checkout PATH` adds this action to main-branch commits while preserving the existing hook. Feature branches require
 explicit submission. Shared Home Manager installations install the hook when the
 configured `programs.hp-os-fleet.release.checkout` exists. A commit on a host-only
 repository remains a host change; edit shared features in the shared repository.
 
-After both canaries accept the exact revision, `fleet-publish promote FULL_SHA`
-requests the gated release workflow. A request is not a successful release.
+The controller normally promotes automatically after full validation and both
+canaries accept the exact revision. To request promotion explicitly on the
+trusted writer, run:
+
+```sh
+fleet-publish promote FULL_SHA --config /path/to/controller.json
+```
+
+This starts `fleet-controller --revision FULL_SHA --promote-only` through
+`nom-tmux`. The controller must find successful validation and canary evidence
+for that exact SHA before publishing the stable ref and immutable tag. The
+command never dispatches a GitHub Actions workflow. A queued local job is not a
+successful release. Without `--config`, the command reads
+`$XDG_CONFIG_HOME/hp-os-fleet/controller.json` or
+`~/.config/hp-os-fleet/controller.json`. `--state` selects the controller's
+persistent evidence directory.
 
 `fleet-consumers --config FILE` runs through `nom-tmux` and reads a JSON object
 with a `consumers` array. Each entry names `checkout`, `branch`, `flakes` (relative
@@ -145,17 +166,44 @@ Optional `rollback` runs after a failed deployment or probe. Commands are argume
 arrays; the controller replaces only `{revision}`. `consumers` lists remaining
 lock consumers to update after promotion.
 
-The controller waits for successful CI on the exact current main SHA. It updates
-and validates each canary pin, deploys, and checks fresh Ghostty and Moonlight
-windows through the installed Fuzzel helper. It closes only its tagged test
-windows and never starts media playback. Successful evidence is retained under
+The controller fetches the exact current main SHA and runs the registered local
+validation commands. The required validation keys are `aarch64-linux`,
+`x86_64-linux`, and `nvidia`. The ARM builder host is Dropshot and the NVIDIA host
+is Goran. Each validation command must finish successfully and produce evidence for that same SHA. Registration includes the
+host and review URL. Missing, stale, failed or evaluation-only results cannot
+qualify a release.
+
+The controller then updates and validates each canary pin, deploys, and checks
+fresh Ghostty and Moonlight windows through the installed Fuzzel helper. It
+closes only its tagged test windows and never starts media playback. ARM desktop
+and NVIDIA acceptance runs on Goran. Successful evidence is retained under
 `~/.local/state/hp-os-fleet/controller/SHA/` and written into the tracked job log
 before commit status publication. A failed attempt records a `.failed` file and
 stops until the failure is inspected and that marker is cleared. No failed
 candidate reaches the stable updater channel.
 
-The controller then requests promotion and waits for `fleet-stable` to match
-before reconciling the remaining consumers. Its timer checks every ten minutes.
-The report timer runs every thirty minutes and writes `latest-report.json` with
-separate publication, release pin and activation states. Both jobs publish logs
-and status through the existing build dashboard.
+Promotion runs on the trusted writer and publishes the stable ref and immutable
+release tag only after the local gates pass. The controller then reconciles the
+remaining consumers. Its timer checks every ten minutes. The report timer runs
+every thirty minutes and writes `latest-report.json` with separate publication,
+release pin and activation states. Both jobs publish logs and status through the
+existing build dashboard.
+
+## Builder routing and NVIDIA boundary
+
+Dropshot provides native `aarch64-linux` builds using Apple
+Virtualization.framework. It has no NVIDIA device. Goran is the only authorized
+host for NVIDIA-specific builds and runtime checks for now. Merely choosing an
+ARM target does not establish that a package is safe to send to Dropshot.
+
+The validation gate inspects the build dependency graph before dispatch. A
+NVIDIA dependency must be routed to the registered Goran path; a generic builder
+must fail closed if such a dependency would run there. Do not add a fallback
+that sends NVIDIA work to Dropshot or another fleet host when Goran is offline.
+A blocked NVIDIA gate holds promotion until Goran can complete it. Build success
+still requires separate display, driver and application acceptance on Goran.
+
+Private SSH keys, builder addresses and machine credentials remain in private
+host configuration. The shared fleet repository contains the routing policy,
+release tools and tests. Configure the client Nix daemon's SSH access explicitly;
+interactive user SSH access alone does not prove daemon access.

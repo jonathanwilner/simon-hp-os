@@ -38,7 +38,7 @@ def validate(root):
                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
         raise ValueError('A fleet submission validation is already running')
     status.unlink(missing_ok=True)
-    run('nom-tmux', session, '--', 'bash', 'tests/release/validate.sh', system, cwd=root, capture=False)
+    run('nom-tmux', session, '--', 'bash', 'tests/release/validate.sh', system, '--evaluate-only', cwd=root, capture=False)
     while not status.exists():
         time.sleep(15)
         if subprocess.run(['tmux', 'has-session', '-t', '=' + session],
@@ -63,15 +63,22 @@ def submit(root):
     # A fast-forward push cannot silently discard another machine's commits.
     git(root, 'push', 'origin', 'HEAD:refs/heads/main')
     print(json.dumps({'revision': revision, 'state': 'submitted',
-                      'checks': f'https://github.com/{REPO}/actions'}))
+                      'checks': 'pending trusted local controller validation'}))
     return revision
 
-def promote(revision):
+def promote(revision, config=None, state=None):
     if not re.fullmatch(r'[0-9a-f]{40}', revision):
         raise ValueError('Use the full tested commit SHA.')
-    run('gh', 'workflow', 'run', 'fleet-promote.yml', '--repo', REPO,
-        '--ref', 'main', '-f', f'revision={revision}')
-    print('Promotion requested. The workflow checks CI and both canary results before publishing.')
+    config_home = pathlib.Path(os.environ.get('XDG_CONFIG_HOME', str(pathlib.Path.home() / '.config')))
+    state_home = pathlib.Path(os.environ.get('XDG_STATE_HOME', str(pathlib.Path.home() / '.local/state')))
+    config = pathlib.Path(config) if config is not None else config_home / 'hp-os-fleet/controller.json'
+    state = pathlib.Path(state) if state is not None else state_home / 'hp-os-fleet/controller'
+    if not config.is_file():
+        raise ValueError(f'Trusted local controller configuration is missing: {config}. Run on the configured writer or pass --config.')
+    session = 'fleet-promote-' + revision[:12]
+    run('nom-tmux', session, '--', 'fleet-controller', '--config', str(config.resolve()),
+        '--state', str(state.resolve()), '--revision', revision, '--promote-only', capture=False)
+    print(f'Local promotion queued in {session}. The controller requires successful validation and canary evidence for this exact revision.')
 
 def drain(root):
     """Queue HEAD before waiting; retry only a new revision after a failed build."""
@@ -186,21 +193,23 @@ exit "$fleet_previous_status"
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='command', required=True)
-    p = sub.add_parser('submit', help='Push clean shared commits to main for mandatory CI')
+    p = sub.add_parser('submit', help='Validate and push clean shared commits for trusted local release checks')
     p.add_argument('--checkout', type=pathlib.Path, default=pathlib.Path.cwd())
     p = sub.add_parser('drain', help='Process queued main-branch commits without dropping concurrent changes')
     p.add_argument('--checkout', type=pathlib.Path, default=pathlib.Path.cwd())
     p = sub.add_parser('install-hook', help='Automatically validate and submit commits made on main')
     p.add_argument('--checkout', type=pathlib.Path, default=pathlib.Path.cwd())
-    p = sub.add_parser('promote', help='Request gated release promotion after canary acceptance')
+    p = sub.add_parser('promote', help='Run gated promotion on the trusted local writer after canary acceptance')
     p.add_argument('revision')
+    p.add_argument('--config', type=pathlib.Path, help='Trusted local controller JSON configuration')
+    p.add_argument('--state', type=pathlib.Path, help='Controller evidence state directory')
     args = parser.parse_args()
     try:
         if args.command == 'submit': submit(args.checkout)
         elif args.command == 'drain':
             if not drain(args.checkout): return 1
         elif args.command == 'install-hook': install_hook(args.checkout)
-        else: promote(args.revision)
+        else: promote(args.revision, args.config, args.state)
     except (ValueError, subprocess.CalledProcessError) as exc:
         print(f'fleet-publish: {exc}', file=sys.stderr)
         return 1
