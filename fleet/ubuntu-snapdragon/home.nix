@@ -13,6 +13,7 @@ let
   '';
   hpSession = pkgs.writeShellScriptBin "hp-os-session" ''
     ${environment}
+    export HP_OS_PAM_SERVICE=hp-os-snapdragon
     exec ${snapdragonHpOs}/bin/hp-os session "$@"
   '';
   dmsSession = pkgs.writeShellScriptBin "snapdragon-dms-session" ''

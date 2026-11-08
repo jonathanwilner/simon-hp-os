@@ -1,0 +1,13 @@
+--- a/modules/lock/LockContext.qml
++++ b/modules/lock/LockContext.qml
+@@ -129,6 +129,10 @@
+     PamContext {
+         id: pam
+ 
++        // Distribution integrations can supply a compatible password stack.
++        config: Quickshell.env("HP_OS_PAM_SERVICE") || "login"
++        configDirectory: Quickshell.env("HP_OS_PAM_DIRECTORY") || "/etc/pam.d"
++
+         // pam_unix will ask for a response for the password prompt
+         onPamMessage: {
+             if (this.responseRequired) {
