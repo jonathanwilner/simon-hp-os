@@ -1,0 +1,28 @@
+name: Promote tested fleet release
+on:
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: Full main commit SHA with CI and both canary acceptances
+        required: true
+        type: string
+permissions:
+  contents: write
+  actions: read
+  statuses: read
+concurrency:
+  group: fleet-stable-promotion
+  cancel-in-progress: false
+jobs:
+  promote:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Verify gates and atomically publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_REVISION: ${{ inputs.revision }}
+        run: python3 tests/release/promote.py "$RELEASE_REVISION"
