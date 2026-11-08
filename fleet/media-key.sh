@@ -20,13 +20,21 @@ case "${1:-}" in
   mute) wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle ;;
   mic-mute) wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle ;;
   play-pause|stop|next|previous) playerctl "$1" ;;
+  brightness-up|brightness-down)
+    if [[ "$1" == brightness-up ]]; then brightnessctl set +5%; else brightnessctl set 5%-; fi
+    IFS=, read -r _device _class _current percent _maximum < <(brightnessctl -m)
+    percent=${percent%\%}
+    [[ "$percent" =~ ^[0-9]+$ ]] && (( 10#$percent <= 100 )) || exit 2
+    osd brightnessValue "$percent"
+    exit 0
+    ;;
   brightness-osd)
     [[ "${2:-}" =~ ^[0-9]+$ ]] && (( 10#${2} <= 100 )) || exit 2
     osd brightnessValue "$2"
     exit 0
     ;;
   *)
-    echo 'usage: hp-os-media-key volume-up|volume-down|mute|mic-mute|play-pause|stop|next|previous' >&2
+    echo 'usage: hp-os-media-key volume-up|volume-down|mute|mic-mute|play-pause|stop|next|previous|brightness-up|brightness-down|brightness-osd PERCENT' >&2
     exit 2
     ;;
 esac

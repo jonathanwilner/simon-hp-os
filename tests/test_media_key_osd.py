@@ -15,11 +15,12 @@ class MediaKeyOverlayTests(unittest.TestCase):
         self.assertIn("pkgs.python3 mediaKeys", source)
 
     def test_actions_and_headless_fallback(self):
-        for action, expected in [('volume-up', 'volume'), ('volume-down', 'volume'), ('mute', 'volume'), ('mic-mute', 'mic'), ('next', 'media next'), ('previous', 'media previous'), ('brightness-osd', 'brightnessValue 45')]:
+        for action, expected in [('volume-up', 'volume'), ('volume-down', 'volume'), ('mute', 'volume'), ('mic-mute', 'mic'), ('next', 'media next'), ('previous', 'media previous'), ('brightness-osd', 'brightnessValue 45'), ('brightness-up', 'brightnessValue 65'), ('brightness-down', 'brightnessValue 65')]:
             with self.subTest(action=action), tempfile.TemporaryDirectory() as d:
-                for name in ['wpctl', 'playerctl', 'hp-os']:
+                for name in ['wpctl', 'playerctl', 'hp-os', 'brightnessctl']:
                     p=Path(d,name)
                     p.write_text('#!/bin/sh\necho "'+name+' $*" >> "$TEST_LOG"\n')
+                    if name == 'brightnessctl': p.write_text(p.read_text() + 'echo device,backlight,65,65%,100\n')
                     p.chmod(0o755)
                 env=dict(os.environ, PATH=d+':'+os.environ['PATH'], TEST_LOG=d+'/log')
                 subprocess.run(['bash',str(ROOT/'fleet/media-key.sh'),action,'45'],env=env,check=True)
