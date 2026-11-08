@@ -16,6 +16,7 @@ let
     keyboard-focus=exclusive
     exit-on-keyboard-focus-loss=no
     terminal=${pkgs.ghostty}/bin/ghostty -e
+    launch-prefix=${config.home.homeDirectory}/.local/bin/fuzzel-launch
 
     [colors]
     background=f1f3f5ff
@@ -37,6 +38,18 @@ let
   '';
 in {
   config = lib.mkIf config.programs.hp-os-fleet.enable {
+    # A scope inherits the calling desktop environment. A transient service
+    # instead uses the user manager environment, which can be stale or empty.
+    home.file.".local/bin/fuzzel-launch" = {
+      executable = true;
+      text = ''
+        #!${pkgs.bash}/bin/bash
+        set -euo pipefail
+        (( $# )) || exit 0
+        exec ${pkgs.systemd}/bin/systemd-run --user --scope --collect --quiet \
+          --unit="fuzzel-launched-$(${pkgs.coreutils}/bin/date +%s%N)-$RANDOM" -- "$@"
+      '';
+    };
     home.packages = import ./launcher-packages.nix { inherit pkgs; };
     # Goran's theme service maintains its existing writable file. Seed the same
     # launcher appearance only for new accounts, without replacing user edits.

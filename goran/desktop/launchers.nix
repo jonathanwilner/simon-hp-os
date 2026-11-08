@@ -24,31 +24,6 @@
   '';
   home.file.".local/bin/fuzzel-focused".executable = true;
 
-  home.file.".local/bin/fuzzel-launch".text = ''
-    #!${pkgs.bash}/bin/bash
-    set -euo pipefail
-
-    if [[ $# -eq 0 ]]; then
-      exit 0
-    fi
-
-    # HP-OS owns a private compositor and D-Bus session. A user service
-    # would replace this environment with the shared manager's environment.
-    if [[ "''${HP_OS_OWNED_SESSION:-}" == 1 ]]; then
-      exec "$@"
-    fi
-
-    unit="fuzzel-launched-$(${pkgs.coreutils}/bin/date +%s%N)-$RANDOM"
-    exec ${pkgs.systemd}/bin/systemd-run \
-      --user \
-      --collect \
-      --quiet \
-      --same-dir \
-      --unit="$unit" \
-      -- "$@"
-  '';
-  home.file.".local/bin/fuzzel-launch".executable = true;
-
   home.file.".local/bin/screenshot-copy".text = ''
     #!${pkgs.bash}/bin/bash
     set -euo pipefail
