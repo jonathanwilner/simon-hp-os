@@ -68,7 +68,7 @@ def classify(graph, roots):
 
 def endpoint(value, lane):
     parsed = urlsplit(value)
-    allowed = ARM_ALIASES if lane == 'arm' else {'goran'}
+    allowed = {'arm': ARM_ALIASES, 'nvidia': {'goran'}, 'x86': {'slazenger'}}[lane]
     if (parsed.scheme != 'ssh-ng' or parsed.hostname not in allowed or
             parsed.port is not None or parsed.path not in ('', '/') or
             parsed.query or parsed.fragment or parsed.password):
@@ -85,13 +85,19 @@ def plan(graph, roots, system, environ=None, hostname=None, machine=None):
     if system == 'x86_64-linux':
         if gpu:
             raise ValueError('NVIDIA-dependent x86 builds are prohibited: only ARM Goran is authorized')
-        hostname = socket.gethostname().split('.')[0] if hostname is None else hostname
-        machine = platform.machine() if machine is None else machine
-        if hostname != 'armstrong' or machine != 'x86_64':
-            raise ValueError('Generic x86 validation must build on Armstrong')
-        if generic:
-            commands.append(('armstrong', ['nix', 'build', '--no-link', '--option', 'builders', '',
-                                            *[path + '^*' for path in generic]]))
+        if 'FLEET_X86_STORE' in environ:
+            store = endpoint(environ['FLEET_X86_STORE'], 'x86')
+            if generic:
+                commands.append(('slazenger', ['nix', 'build', '--no-link', '--eval-store', 'auto',
+                    '--store', store, '--option', 'builders', '', *[path + '^*' for path in generic]]))
+        else:
+            hostname = socket.gethostname().split('.')[0] if hostname is None else hostname
+            machine = platform.machine() if machine is None else machine
+            if hostname != 'armstrong' or machine != 'x86_64':
+                raise ValueError('Generic x86 validation must build on Armstrong')
+            if generic:
+                commands.append(('armstrong', ['nix', 'build', '--no-link', '--option', 'builders', '',
+                                                *[path + '^*' for path in generic]]))
     elif system == 'aarch64-linux':
         for lane, paths, variable, host in (
                 ('arm', generic, 'FLEET_ARM_STORE', 'dropshot'),

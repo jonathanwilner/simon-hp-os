@@ -207,3 +207,17 @@ Private SSH keys, builder addresses and machine credentials remain in private
 host configuration. The shared fleet repository contains the routing policy,
 release tools and tests. Configure the client Nix daemon's SSH access explicitly;
 interactive user SSH access alone does not prove daemon access.
+
+### Optional x86 build store
+
+Set `FLEET_X86_STORE=ssh-ng://jonathan@slazenger` on the local release controller
+when Armstrong lacks build-store space. Slazenger has capacity for the generic
+x86 closure downloads and builds. The router accepts only the `slazenger` SSH
+alias for this override, uses `--eval-store auto`, and disables onward builders.
+An unset variable preserves local Armstrong builds. An empty or invalid value
+fails validation instead of silently falling back to Armstrong.
+
+The complete derivation graph is classified before any build starts. Any x86
+root with an NVIDIA/CUDA dependency is rejected before selecting a store.
+NVIDIA-dependent ARM builds remain Goran-only, and generic ARM builds remain on
+Dropshot. This capacity adjustment does not enable GitHub-hosted builds.

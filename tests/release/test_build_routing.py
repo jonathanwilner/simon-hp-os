@@ -40,6 +40,26 @@ class Routing(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'Armstrong'):
                 router.plan(graph, ['app'], 'x86_64-linux', {}, hostname=host, machine=machine)
 
+    def test_remote_x86_uses_slazenger_without_delegation(self):
+        routes = router.plan({'app': drv('hello')}, ['app'], 'x86_64-linux',
+                             {'FLEET_X86_STORE': 'ssh-ng://jonathan@slazenger'})
+        self.assertEqual(routes, [('slazenger', ['nix', 'build', '--no-link',
+            '--eval-store', 'auto', '--store', 'ssh-ng://jonathan@slazenger',
+            '--option', 'builders', '', 'app^*'])])
+
+    def test_remote_x86_rejects_transitive_nvidia_before_route(self):
+        graph = {'plain': drv('hello'), 'app': drv('app', ['gpu']), 'gpu': drv('cuda-12')}
+        with self.assertRaisesRegex(ValueError, 'only ARM Goran'):
+            router.plan(graph, ['plain', 'app'], 'x86_64-linux',
+                        {'FLEET_X86_STORE': 'invalid'})
+
+    def test_remote_x86_rejects_unapproved_or_empty_endpoints(self):
+        for store in ['', 'ssh-ng://github-runner', 'ssh-ng://goran',
+                      'ssh-ng://slazenger?remote-store=ssh-ng://elsewhere']:
+            with self.assertRaises(ValueError):
+                router.plan({'app': drv('hello')}, ['app'], 'x86_64-linux',
+                            {'FLEET_X86_STORE': store}, hostname='armstrong', machine='x86_64')
+
     def test_missing_or_wrong_endpoints_fail_before_builds(self):
         graph = {'app': drv('hello'), 'gpu': drv('cudnn-9')}
         for env in ({}, {'FLEET_ARM_STORE': self.env['FLEET_ARM_STORE']},
