@@ -1,4 +1,5 @@
 name: Promote tested fleet release
+run-name: Promote fleet ${{ inputs.revision }}
 on:
   workflow_dispatch:
     inputs:
