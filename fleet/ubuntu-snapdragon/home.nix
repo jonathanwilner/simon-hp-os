@@ -55,13 +55,15 @@ in {
       systemd.enable = false;
     };
     fonts.fontconfig.enable = true;
-    home.packages = [ (pkgs.writeTextFile { name = "hp-os-ubuntu-account-check"; destination = "/bin/hp-os-ubuntu-account-check"; executable = true; text = builtins.readFile ./account-check.py; }) (pkgs.callPackage ../../pkgs/nom-dashboard.nix {}) snapdragonHpOs snapdragonHpOsFonts snapdragonDms hpSession dmsSession pkgs.niri pkgs.xwayland-satellite pkgs.foot pkgs.brightnessctl pkgs.wireplumber ] ++ lib.optionals cfg.resumePanelRetrain [ panelResume resumeWatcher ];
+    home.packages = [ (pkgs.writeTextFile { name = "hp-os-ubuntu-account-check"; destination = "/bin/hp-os-ubuntu-account-check"; executable = true; text = builtins.readFile ./account-check.py; }) (pkgs.callPackage ../../pkgs/nom-dashboard.nix {}) snapdragonHpOs snapdragonHpOsFonts snapdragonDms hpSession dmsSession pkgs.niri pkgs.xwayland-satellite pkgs.foot pkgs.fuzzel pkgs.brightnessctl pkgs.wireplumber ] ++ lib.optionals cfg.resumePanelRetrain [ panelResume resumeWatcher ];
     # Preserve HP-OS's editable startup file and unrelated startup entries.
-    home.activation.snapdragonResumeStartup = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    home.activation.snapdragonSessionStartup = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       startup="$HOME/.config/hp-os/niri/config.d/50-startup.kdl"
       mkdir -p "$(dirname "$startup")"
       touch "$startup"
       ${pkgs.gnused}/bin/sed -i '/\/\/ snapdragon-panel-resume$/d' "$startup"
+      ${pkgs.gnused}/bin/sed -i '/\/\/ snapdragon-launcher$/d' "$startup"
+      printf '%s\n' 'binds { Mod+D { spawn "${pkgs.fuzzel}/bin/fuzzel"; }; } // snapdragon-launcher' >> "$startup"
       ${lib.optionalString cfg.resumePanelRetrain ''
         printf '%s\n' 'spawn-at-startup "${resumeWatcher}/bin/snapdragon-resume-watch" // snapdragon-panel-resume' >> "$startup"
       ''}
@@ -79,7 +81,8 @@ in {
       screenshot-path "~/Pictures/Screenshot-%Y-%m-%d-%H-%M-%S.png"
       binds {
         Mod+Return { spawn "${pkgs.foot}/bin/foot"; }
-        Mod+D { spawn "${snapdragonDms}/bin/dms" "ipc" "call" "spotlight" "toggle"; }
+        Mod+D { spawn "${pkgs.fuzzel}/bin/fuzzel"; }
+        Mod+A { spawn "${snapdragonDms}/bin/dms" "ipc" "call" "spotlight" "toggle"; }
         Mod+Q { close-window; }
         Mod+Left { focus-column-left; }
         Mod+Right { focus-column-right; }
