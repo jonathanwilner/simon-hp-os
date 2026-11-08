@@ -16,9 +16,30 @@ class Rulesets(unittest.TestCase):
         live = [dict(item, id=i + 1) for i, item in enumerate(desired)]
         def api(path, method='GET', body=None):
             self.assertEqual(method, 'GET', 'unchanged apply must not write')
+            if path.endswith('/actions/permissions'): return {'enabled': False}
             return live if '?' in path else live[int(path.rsplit('/', 1)[1]) - 1]
         with patch.object(m, 'api', side_effect=api), patch('sys.argv', ['rulesets', '--apply']):
             self.assertEqual(m.main(), 0)
+
+    def test_actions_drift_check_never_writes(self):
+        with patch.object(m, 'api', return_value={'enabled': True}) as api:
+            self.assertTrue(m.reconcile_actions('example/fleet'))
+            api.assert_called_once_with('repos/example/fleet/actions/permissions')
+
+    def test_actions_apply_disables_and_reads_back(self):
+        with patch.object(m, 'api', side_effect=[{'enabled': True}, {}, {'enabled': False}]) as api:
+            self.assertFalse(m.reconcile_actions('example/fleet', apply=True))
+            self.assertEqual(api.call_args_list[1].args, ('repos/example/fleet/actions/permissions', 'PUT', {'enabled': False}))
+            self.assertEqual(api.call_args_list[2].args, ('repos/example/fleet/actions/permissions',))
+
+    def test_actions_failed_readback_fails_closed(self):
+        with patch.object(m, 'api', side_effect=[{'enabled': True}, {}, {'enabled': True}]):
+            with self.assertRaisesRegex(RuntimeError, 'remain disabled'):
+                m.reconcile_actions('example/fleet', apply=True)
+
+    def test_actions_204_response_is_supported(self):
+        with patch.object(m.subprocess, 'check_output', return_value=b''):
+            self.assertEqual(m.api('repos/example/fleet/actions/permissions', 'PUT', {'enabled': False}), {})
 
     def test_gate_contract(self):
         branch = json.loads((ROOT / '.github/rulesets/fleet-stable-gates.json').read_text())
