@@ -1,0 +1,36 @@
+import importlib.util
+import json
+from pathlib import Path
+import unittest
+from unittest.mock import patch
+
+ROOT = Path(__file__).resolve().parents[2]
+spec = importlib.util.spec_from_file_location('fleet_rulesets', ROOT / 'scripts/fleet-rulesets.py')
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+
+
+class Rulesets(unittest.TestCase):
+    def test_active_rules_are_idempotent(self):
+        desired = [json.loads(p.read_text()) for p in sorted((ROOT / '.github/rulesets').glob('fleet-*.json'))]
+        live = [dict(item, id=i + 1) for i, item in enumerate(desired)]
+        def api(path, method='GET', body=None):
+            self.assertEqual(method, 'GET', 'unchanged apply must not write')
+            return live if '?' in path else live[int(path.rsplit('/', 1)[1]) - 1]
+        with patch.object(m, 'api', side_effect=api), patch('sys.argv', ['rulesets', '--apply']):
+            self.assertEqual(m.main(), 0)
+
+    def test_gate_contract(self):
+        branch = json.loads((ROOT / '.github/rulesets/fleet-stable-gates.json').read_text())
+        self.assertEqual(branch['bypass_actors'], [])
+        checks = next(r['parameters'] for r in branch['rules'] if r['type'] == 'required_status_checks')
+        self.assertFalse(checks['do_not_enforce_on_create'])
+        self.assertEqual(len(checks['required_status_checks']), 4)
+        self.assertEqual({c['integration_id'] for c in checks['required_status_checks'] if c['context'].startswith('validate')}, {15368})
+        changed = dict(branch, enforcement='disabled')
+        self.assertFalse(m.matches(changed, branch))
+        self.assertTrue(m.matches(dict(branch, id=99), branch))
+
+
+if __name__ == '__main__':
+    unittest.main()

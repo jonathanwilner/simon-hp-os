@@ -1,0 +1,45 @@
+{
+  "enforcement": "active",
+  "bypass_actors": [],
+  "name": "fleet-stable-gates",
+  "target": "branch",
+  "conditions": {
+    "ref_name": {
+      "include": [
+        "refs/heads/fleet-stable"
+      ],
+      "exclude": []
+    }
+  },
+  "rules": [
+    {
+      "type": "deletion"
+    },
+    {
+      "type": "non_fast_forward"
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": false,
+        "do_not_enforce_on_create": false,
+        "required_status_checks": [
+          {
+            "context": "validate (ubuntu-24.04, x86_64-linux)",
+            "integration_id": 15368
+          },
+          {
+            "context": "validate (ubuntu-24.04-arm, aarch64-linux)",
+            "integration_id": 15368
+          },
+          {
+            "context": "fleet/canary/aarch64-linux"
+          },
+          {
+            "context": "fleet/canary/x86_64-linux"
+          }
+        ]
+      }
+    }
+  ]
+}
