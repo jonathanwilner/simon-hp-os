@@ -79,6 +79,7 @@
       homeModules.ubuntuSnapdragon = { pkgs, ... }: {
         imports = [ self.homeModules.fleetApps ./fleet/ubuntu-snapdragon/home.nix ];
         _module.args.snapdragonHpOs = hp-os.packages.${pkgs.stdenv.hostPlatform.system}.default;
+        _module.args.snapdragonHpOsFonts = pkgs.callPackage (hp-os + "/packaging/fonts") { };
         _module.args.snapdragonDms = dank-material-shell.packages.${pkgs.stdenv.hostPlatform.system}.default;
         programs.hp-os-snapdragon.enable = true;
       };

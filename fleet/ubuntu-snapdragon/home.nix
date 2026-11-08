@@ -1,8 +1,12 @@
 # Ubuntu owns the kernel, firmware, audio and networking. No NVIDIA assumptions.
-{ config, lib, pkgs, snapdragonHpOs, snapdragonDms, ... }:
+{ config, lib, pkgs, snapdragonHpOs, snapdragonHpOsFonts, snapdragonDms, ... }:
 let
   cfg = config.programs.hp-os-snapdragon;
   environment = ''
+    if [[ -f "$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh" ]]; then
+      source "$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh"
+    fi
+    export XDG_DATA_DIRS="$HOME/.local/share/flatpak/exports/share:$HOME/.nix-profile/share:''${XDG_DATA_DIRS:-/usr/local/share:/usr/share}:/var/lib/snapd/desktop"
     export PATH="$HOME/.nix-profile/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
     export XDG_SESSION_TYPE=wayland
     unset GBM_BACKEND __GLX_VENDOR_LIBRARY_NAME
@@ -31,7 +35,7 @@ in {
     targets.genericLinux.gpu.enable = true;
     programs.home-manager.enable = true;
     fonts.fontconfig.enable = true;
-    home.packages = [ snapdragonHpOs snapdragonDms hpSession dmsSession pkgs.niri pkgs.xwayland-satellite pkgs.foot pkgs.brightnessctl pkgs.wireplumber ];
+    home.packages = [ snapdragonHpOs snapdragonHpOsFonts snapdragonDms hpSession dmsSession pkgs.niri pkgs.xwayland-satellite pkgs.foot pkgs.brightnessctl pkgs.wireplumber ];
     xdg.configFile."hp-os/snapdragon-device".text = cfg.device + "\n";
     xdg.configFile."niri/snapdragon.kdl".text = ''
       input {
