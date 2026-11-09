@@ -16,6 +16,7 @@ session. Packages alone did not provide those desktop integrations.
 | User-manager services | Ordinary Niri exports its environment and starts graphical-session.target. HP-OS private D-Bus stays private. Enrolled Relay starts with the current display through its existing user-manager bridge and stops when that display exits. |
 | Ask IQ | `goran/desktop/search-iq.nix`: portable CPU-only service now shared behind `session.searchIq.enable`, default false. Downloads a model, binds localhost:30002, retains 2 GiB and 200% CPU limits. |
 | Apps, Office, Chrome, media, Steam ARM, printing, Owly, Relay | Already shared fleet modules. Enrollment, credentials, sign-ins and games remain separate. |
+| HP-OS controls and touch | Battery-aware bar, notifications and COSMIC Files use a one-time migration. Optional long-press compositor adaptation preserves keyboard, gesture, PAM and suspend policy. |
 | HP theme and terminal styles | Portable assets, but Goran activation mutates writable files and restarts Goran DMS. Extract defaults while preserving user themes and active sessions. |
 | Wallhaven | Portable DMS option requiring its plugin/settings. Wallpaper files alone do not enable it. |
 | Headphones/KDE Connect | Executables already shared. Pairing, daemon activation and network/firewall integration remain explicit. |
