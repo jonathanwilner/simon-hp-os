@@ -32,3 +32,20 @@ with `--login-only` while their dedicated boot workflow maintains initrds.
 Test mode validates theme rendering only. Actual splash rendering and password
 login require a physical boot/login test. Never restart the display manager
 from an active desktop merely to preview the theme.
+
+## Motion and typography
+
+The boot theme reveals the HP-OS wordmark, followed by sparse outward star
+motion. The login theme uses the same dark space direction, a generated
+background and native text. Login animation never controls authentication or
+adds a fixed delay before the desktop starts.
+
+HP Forma is supplied privately from
+`/usr/local/share/fonts/hp/HPFormaDJROffice-Regular.ttf`, or an explicit
+`HP_OS_FORMA_FONT` path passed to the installer. Public source includes the
+rendered boot wordmark, without redistributing the font binary.
+
+The shared `hp-os-motion-design` skill is installed under `.codex/skills` and
+`.agents/skills`; DeepSeek Harness discovers the latter through its filesystem
+skill provider. Its source and asset-generation prompt live in
+`skills/hp-os-motion-design`. Agent session data remains separate.
