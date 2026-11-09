@@ -64,6 +64,7 @@ in {
   };
   config = lib.mkIf cfg.enable {
     assertions = [{ assertion = pkgs.stdenv.hostPlatform.isAarch64; message = "The Snapdragon desktop requires aarch64-linux."; }];
+    programs.hp-os-fleet.desktopControls.enable = true;
     targets.genericLinux.enable = true;
     targets.genericLinux.gpu.enable = true;
     programs.home-manager.enable = true;
