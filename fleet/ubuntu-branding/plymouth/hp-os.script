@@ -5,11 +5,11 @@ width = Window.GetWidth();
 height = Window.GetHeight();
 cx = Window.GetX() + width / 2;
 cy = Window.GetY() + height / 2;
-# The same six-second circle-to-O / HP-OS / modern slash sequence as SDDM.
-# 181 bounded 480x200 RGBA frames use at most 69 MB decoded. Scale once only
+# The same circle-to-O / HP-OS / modern slash sequence as SDDM.
+# 184 bounded 480x200 RGBA frames use at most 71 MB decoded. Scale once only
 # on small displays; no live blur or resizing in the refresh callback.
 logo_width = Math.Min(480, width * 0.8);
-for (i = 0; i < 181; i++) {
+for (i = 0; i < 184; i++) {
   digits = "" + i;
   if (i < 10) digits = "00" + i;
   else if (i < 100) digits = "0" + i;
@@ -38,7 +38,7 @@ frame = 0;
 fun refresh() {
   global.frame++;
   # Plymouth refresh runs at 50 Hz; a sequence never delays quit or prompts.
-  brand_frame = Math.Min(180, Math.Int(frame * 30 / 50));
+  brand_frame = Math.Min(183, Math.Int(frame * 30 / 50));
   logo.sprite.SetImage(logo.images[brand_frame]);
   if (status == "normal") {
     for (i = 0; i < 72; i++) {

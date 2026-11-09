@@ -17,12 +17,12 @@ Rectangle {
     property real flight: 0
     property string brandFont: forma.status === FontLoader.Ready ? forma.name : "HP Forma DJR Office"
     property string headingFont: formaMedium.status === FontLoader.Ready ? formaMedium.name : brandFont
-    property real flightSpeed: reducedMotion || authenticated ? 0 : (busy ? 0.85 : (entranceDone ? 0 : (brandFrame < 115 ? 0.025 : 0.42)))
+    property real flightSpeed: !reducedMotion && authenticated && brandFrame < brandFinalFrame ? 0.85 : 0
     Behavior on flightSpeed { NumberAnimation { duration: root.reducedMotion ? 0 : 900; easing.type: Easing.InOutSine } }
     FontLoader { id: formaMedium; source: "fonts/HPForma-Medium.ttf" }
     FontLoader { id: forma; source: "fonts/HPForma-Regular.ttf" }
-    Image { anchors.fill: parent; source: "images/starfield.png"; fillMode: Image.PreserveAspectCrop; opacity: root.brandFrame < 115 ? 0.08 : 0.5; asynchronous: true; Behavior on opacity { NumberAnimation { duration: root.reducedMotion ? 0 : 1400; easing.type: Easing.InOutSine } } }
-    StarFlight { width: parent.width / 2; height: parent.height / 2; scale: 2; transformOrigin: Item.TopLeft; phase: root.flight; warp: root.flightSpeed; opacity: root.brandFrame < 115 ? 0 : 0.6; Behavior on opacity { NumberAnimation { duration: root.reducedMotion ? 0 : 1400; easing.type: Easing.InOutSine } } }
+    Image { anchors.fill: parent; source: "images/starfield.png"; fillMode: Image.PreserveAspectCrop; opacity: root.authenticated ? 0.5 : 0.08; asynchronous: true; Behavior on opacity { NumberAnimation { duration: root.reducedMotion ? 0 : 1400; easing.type: Easing.InOutSine } } }
+    StarFlight { width: parent.width / 2; height: parent.height / 2; scale: 2; transformOrigin: Item.TopLeft; phase: root.flight; warp: root.flightSpeed; opacity: root.authenticated ? 0.6 : 0; Behavior on opacity { NumberAnimation { duration: root.reducedMotion ? 0 : 1400; easing.type: Easing.InOutSine } } }
     // Time-based movement avoids a speed change under software-rendering load.
     Timer {
         property double previous: 0
@@ -32,15 +32,24 @@ Rectangle {
     }
     Rectangle { anchors.fill: parent; color: "#030914"; opacity: root.entered ? 0 : 1; Behavior on opacity { NumberAnimation { duration: root.reducedMotion ? 0 : 1000; easing.type: Easing.InOutSine } } }
     Timer { interval: 100; running: !root.reducedMotion; onTriggered: root.entered = true }
-    // One six-second brand transformation. Controls remain usable throughout.
-    Timer { interval: 6000; running: !root.reducedMotion; onTriggered: root.entranceDone = true }
+    // Reveal HP-OS once, then hold it with the usable login prompt.
+    // Only SDDM's successful authentication signal starts the departure.
+    readonly property int brandHoldFrame: 105
+    readonly property int brandFinalFrame: 183
     property double brandStarted: 0
-    property int brandFrame: root.reducedMotion ? 180 : 0
+    property double departureStarted: 0
+    property int brandFrame: root.reducedMotion ? brandHoldFrame : 0
     Timer {
-        interval: 16; running: !root.reducedMotion && root.brandFrame < 180; repeat: true
+        interval: 16; repeat: true
+        running: !root.reducedMotion && root.brandFrame < (root.authenticated ? root.brandFinalFrame : root.brandHoldFrame)
         onTriggered: {
-            if (!root.brandStarted) root.brandStarted = Date.now();
-            root.brandFrame = Math.min(180, Math.floor((Date.now() - root.brandStarted) * 30 / 1000));
+            if (root.authenticated) {
+                root.brandFrame = Math.min(root.brandFinalFrame, root.brandHoldFrame + Math.floor((Date.now() - root.departureStarted) * 30 / 1000));
+            } else {
+                if (!root.brandStarted) root.brandStarted = Date.now();
+                root.brandFrame = Math.min(root.brandHoldFrame, Math.floor((Date.now() - root.brandStarted) * 30 / 1000));
+            }
+            if (root.brandFrame >= root.brandHoldFrame) root.entranceDone = true;
         }
     }
     Image {
@@ -49,7 +58,8 @@ Rectangle {
         width: 480 * root.uiScale; height: 200 * root.uiScale
         fillMode: Image.PreserveAspectFit; smooth: true; cache: false
         anchors.horizontalCenter: parent.horizontalCenter
-        y: root.height * 0.23 - height / 2
+        y: root.height * (root.authenticated ? 0.5 : 0.23) - height / 2
+        Behavior on y { NumberAnimation { duration: root.reducedMotion ? 0 : 1200; easing.type: Easing.InOutSine } }
     }
     property int selectedSession: sessionModel.lastIndex >= 0 ? sessionModel.lastIndex : 0
     property bool busy: false
@@ -62,9 +72,14 @@ Rectangle {
     }
     Connections {
         target: sddm
-        function onLoginSucceeded() { root.authenticated = true; root.message = "Welcome"; }
+        function onLoginSucceeded() {
+            root.departureStarted = Date.now();
+            root.brandFrame = root.reducedMotion ? root.brandFinalFrame : root.brandHoldFrame;
+            root.authenticated = true;
+            root.message = "Welcome";
+        }
         function onLoginFailed() {
-            root.busy = false; root.entranceDone = true; root.promptVisible = true; root.raised = true; root.message = "Sign-in failed. Check your password and try again.";
+            root.busy = false; root.brandFrame = root.brandHoldFrame; root.entranceDone = true; root.promptVisible = true; root.raised = true; root.message = "Sign-in failed. Check your password and try again.";
             password.text = ""; password.forceActiveFocus();
         }
     }
@@ -144,7 +159,7 @@ Rectangle {
     Column {
         anchors.horizontalCenter: parent.horizontalCenter; anchors.bottom: parent.bottom; anchors.bottomMargin: 22 * root.uiScale
         scale: root.uiScale; transformOrigin: Item.Bottom; spacing: 8
-        opacity: root.promptVisible ? 1 : 0
+        opacity: root.authenticated ? 0 : (root.promptVisible ? 1 : 0)
         visible: opacity > 0
         Behavior on opacity { NumberAnimation { duration: root.reducedMotion ? 0 : 900; easing.type: Easing.InOutSine } }
         Row {

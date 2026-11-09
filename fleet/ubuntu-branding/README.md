@@ -36,14 +36,15 @@ from an active desktop merely to preview the theme.
 ## Motion and typography
 
 The boot and login sequence reveals the original circular HP logo, carries its
-circle into the O of HP-OS once, then resolves into the modern four-slash logo
-and starfield. Blue-white glow connects the phases. HP Forma Medium shapes the
+circle into the actual HP Forma O of HP-OS once. The login screen holds this
+wordmark while the user signs in. Only successful authentication starts the
+transition into the modern four-slash logo and starfield. Blue-white glow connects the phases. HP Forma Medium shapes the
 wordmark and headings; Regular keeps controls clear. Eased position, opacity,
 glow and star velocity preserve continuity. Login animation never controls
 authentication or adds a fixed delay before the desktop starts. The native
-sequence keeps the O in place while it fades into the final slash logo; the
-full-screen concept video expands the O into a portal. This keeps native
-controls clear and prevents a cropped portal edge.
+sequence keeps the O in place while it fades into the final slash logo after
+authentication. The concept video shows password entry and sign-in with a
+clearly labelled simulated authentication sequence.
 
 HP Forma is supplied privately from
 `/usr/local/share/fonts/hp/HPFormaDJROffice-Regular.ttf`, or an explicit
