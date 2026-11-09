@@ -8,7 +8,14 @@ umask 077
 exec 9>"$XDG_RUNTIME_DIR/hp-os-fleet-session-${WAYLAND_DISPLAY//\//_}.lock"
 flock -n 9 || exit 0
 children=()
+notification_env="$XDG_RUNTIME_DIR/hp-os-fleet-notify-${WAYLAND_DISPLAY//\//_}.json"
+python3 - "$notification_env" <<'PYENV'
+import json, os, pathlib, sys
+pathlib.Path(sys.argv[1]).write_text(json.dumps({key: os.environ.get(key, '') for key in
+    ('WAYLAND_DISPLAY', 'DBUS_SESSION_BUS_ADDRESS', 'NIRI_SOCKET')}))
+PYENV
 cleanup() {
+  rm -f "$notification_env"
   if command -v relay-control >/dev/null; then
     relay-control session-stop >/dev/null 2>&1 || true
   fi

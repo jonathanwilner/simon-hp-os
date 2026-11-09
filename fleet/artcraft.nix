@@ -40,7 +40,7 @@ in {
           ${catalog}/bin/artcraft-catalog > "$temporary"
           if ! cmp -s "$temporary" "$directory/catalog.txt"; then
             mv "$temporary" "$directory/catalog.txt"
-            ${pkgs.libnotify}/bin/notify-send "Artcraft catalog updated" "Run artcraft-catalog to review releases and choose new apps." || true
+            ${pkgs.python3}/bin/python3 ${./session/notify.py} ${pkgs.libnotify}/bin/notify-send "Artcraft catalog updated" "Run artcraft-catalog to review releases and choose new apps." || true
           fi
         ''}";
       };
