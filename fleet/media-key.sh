@@ -9,19 +9,30 @@ osd() {
 }
 
 case "${1:-}" in
+  volume-up|volume-down|brightness-up|brightness-down)
+    step=${2:-}
+    if [[ -z "$step" ]]; then
+      if [[ "$1" == volume-* ]]; then step=10; else step=5; fi
+    fi
+    [[ "$step" =~ ^[0-9]+$ ]] && (( 10#$step >= 1 && 10#$step <= 100 )) || exit 2
+    step=$((10#$step))
+    ;;
+esac
+
+case "${1:-}" in
   volume-up)
-    wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 10%+
+    wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ "${step}%+"
     wpctl set-mute @DEFAULT_AUDIO_SINK@ 0
     ;;
   volume-down)
-    wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 10%-
+    wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ "${step}%-"
     wpctl set-mute @DEFAULT_AUDIO_SINK@ 0
     ;;
   mute) wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle ;;
   mic-mute) wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle ;;
   play-pause|stop|next|previous) playerctl "$1" ;;
   brightness-up|brightness-down)
-    if [[ "$1" == brightness-up ]]; then brightnessctl set +5%; else brightnessctl set 5%-; fi
+    if [[ "$1" == brightness-up ]]; then brightnessctl set "+${step}%"; else brightnessctl set "${step}%-"; fi
     IFS=, read -r _device _class _current percent _maximum < <(brightnessctl -m)
     percent=${percent%\%}
     [[ "$percent" =~ ^[0-9]+$ ]] && (( 10#$percent <= 100 )) || exit 2

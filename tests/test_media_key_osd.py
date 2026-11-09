@@ -28,6 +28,24 @@ class MediaKeyOverlayTests(unittest.TestCase):
                 Path(d,'hp-os').write_text('#!/bin/sh\nexit 1\n')
                 subprocess.run(['bash',str(ROOT/'fleet/media-key.sh'),action,'45'],env=env,check=True)
 
+    def test_explicit_steps_preserved_and_invalid_steps_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            for name in ('wpctl', 'brightnessctl'):
+                p = Path(d, name)
+                p.write_text('#!/bin/sh\necho "$*" >> "$TEST_LOG"\n' +
+                             ('echo device,backlight,65,65%,100\n' if name == 'brightnessctl' else ''))
+                p.chmod(0o755)
+            env = dict(os.environ, PATH=d+':'+os.environ['PATH'], TEST_LOG=d+'/log')
+            for action, expected in [('volume-up', '10%+'), ('volume-down', '10%-'),
+                                     ('brightness-up', '+10%'), ('brightness-down', '10%-')]:
+                subprocess.run(['bash', str(ROOT/'fleet/media-key.sh'), action, '10'], env=env, check=True)
+                self.assertIn(expected, Path(d, 'log').read_text())
+            before = Path(d, 'log').read_text()
+            for step in ('0', '101', '-1', 'invalid'):
+                result = subprocess.run(['bash', str(ROOT/'fleet/media-key.sh'), 'brightness-up', step], env=env)
+                self.assertEqual(result.returncode, 2)
+            self.assertEqual(before, Path(d, 'log').read_text())
+
     def test_invalid_brightness_rejected(self):
         for value in ['-1', '101', 'NaN', '']:
             self.assertNotEqual(subprocess.run(['bash',str(ROOT/'fleet/media-key.sh'),'brightness-osd',value],capture_output=True).returncode,0)

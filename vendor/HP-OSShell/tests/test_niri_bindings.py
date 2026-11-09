@@ -36,6 +36,29 @@ Mod+Return { spawn "foot"; }
     def sync(self):
         MOD.sync(self.source, self.target, self.baseline, str(self.validator))
 
+    def test_dms_media_steps_and_unknown_device(self):
+        actions = [
+            ('audio', 'increment', '"10"', 'volume-up'),
+            ('audio', 'decrement', '"10"', 'volume-down'),
+            ('audio', 'mute', '', 'mute'),
+            ('audio', 'micmute', '', 'mic-mute'),
+            ('brightness', 'increment', '"10" ""', 'brightness-up'),
+            ('brightness', 'decrement', '"10" ""', 'brightness-down'),
+        ]
+        source = 'binds {\n' + '\n'.join(
+            f'F{i+1} {{ spawn "dms" "ipc" "call" "{kind}" "{action}" {extra}; }}'
+            for i, (kind, action, extra, _) in enumerate(actions)) + '\n}\n'
+        self.source.write_text(source)
+        self.sync()
+        result = self.target.read_text()
+        for _, _, extra, action in actions:
+            expected = f'"hp-os-media-key" "{action}"' + (' "10"' if extra else '')
+            self.assertIn(expected, result)
+        self.assertEqual(self.source.read_text(), source)
+        for extra in ('"10" "panel1"', '"0" ""', '"101" ""'):
+            with self.assertRaises(ValueError):
+                MOD.adapt(f'F1 {{ spawn "dms" "ipc" "call" "brightness" "increment" {extra}; }}')
+
     def test_native_conflicts_and_idempotence(self):
         self.sync()
         first = self.target.read_text()

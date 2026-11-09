@@ -175,9 +175,29 @@ def adapt(text):
             ('ipc', 'call', 'wallhaven', 'toggle'): ('wallpaperSelector', 'toggle'),
             ('ipc', 'call', 'wallhavenCarousel', 'discover'): ('wallpaperSelector', 'toggle'),
         }
-        command = mapping.get(tuple(values[2:]))
-        if command is None: raise ValueError('Unknown DMS IPC action: ' + repr(values[2:]))
-        replacement = 'spawn ' + ' '.join(json.dumps(v) for v in ('hp-os', 'ipc', *command))
+        args = tuple(values[2:])
+        media = {
+            ('ipc', 'call', 'audio', 'mute'): ('mute',),
+            ('ipc', 'call', 'audio', 'micmute'): ('mic-mute',),
+        }.get(args)
+        if (len(args) in (5, 6) and args[:2] == ('ipc', 'call')
+                and args[2] in ('audio', 'brightness')
+                and args[3] in ('increment', 'decrement')
+                and re.fullmatch(r'[0-9]+', args[4]) and 1 <= int(args[4]) <= 100
+                and (len(args) == 5 or (args[2] == 'brightness' and args[5] == ''))):
+            # An empty brightness selector means the default device. Never
+            # silently discard an explicit device selection.
+            kind = 'volume' if args[2] == 'audio' else 'brightness'
+            direction = 'up' if args[3] == 'increment' else 'down'
+            media = (kind + '-' + direction, str(int(args[4])))
+        command = mapping.get(args)
+        if media is not None:
+            argv = ('hp-os-media-key', *media)
+        elif command is not None:
+            argv = ('hp-os', 'ipc', *command)
+        else:
+            raise ValueError('Unknown DMS IPC action: ' + repr(values[2:]))
+        replacement = 'spawn ' + ' '.join(json.dumps(v) for v in argv)
         if edits and edits[-1][:2] == (action.start, action.end): edits.pop()
         edits.append((action.start, action.end, replacement))
     for start, end, replacement in reversed(edits): text = text[:start] + replacement + text[end:]
