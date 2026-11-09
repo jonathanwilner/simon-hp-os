@@ -11,7 +11,7 @@ getent passwd "$user" >/dev/null
 [[ ${2:-} == '' || ${2:-} == --client-only ]] || exit 2
 source_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 # Retain Ubuntu's driver/kernel pairing. No NVIDIA driver is installed here.
-apt-get install -y libgtk2.0-0t64 libasound2t64 libx11-6 libxrandr2 libxrender1 libxcb1 libegl1 libgl1 libvulkan1 mesa-utils vulkan-tools squashfs-tools squashfuse curl python3 apparmor
+apt-get install -y libgtk2.0-0t64 libsdl2-2.0-0 libasound2t64 libx11-6 libxrandr2 libxrender1 libxcb1 libegl1 libgl1 libvulkan1 mesa-utils vulkan-tools squashfs-tools squashfuse curl python3 apparmor
 if python3 "$source_dir/gpu.py" | grep -q '"kind": "qualcomm"'; then
   apt-get install -y mesa-vulkan-drivers libgl1-mesa-dri
 fi

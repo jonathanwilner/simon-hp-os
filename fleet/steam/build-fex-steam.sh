@@ -9,7 +9,7 @@ export PATH=/usr/bin:/bin CC=/usr/bin/clang-21 CXX=/usr/bin/clang++-21
 cmake -S "$src" -B "$src/build-steam" -G Ninja \
   -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr \
   -DBUILD_STEAM_SUPPORT=ON -DBUILD_TESTING=OFF -DBUILD_FEXCONFIG=OFF \
-  -DBUILD_THUNKS=ON -DENABLE_CLANG_THUNKS=ON \
+  -DBUILD_THUNKS=ON -DENABLE_CLANG_THUNKS=ON -DCLANG_EXEC_PATH=/usr/bin/clang-21 \
   -DENABLE_LTO=ON -DUSE_LINKER=lld-21 -DENABLE_ASSERTIONS=OFF
 cmake --build "$src/build-steam" --parallel "${FEX_BUILD_JOBS:-8}"
 DESTDIR="$depot" cmake --install "$src/build-steam" --component Runtime
