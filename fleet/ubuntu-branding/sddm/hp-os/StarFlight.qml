@@ -16,7 +16,7 @@ Canvas {
         for (var i = 0; i < 100; i++) {
             var angle = i * 2.399963;
             var radius = 0.08 + ((i * 37) % 100) / 100;
-            var z = 0.12 + ((i * 0.618034 + phase * 0.16) % 1) * 1.8;
+            var z = 0.12 + (((i * 0.618034 - phase * 0.16) % 1 + 1) % 1) * 1.8;
             var x = cx + Math.cos(angle) * radius * span * 0.18 / z;
             var y = cy + Math.sin(angle) * radius * span * 0.18 / z;
             var tail = 0.012 + warp * 0.09;
