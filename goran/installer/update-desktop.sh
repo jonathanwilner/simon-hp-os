@@ -54,6 +54,7 @@ worker=false
 attach=false
 channel=fleet-stable
 status_mode=
+resume_run=
 while (($#)); do
   case "$1" in
     --checkout) (($# >= 2)) || fail '--checkout requires a path'; checkout="$2"; shift 2 ;;
@@ -61,6 +62,7 @@ while (($#)); do
     --build-only) build_only=true; shift ;;
     --no-pull) pull=false; shift ;;
     --worker) worker=true; shift ;;
+    --resume-run) resume_run=${2:?}; shift 2 ;;
     --attach) attach=true; shift ;;
     --status) status_mode=plain; shift ;;
     --status-window) status_mode=window; shift ;;
@@ -105,15 +107,21 @@ fi
 [[ -n "${NOM_DASHBOARD_PROGRESS_FILE:-}" ]] || fail 'Internal worker must run through nom-tmux'
 state="${XDG_STATE_HOME:-$HOME/.local/state}/simon-desktop-update"
 mkdir -p "$state"
-exec 9>"$state/update.lock"
+if [[ -z "$resume_run" ]]; then exec 9>"$state/update.lock"; fi
 flock -n 9 || fail 'Another Simon desktop update is running'
 # Git flakes include tracked files only. Evaluation checks the full import tree.
 git ls-files --error-unmatch flake.nix flake.lock goran/installer/simon-home.nix \
   goran/installer/update-desktop.sh >/dev/null || fail 'Required desktop sources are not tracked in Git'
-stamp=$(date -u +%Y%m%dT%H%M%SZ)-$$
-run_dir="$state/$stamp"
-mkdir -p "$run_dir"
-if [[ "$pull" == true ]]; then
+if [[ -n "$resume_run" ]]; then
+  [[ "$resume_run" == "$state/"* && -d "$resume_run" && -f "$resume_run/published-revision" ]] || fail 'Invalid resumed update record'
+  run_dir=$resume_run
+  stamp=${run_dir##*/}
+else
+  stamp=$(date -u +%Y%m%dT%H%M%SZ)-$$
+  run_dir="$state/$stamp"
+  mkdir -p "$run_dir"
+fi
+if [[ "$pull" == true && -z "$resume_run" ]]; then
   # Load the channel's merge tool before running checkout code. The checkout
   # may predate tested releases, while this installed updater already supports them.
   git fetch origin "refs/heads/$channel" || fail "Release channel $channel is unavailable; no fallback to main is permitted"
@@ -121,6 +129,13 @@ if [[ "$pull" == true ]]; then
   bash "$run_dir/merge-desktop-update.sh" "$checkout" "$run_dir/recovery" "$channel"
   cp "$run_dir/recovery/published-revision" "$run_dir/published-revision"
   cp "$run_dir/recovery/release-channel" "$run_dir/release-channel"
+  # Continue this same tracked task with the updater from the merged release.
+  # Descriptor 9 retains the update lock across exec; the record is reused.
+  args=(--worker --checkout "$checkout" --resume-run "$run_dir")
+  [[ "$build_only" == false ]] || args+=(--build-only)
+  [[ "$channel" == fleet-stable ]] || args+=(--development)
+  export HP_OS_FLEET_STATUS="$checkout/fleet/release/status.py"
+  exec bash "$checkout/goran/installer/update-desktop.sh" "${args[@]}"
 fi
 [[ -z $(git status --porcelain) ]] || fail 'Build-only source must be committed; normal updates preserve and commit local edits automatically'
 git ls-files --error-unmatch fleet/release/client_build.py fleet/release/build_router.py >/dev/null \
@@ -152,8 +167,8 @@ export HOME_MANAGER_BACKUP_EXT="simon-update-$stamp"
 activate_with_rollback "$candidate" "$profile" "$previous" || exit $?
 # Keep privileged boot/login assets aligned with the newly activated fleet source.
 # The tracked worker must report incomplete setup instead of claiming full refresh.
-if ! /usr/bin/sudo -n bash "$checkout/fleet/ubuntu-branding/refresh-managed.sh" simon; then
-  printf '%s\n' 'Desktop activated; run sudo bash fleet/ubuntu-branding/refresh-managed.sh simon from the checkout to finish boot/login setup. See the tracked update log for the failed preflight.' > "$state/branding-pending"
+if ! /usr/bin/sudo bash "$checkout/fleet/ubuntu-branding/refresh-managed.sh" simon; then
+  printf '%s\n' 'Desktop activated; boot/login setup is incomplete. See the tracked update log, resolve the reported preflight, then run Update Applications again.' > "$state/branding-pending"
   fail "$(cat "$state/branding-pending")"
 fi
 rm -f "$state/branding-pending"

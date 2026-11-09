@@ -1,4 +1,4 @@
-{ pkgs, lib, ... }:
+{ config, pkgs, lib, ... }:
 let
   dashboard = pkgs.callPackage ../../pkgs/nom-dashboard.nix { };
   updater = pkgs.writeShellApplication {
@@ -42,6 +42,20 @@ in {
         $DRY_RUN_CMD /usr/bin/systemctl --user stop 'app-update\x2dnotifier@autostart.service'
       fi
       $DRY_RUN_CMD /usr/bin/systemctl --user daemon-reload
+    fi
+  '';
+  # An older installed updater can activate this generation before it knows
+  # about boot/login integration. Run the versioned helper in that same update.
+  home.activation.simonSharedBranding = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+    if [ -z "''${DRY_RUN_CMD:-}" ]; then
+      branding_state="''${XDG_STATE_HOME:-${config.home.homeDirectory}/.local/state}/simon-desktop-update"
+      mkdir -p "$branding_state"
+      if /usr/bin/sudo /usr/bin/bash ${../../fleet/ubuntu-branding}/refresh-managed.sh simon; then
+        rm -f "$branding_state/branding-pending"
+      else
+        printf '%s\n' 'Boot/login setup is incomplete. Check the update log, resolve its preflight, and run Update Applications again.' > "$branding_state/branding-pending"
+        cat "$branding_state/branding-pending" >&2
+      fi
     fi
   '';
   # Simon can add an authorized reporting destination later. No Jonathan SSH

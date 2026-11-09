@@ -6,6 +6,18 @@ user=${1:?Supply the desktop user}
 base=$(cd -- "$(dirname -- "$0")" && pwd)
 source /etc/os-release
 [[ $ID == ubuntu ]] || exit 2
+# Fonts are licensed host assets, never fetched from an unauthenticated public
+# source. Reuse the supplied host fonts or recover an earlier installed copy.
+for weight in Regular Medium; do
+  target="/usr/local/share/fonts/hp/HPFormaDJROffice-$weight.ttf"
+  if [[ ! -f $target ]]; then
+    source_font="/usr/share/sddm/themes/hp-os/fonts/HPForma-$weight.ttf"
+    if [[ -f $source_font ]]; then install -Dm644 "$source_font" "$target"; else
+      echo "Licensed HP Forma $weight font is missing from the host provisioning; branding remains pending." >&2
+      exit 2
+    fi
+  fi
+done
 # Preserve the installed HP-OS session. Never guess between unrelated desktops.
 session=$(python3 - <<'PY'
 import configparser,pathlib

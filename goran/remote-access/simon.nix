@@ -19,7 +19,7 @@ let
     name = "hp-os-remote-access-setup";
     runtimeInputs = [ pkgs.tmux ];
     text = ''
-      nom-tmux setup-simon-remote-access -- /usr/bin/sudo /usr/bin/bash ${./install-simon-system.sh}
+      nom-tmux setup-simon-remote-access -- /usr/bin/sudo /usr/bin/bash ${./install-simon-system.sh} ${../../fleet/ubuntu-branding}/refresh-managed.sh
       exec tmux attach -t setup-simon-remote-access
     '';
   };

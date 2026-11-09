@@ -10,7 +10,8 @@ home=$(getent passwd "$user" | cut -d: -f6)
 [[ $home == /home/simon ]] || exit 2
 # Initial setup and regular updates consume the same shared fleet branding.
 source_dir=$(cd -- "$(dirname -- "$0")" && pwd)
-bash "$source_dir/../../fleet/ubuntu-branding/refresh-managed.sh" "$user"
+branding_helper=${1:-$source_dir/../../fleet/ubuntu-branding/refresh-managed.sh}
+bash "$branding_helper" "$user"
 manifest="$home/.config/hp-os/remote-access.json"
 [[ -r $manifest ]] || { echo 'Activate the updated Simon profile first.' >&2; exit 2; }
 mapfile -t binaries < <(python3 - "$manifest" <<'PY'

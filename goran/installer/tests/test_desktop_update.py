@@ -17,6 +17,7 @@ class DesktopUpdateTest(unittest.TestCase):
         self.repo = self.root / 'repo'
         (self.repo / 'goran/installer').mkdir(parents=True)
         (self.repo / 'goran/installer/simon-home.nix').touch()
+        (self.repo / 'goran/installer/update-desktop.sh').write_text(SCRIPT.read_text().replace('set -euo pipefail', 'set -euo pipefail\nprintf resumed >> "$TEST_RESUMED"', 1))
         shutil.copyfile(SCRIPT.parent / 'desktop-update-guards.sh', self.repo / 'goran/installer/desktop-update-guards.sh')
         (self.repo / 'fleet/release').mkdir(parents=True)
         release = SCRIPT.parents[2] / 'fleet/release'
@@ -53,7 +54,8 @@ exit 2''')
                         XDG_STATE_HOME=str(self.root / 'state'),
                         NOM_DASHBOARD_PROGRESS_FILE=str(self.root / 'progress.json'),
                         TEST_NIX_ARGS=str(self.root / 'nix-args'),
-                        TEST_CANDIDATE=str(candidate), TEST_ACTIVATED=str(self.root / 'activated'))
+                        TEST_CANDIDATE=str(candidate), TEST_ACTIVATED=str(self.root / 'activated'),
+                        TEST_RESUMED=str(self.root / 'resumed'))
 
     def stub(self, name, text):
         p = self.bin / name
@@ -92,6 +94,7 @@ exit 2''')
         self.env['TEST_FETCH_ARGS'] = str(self.root / 'fetch-args')
         result = self.run_update('--worker', '--build-only')
         self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.root / 'resumed').read_text(), 'resumed')
         self.assertIn('refs/heads/fleet-stable', (self.root / 'fetch-args').read_text())
         records = list((self.root / 'state/simon-desktop-update').glob('*/published-revision'))
         self.assertEqual(len(records), 1)
