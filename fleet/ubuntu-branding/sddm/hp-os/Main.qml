@@ -6,7 +6,7 @@ Rectangle {
     property bool reducedMotion: String(config.reducedMotion).toLowerCase() === "true"
     property bool entranceDone: reducedMotion
     property bool raised: reducedMotion
-    property bool promptVisible: reducedMotion
+    property bool promptVisible: true
     onPromptVisibleChanged: { if (promptVisible) { if(username.text) password.forceActiveFocus(); else username.forceActiveFocus(); } }
     property bool choosingSession: false
     property bool changingUser: !userModel.lastUser
@@ -17,12 +17,12 @@ Rectangle {
     property real flight: 0
     property string brandFont: forma.status === FontLoader.Ready ? forma.name : "HP Forma DJR Office"
     property string headingFont: formaMedium.status === FontLoader.Ready ? formaMedium.name : brandFont
-    property real flightSpeed: reducedMotion || authenticated ? 0 : (busy ? 0.85 : (entranceDone ? 0 : 0.24))
+    property real flightSpeed: reducedMotion || authenticated ? 0 : (busy ? 0.85 : (entranceDone ? 0 : (brandFrame < 115 ? 0.025 : 0.42)))
     Behavior on flightSpeed { NumberAnimation { duration: root.reducedMotion ? 0 : 900; easing.type: Easing.InOutSine } }
     FontLoader { id: formaMedium; source: "fonts/HPForma-Medium.ttf" }
     FontLoader { id: forma; source: "fonts/HPForma-Regular.ttf" }
-    Image { anchors.fill: parent; source: "images/starfield.png"; fillMode: Image.PreserveAspectCrop; opacity: 0.5; asynchronous: true }
-    StarFlight { width: parent.width / 2; height: parent.height / 2; scale: 2; transformOrigin: Item.TopLeft; phase: root.flight; warp: root.flightSpeed; opacity: 0.6 }
+    Image { anchors.fill: parent; source: "images/starfield.png"; fillMode: Image.PreserveAspectCrop; opacity: root.brandFrame < 115 ? 0.08 : 0.5; asynchronous: true; Behavior on opacity { NumberAnimation { duration: root.reducedMotion ? 0 : 1400; easing.type: Easing.InOutSine } } }
+    StarFlight { width: parent.width / 2; height: parent.height / 2; scale: 2; transformOrigin: Item.TopLeft; phase: root.flight; warp: root.flightSpeed; opacity: root.brandFrame < 115 ? 0 : 0.6; Behavior on opacity { NumberAnimation { duration: root.reducedMotion ? 0 : 1400; easing.type: Easing.InOutSine } } }
     // Time-based movement avoids a speed change under software-rendering load.
     Timer {
         property double previous: 0
@@ -32,22 +32,24 @@ Rectangle {
     }
     Rectangle { anchors.fill: parent; color: "#030914"; opacity: root.entered ? 0 : 1; Behavior on opacity { NumberAnimation { duration: root.reducedMotion ? 0 : 1000; easing.type: Easing.InOutSine } } }
     Timer { interval: 100; running: !root.reducedMotion; onTriggered: root.entered = true }
-    Timer { interval: 3300; running: true; onTriggered: root.entranceDone = true }
-    Timer { interval: 1100; running: !root.reducedMotion; onTriggered: root.raised = true }
-    Timer { interval: 1850; running: !root.reducedMotion; onTriggered: root.promptVisible = true }
-    // Keep the approved logo intact. Its reveal and placement carry the brand.
+    // One six-second brand transformation. Controls remain usable throughout.
+    Timer { interval: 6000; running: !root.reducedMotion; onTriggered: root.entranceDone = true }
+    property double brandStarted: 0
+    property int brandFrame: root.reducedMotion ? 180 : 0
+    Timer {
+        interval: 16; running: !root.reducedMotion && root.brandFrame < 180; repeat: true
+        onTriggered: {
+            if (!root.brandStarted) root.brandStarted = Date.now();
+            root.brandFrame = Math.min(180, Math.floor((Date.now() - root.brandStarted) * 30 / 1000));
+        }
+    }
     Image {
-        source: "images/hp-logo.png"; fillMode: Image.PreserveAspectFit
-        width: 136 * root.uiScale; height: width
-        sourceSize.width: Math.ceil(width * 2); sourceSize.height: sourceSize.width
-        smooth: true; mipmap: true
+        // Shared offline-rendered glow avoids expensive live blur and geometry work.
+        source: "images/morph-" + ("000" + root.brandFrame).slice(-3) + ".png"
+        width: 480 * root.uiScale; height: 200 * root.uiScale
+        fillMode: Image.PreserveAspectFit; smooth: true; cache: false
         anchors.horizontalCenter: parent.horizontalCenter
-        y: root.height * (root.raised ? 0.23 : 0.5) - height / 2
-        scale: root.raised ? 0.66 : 1
-        opacity: root.entered ? 1 : 0
-        Behavior on y { NumberAnimation { duration: root.reducedMotion ? 0 : 1450; easing.type: Easing.InOutSine } }
-        Behavior on scale { NumberAnimation { duration: root.reducedMotion ? 0 : 1450; easing.type: Easing.InOutSine } }
-        Behavior on opacity { NumberAnimation { duration: root.reducedMotion ? 0 : 900; easing.type: Easing.InOutSine } }
+        y: root.height * 0.23 - height / 2
     }
     property int selectedSession: sessionModel.lastIndex >= 0 ? sessionModel.lastIndex : 0
     property bool busy: false

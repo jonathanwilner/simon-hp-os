@@ -35,13 +35,15 @@ from an active desktop merely to preview the theme.
 
 ## Motion and typography
 
-The boot and login themes use the approved HP logo as their primary identity.
-The logo stays intact, with clear space and restrained outward star motion.
-The login theme uses HP Forma Medium for the welcome heading and Regular for
-controls. HP-OS remains the technical theme/session name where identification
-requires it; it is not repeated as decorative copy. Native sine easing and
-time-based motion soften the entrance and deceleration. Login animation never controls authentication or
-adds a fixed delay before the desktop starts.
+The boot and login sequence reveals the original circular HP logo, carries its
+circle into the O of HP-OS once, then resolves into the modern four-slash logo
+and starfield. Blue-white glow connects the phases. HP Forma Medium shapes the
+wordmark and headings; Regular keeps controls clear. Eased position, opacity,
+glow and star velocity preserve continuity. Login animation never controls
+authentication or adds a fixed delay before the desktop starts. The native
+sequence keeps the O in place while it fades into the final slash logo; the
+full-screen concept video expands the O into a portal. This keeps native
+controls clear and prevents a cropped portal edge.
 
 HP Forma is supplied privately from
 `/usr/local/share/fonts/hp/HPFormaDJROffice-Regular.ttf`, or an explicit
@@ -59,6 +61,6 @@ Set `reducedMotion=true` in
 without movement. Theme installation currently resets this setting to false.
 The normal entrance is bounded and the star redraw timer stops at idle.
 
-An editable alternative made with Open Design's motion-design skill is in
+A historical alternative made with Open Design's motion-design skill is in
 `concepts/open-design-arrival`. Its browser controls simulate login. The native
 SDDM theme retains real authentication and system controls.

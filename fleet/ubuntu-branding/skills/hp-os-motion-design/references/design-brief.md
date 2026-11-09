@@ -1,6 +1,6 @@
 # HP-OS star-flight direction
 
-The user requested HP branding and fonts, an HP-logo reveal followed by a transition resembling movement through stars. The 8 Nov revision removes repeated HP-OS display text, uses HP Forma Medium/Regular, and softens acceleration and deceleration. Use original assets and choreography; no HarmonyOS assets are copied.
+The corrected direction restores the original circular HP logo, the visible HP-OS identity, luminous transitions, and the modern four-slash HP logo. Reveal the circular mark, move and reshape its circle continuously into the O of HP-OS exactly once, hold the wordmark long enough to read, then move into the starfield and modern logo. Use HP Forma Medium/Regular and eased position, opacity, glow and star velocity. The user explicitly requested the circle-to-O transformation. Avoid repeating HP-OS in decorative footers or adding a second reveal. Use original assets and choreography; no HarmonyOS assets are copied.
 
 Native implementation lives in `fleet/ubuntu-branding/plymouth` and `fleet/ubuntu-branding/sddm/hp-os` in the simon-hp-os repository. The public package stages the theme; licensed HP Forma is supplied from the host at installation.
 

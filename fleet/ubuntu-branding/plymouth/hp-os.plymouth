@@ -1,6 +1,6 @@
 [Plymouth Theme]
 Name=HP-OS
-Description=HP-OS wordmark reveal and starflight
+Description=Glowing HP circle-to-O reveal, HP-OS and modern HP slash starflight
 ModuleName=script
 
 [script]

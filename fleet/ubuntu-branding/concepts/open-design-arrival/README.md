@@ -8,11 +8,12 @@ Serve this directory with a local HTTP server, then open `index.html`. Copy a pr
 
 The page is a design preview. Its password field, sign-in button, session switch and power control do not authenticate or modify the host. The input is cleared when preview sign-in is pressed. No data is transmitted.
 
-## Current logo-led revision
+## Historical logo-led revision
 
 The 8 Nov revision uses the approved HP keyline logo, HP Forma Medium headings,
 Regular controls, overlapping sine-eased entrances and quintic star travel.
-The native QML version follows the same visual hierarchy while retaining real
+This prototype predates the corrected circle-to-O and modern slash sequence.
+The native QML theme retains real
 authentication, errors, user/session selection, keyboard navigation and power
 confirmation. The browser remains a simulated design preview.
 

@@ -5,13 +5,20 @@ width = Window.GetWidth();
 height = Window.GetHeight();
 cx = Window.GetX() + width / 2;
 cy = Window.GetY() + height / 2;
-logo.image = Image("watermark.png");
-# One resize at startup. The approved circular HP logo retains its aspect ratio.
-logo_size = Math.Min(width * 0.16, height * 0.18);
-logo.image = logo.image.Scale(logo_size, logo.image.GetHeight() * logo_size / logo.image.GetWidth());
-logo.sprite = Sprite(logo.image);
-logo.sprite.SetPosition(cx - logo.image.GetWidth() / 2, cy - logo.image.GetHeight() / 2, 100);
-logo.sprite.SetOpacity(0);
+# The same six-second circle-to-O / HP-OS / modern slash sequence as SDDM.
+# 181 bounded 480x200 RGBA frames use at most 69 MB decoded. Scale once only
+# on small displays; no live blur or resizing in the refresh callback.
+logo_width = Math.Min(480, width * 0.8);
+for (i = 0; i < 181; i++) {
+  digits = "" + i;
+  if (i < 10) digits = "00" + i;
+  else if (i < 100) digits = "0" + i;
+  logo.images[i] = Image("morph-" + digits + ".png");
+  if (logo_width < 480) logo.images[i] = logo.images[i].Scale(logo_width, logo_width * 200 / 480);
+}
+logo.sprite = Sprite(logo.images[0]);
+logo.sprite.SetPosition(cx - logo_width / 2, cy - logo_width * 200 / 480 / 2, 100);
+logo.sprite.SetOpacity(1);
 
 # Precompute rotations/scales once. Frame updates change only position/opacity.
 trail = Image("streak.png");
@@ -30,11 +37,9 @@ status = "normal";
 frame = 0;
 fun refresh() {
   global.frame++;
-  reveal = Math.Min(1, frame / 50);
-  # Quintic easing has zero velocity and acceleration at both endpoints.
-  reveal = reveal * reveal * reveal * (reveal * (reveal * 6 - 15) + 10);
-  logo.sprite.SetOpacity(reveal);
-  logo.sprite.SetY(cy - logo.image.GetHeight() / 2 + (1 - reveal) * 10);
+  # Plymouth refresh runs at 50 Hz; a sequence never delays quit or prompts.
+  brand_frame = Math.Min(180, Math.Int(frame * 30 / 50));
+  logo.sprite.SetImage(logo.images[brand_frame]);
   if (status == "normal") {
     for (i = 0; i < 72; i++) {
       star[i].depth -= 0.0028;
@@ -45,7 +50,7 @@ fun refresh() {
       level = Math.Min(11, Math.Int(distance / 62));
       star[i].sprite.SetImage(star[i].image[level]);
       star[i].sprite.SetPosition(x, y, 1);
-      entrance = Math.Clamp((frame - 25) / 65, 0, 1);
+      entrance = Math.Clamp((frame - 175) / 125, 0, 1);
       entrance = entrance * entrance * (3 - 2 * entrance);
       opacity = entrance * Math.Clamp((distance - 110) / 250, 0, 0.65) * Math.Clamp((star[i].depth - 0.06) / 0.12, 0, 1);
       if (x < 0 || x > width || y < 0 || y > height) opacity = 0;

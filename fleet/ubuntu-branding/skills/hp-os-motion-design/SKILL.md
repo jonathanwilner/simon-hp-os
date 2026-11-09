@@ -9,8 +9,8 @@ Deliver editable source, reproducible assets, runtime themes and a reviewed prev
 
 ## Design and assets
 
-- Use the existing HP brand kit and licensed HP Forma font available on the host. Keep proprietary font binaries and credentials out of public source. Use the approved HP logo as the primary identity. Keep `HP-OS` text only where the product or session needs explicit identification. Use HP Forma Medium for headings and Regular for controls; never rely on generated lettering or redraw logo geometry.
-- For this direction: intact approved HP logo, near-black blue space, restrained HP blue accents, quiet center and sparse stars that travel outward from a central vanishing point. Keep the password and session controls clear throughout motion.
+- Use the existing HP brand kit and licensed HP Forma font available on the host. Keep proprietary font binaries and credentials out of public source. Use HP Forma Medium for the explicit `HP-OS` reveal and Regular for controls. The approved sequence starts with the original circular HP logo, carries its circle continuously into the O of HP-OS once, then resolves into the modern four-slash HP logo over the starfield. Use the original logo geometry at the opening and closing endpoints. Never rely on generated lettering.
+- For this direction: a visible blue-white optical glow, a smooth single circle-to-O morph, a readable HP-OS hold, and the modern slash logo over near-black blue space. Use sparse stars that travel outward from a central vanishing point. Avoid hard cuts, repeated wordmark reveals, and abrupt speed changes. Keep the password and session controls clear throughout motion.
 - Generate bitmap atmosphere with the available image-generation tool. Ask for no text, logos or controls. Save the prompt, output provenance and resulting asset in the project. Draw typography and motion in code.
 - Offer a distinct alternative only when requested. Label concept previews separately from actual native renderer output.
 
