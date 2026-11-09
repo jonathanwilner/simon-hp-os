@@ -3,7 +3,7 @@ let
   catalogue = builtins.fromJSON (builtins.readFile ./microsoft365-webapps/apps.json);
   # Host wrappers retain their established profile and hardware configuration.
   # New fleet devices get native Chrome without Goran's NVIDIA-specific flags.
-  browser = pkgs.callPackage ../../fleet/chrome-channels/package.nix {
+  browser = if (pkgs.google-chrome.channel or null) == "stable" then pkgs.google-chrome else pkgs.callPackage ../../fleet/chrome-channels/package.nix {
     channel = "stable";
     google-chrome = pkgs.google-chrome;
   };
