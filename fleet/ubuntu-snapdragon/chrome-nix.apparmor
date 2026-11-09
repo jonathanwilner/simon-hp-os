@@ -1,0 +1,8 @@
+abi <abi/5.0>,
+include <tunables/global>
+
+# Permit Chrome's user namespace sandbox for root-owned Nix store binaries.
+profile chrome-nix /nix/store/*-google-chrome-*/share/google/chrome/chrome flags=(unconfined) {
+  userns,
+  @{exec_path} mr,
+}

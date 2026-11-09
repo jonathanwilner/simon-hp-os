@@ -59,3 +59,40 @@ terminal, MIME and DMS preferences are preserved.
 The full comparison and host-specific exclusions are recorded in
 [`../session/PARITY-AUDIT.md`](../session/PARITY-AUDIT.md). NVIDIA environment,
 Goran panel calibration, pairing credentials and suspend policy stay host-owned.
+
+## Small online installer and updater
+
+The Ubuntu ISO needs only a launcher for `bootstrap.sh`. After booting the
+installed system, run it from the new user's terminal:
+
+```sh
+bash bootstrap.sh --source-revision FULL_PUBLIC_COMMIT
+```
+
+The installer launcher pins that commit and downloads the script over HTTPS.
+The bootstrap installs native prerequisites and official multi-user Nix when
+needed, then fetches that same public revision. It generates a small private
+Home Manager consumer containing the actual user, home directory and detected
+board. There is no private repository, host key, or personal account dependency.
+Desktop packages download on the installed system; they are not added to the ISO.
+
+The build runs through `nom-tmux` with two jobs and two cores. Home Manager backs
+up colliding configuration files, retains the previous generation and attempts
+rollback on activation failure. Native integration adds HP-OS and DMS sessions,
+Ubuntu-compatible lock authentication, GPU setup and Chrome sandbox support.
+The current desktop and GNOME session remain available. System integration
+backups live in `/var/lib/hp-os-snapdragon/`. A failure leaves the setup incomplete
+and rerunning is supported. Setup requires Internet, free disk space and sudo.
+
+Use **Update HP-OS Desktop** or `hp-os-snapdragon-update` after installation.
+Updates default to the installed pinned revision. Select a newer reviewed commit
+with `--source-revision COMMIT`, or use `--channel fleet-stable` after that channel
+contains Snapdragon support. An incompatible channel fails without activating;
+there is no automatic fallback to development `main`. `--build-only` builds the
+candidate and skips Home Manager activation and native integration, but may
+install build prerequisites. Bootstrap refuses a Casper live session and root.
+
+The current bootstrap adds the desktop and login choices. Changing the active
+display manager, applying boot/login branding, enrolling accounts and installing
+optional hardware services remain separate explicit actions. Existing branding
+is refreshed by the same native integration used by the live Snapdragon host.
