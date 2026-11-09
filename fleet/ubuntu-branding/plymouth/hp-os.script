@@ -1,0 +1,113 @@
+# Native Plymouth script. Animation is decorative, never a boot completion gate.
+Window.SetBackgroundTopColor(0.008, 0.016, 0.035);
+Window.SetBackgroundBottomColor(0.008, 0.016, 0.035);
+width = Window.GetWidth();
+height = Window.GetHeight();
+cx = Window.GetX() + width / 2;
+cy = Window.GetY() + height / 2;
+logo.image = Image("watermark.png");
+if (logo.image.GetWidth() > width * 0.42)
+  logo.image = logo.image.Scale(width * 0.42, logo.image.GetHeight() * width * 0.42 / logo.image.GetWidth());
+logo.sprite = Sprite(logo.image);
+logo.sprite.SetPosition(cx - logo.image.GetWidth() / 2, cy - logo.image.GetHeight() / 2, 100);
+logo.sprite.SetOpacity(0);
+
+# Precompute rotations/scales once. Frame updates change only position/opacity.
+trail = Image("streak.png");
+for (i = 0; i < 72; i++) {
+  angle = i * 2.39996323;
+  star[i].dx = Math.Cos(angle);
+  star[i].dy = Math.Sin(angle);
+  star[i].depth = 0.08 + (i * 37 % 100) / 108;
+  for (j = 0; j < 4; j++)
+    star[i].image[j] = trail.Scale(4 + j * 24, 1 + j).Rotate(angle);
+  star[i].sprite = Sprite(star[i].image[0]);
+  star[i].sprite.SetZ(1);
+  star[i].sprite.SetOpacity(0);
+}
+status = "normal";
+frame = 0;
+fun refresh() {
+  global.frame++;
+  reveal = Math.Min(1, frame / 38);
+  logo.sprite.SetOpacity(reveal * (0.999 + (frame % 2) * 0.001));
+  logo.sprite.SetY(cy - logo.image.GetHeight() / 2 + (1 - reveal) * 10);
+  if (status == "normal") {
+    for (i = 0; i < 72; i++) {
+      star[i].depth -= 0.0042;
+      if (star[i].depth < 0.06) star[i].depth = 1;
+      distance = (1 / star[i].depth - 1) * 90 + 110;
+      x = cx + star[i].dx * distance;
+      y = cy + star[i].dy * distance * 0.66;
+      level = Math.Min(3, Math.Int(distance / 170));
+      star[i].sprite.SetImage(star[i].image[level]);
+      star[i].sprite.SetPosition(x, y, 1);
+      opacity = Math.Clamp((frame - 32) / 36, 0, 1) * Math.Clamp((distance - 110) / 230, 0, 0.85);
+      if (x < 0 || x > width || y < 0 || y > height) opacity = 0;
+      star[i].sprite.SetOpacity(opacity);
+    }
+  } else {
+    for (i = 0; i < 72; i++) star[i].sprite.SetOpacity(0);
+  }
+}
+Plymouth.SetRefreshFunction(refresh);
+
+prompt_sprite = Sprite();
+entry_sprite = Sprite();
+layout_sprite = Sprite();
+message_sprite = Sprite();
+progress_sprite = Sprite();
+progress_image = Image("progress.png");
+fun centered_text(sprite, text, y) {
+  image = Image.Text(text, 0.94, 0.97, 1, 1, "Sans 14", "center");
+  if (image.GetWidth() > width * 0.9)
+    image = image.Scale(width * 0.9, image.GetHeight() * width * 0.9 / image.GetWidth());
+  sprite.SetImage(image);
+  sprite.SetPosition(cx - image.GetWidth() / 2, y, 1000);
+  sprite.SetOpacity(1);
+}
+fun normal() {
+  global.status = "normal";
+  prompt_sprite.SetOpacity(0);
+  entry_sprite.SetOpacity(0);
+  layout_sprite.SetOpacity(0);
+}
+fun password(prompt, bullets) {
+  global.status = "password";
+  centered_text(prompt_sprite, prompt, cy + 90);
+  text = "";
+  # Limit the displayed bullet row; Plymouth retains the full entered secret.
+  for (i = 0; i < Math.Min(bullets, 48); i++) text += "•";
+  if (bullets == 0) text = "_";
+  centered_text(entry_sprite, text, cy + 125);
+  layout = Plymouth.GetKeyboardLayout();
+  if (layout) centered_text(layout_sprite, layout, cy + 165);
+  else layout_sprite.SetOpacity(0);
+}
+fun question(prompt, entry) {
+  global.status = "question";
+  centered_text(prompt_sprite, prompt, cy + 90);
+  centered_text(entry_sprite, entry, cy + 125);
+  layout_sprite.SetOpacity(0);
+}
+fun message(text) {
+  centered_text(message_sprite, text, height * 0.88);
+}
+fun hide_message(text) { message_sprite.SetOpacity(0); }
+fun update(progress) {
+  # Actual Plymouth system-update progress only, never a synthetic boot meter.
+  fraction = Math.Clamp(progress / 100, 0, 1);
+  progress_sprite.SetImage(progress_image.Scale(Math.Max(1, 320 * fraction), 3));
+  progress_sprite.SetPosition(cx - 160, height * 0.80, 1000);
+  progress_sprite.SetOpacity(1);
+}
+fun boot_progress(duration, fraction) { global.boot_fraction = fraction; }
+Plymouth.SetBootProgressFunction(boot_progress);
+fun quit() { logo.sprite.SetOpacity(1); }
+Plymouth.SetDisplayNormalFunction(normal);
+Plymouth.SetDisplayPasswordFunction(password);
+Plymouth.SetDisplayQuestionFunction(question);
+Plymouth.SetDisplayMessageFunction(message);
+Plymouth.SetHideMessageFunction(hide_message);
+Plymouth.SetSystemUpdateFunction(update);
+Plymouth.SetQuitFunction(quit);

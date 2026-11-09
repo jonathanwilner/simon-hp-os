@@ -1,65 +1,8 @@
 [Plymouth Theme]
 Name=HP-OS
-Description=HP-OS boot and shutdown splash
-ModuleName=two-step
+Description=HP-OS wordmark reveal and starflight
+ModuleName=script
 
-[two-step]
-Font=Sans 12
-TitleFont=Sans Light 30
+[script]
 ImageDir=/usr/share/plymouth/themes/hp-os
-DialogHorizontalAlignment=.5
-DialogVerticalAlignment=.7
-TitleHorizontalAlignment=.5
-TitleVerticalAlignment=.382
-HorizontalAlignment=.5
-VerticalAlignment=.7
-WatermarkHorizontalAlignment=.5
-WatermarkVerticalAlignment=.40
-Transition=none
-TransitionDuration=0.0
-BackgroundStartColor=0x101827
-BackgroundEndColor=0x101827
-ProgressBarBackgroundColor=0x606060
-ProgressBarForegroundColor=0xbad5ee
-DialogClearsFirmwareBackground=true
-MessageBelowAnimation=true
-
-[boot-up]
-UseEndAnimation=false
-UseFirmwareBackground=false
-
-[shutdown]
-UseEndAnimation=false
-UseFirmwareBackground=false
-
-[reboot]
-UseEndAnimation=false
-UseFirmwareBackground=false
-
-[updates]
-SuppressMessages=true
-ProgressBarShowPercentComplete=true
-UseProgressBar=true
-Title=Installing Updates...
-SubTitle=Do not turn off your computer
-
-[system-upgrade]
-SuppressMessages=true
-ProgressBarShowPercentComplete=true
-UseProgressBar=true
-Title=Upgrading System...
-SubTitle=Do not turn off your computer
-
-[firmware-upgrade]
-SuppressMessages=true
-ProgressBarShowPercentComplete=true
-UseProgressBar=true
-Title=Upgrading Firmware...
-SubTitle=Do not turn off your computer
-
-[system-reset]
-SuppressMessages=true
-ProgressBarShowPercentComplete=true
-UseProgressBar=true
-Title=Resetting System...
-SubTitle=Do not turn off your computer
+ScriptFile=/usr/share/plymouth/themes/hp-os/hp-os.script
