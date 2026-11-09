@@ -27,7 +27,7 @@ Rectangle {
         border.color: activeFocus ? "#6bdcff" : "#346075"
         opacity: enabled ? 1 : 0.5
         activeFocusOnTab: true
-        Text { anchors.centerIn: parent; text: parent.label; color: "white"; font.pixelSize: 15 }
+        Text { anchors.centerIn: parent; width: parent.width - 20; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight; text: parent.label; color: "white"; font.pixelSize: 15 }
         MouseArea { id: mouse; anchors.fill: parent; hoverEnabled: true; onClicked: parent.clicked() }
         Keys.onReturnPressed: clicked()
         Keys.onSpacePressed: clicked()
