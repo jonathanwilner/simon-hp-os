@@ -12,16 +12,32 @@ let
     unset GBM_BACKEND __GLX_VENDOR_LIBRARY_NAME
   '';
   panelResume = pkgs.writeShellScriptBin "snapdragon-panel-resume" ''
+    exec > >(${pkgs.systemd}/bin/systemd-cat -t snapdragon-panel-resume) 2>&1
+    echo "Panel recovery requested: mode=''${1:-manual} socket=''${NIRI_SOCKET:-unset}"
     exec 9>"$XDG_RUNTIME_DIR/snapdragon-panel-resume.lock"
-    ${pkgs.util-linux}/bin/flock -n 9 || exit 0
-    ${pkgs.coreutils}/bin/timeout 5 ${pkgs.niri}/bin/niri msg action power-off-monitors || exit 1
+    ${pkgs.util-linux}/bin/flock -n 9 || { echo "Recovery already running"; exit 0; }
+    # logind's resume signal can precede completion of compositor recovery.
+    # Keep manual recovery immediate; give the automatic path time to settle.
+    if [[ "''${1:-}" == --after-resume ]]; then
+      ${pkgs.coreutils}/bin/sleep 3
+    fi
+    if ! ${pkgs.coreutils}/bin/timeout 5 ${pkgs.niri}/bin/niri msg action power-off-monitors; then
+      echo "Panel power-off request failed"
+      exit 1
+    fi
     ${pkgs.coreutils}/bin/sleep 2
-    ${pkgs.coreutils}/bin/timeout 5 ${pkgs.niri}/bin/niri msg action power-on-monitors
+    if ! ${pkgs.coreutils}/bin/timeout 5 ${pkgs.niri}/bin/niri msg action power-on-monitors; then
+      echo "Panel power-on request failed"
+      exit 1
+    fi
+    echo "Panel power-cycle requests accepted; physical display acceptance remains separate"
   '';
   resumeWatcher = pkgs.writeShellScriptBin "snapdragon-resume-watch" ''
+    exec > >(${pkgs.systemd}/bin/systemd-cat -t snapdragon-resume-watch) 2>&1
     exec 9>"$XDG_RUNTIME_DIR/snapdragon-resume-watch.lock"
     ${pkgs.util-linux}/bin/flock -n 9 || exit 0
-    exec ${pkgs.swayidle}/bin/swayidle -w after-resume ${panelResume}/bin/snapdragon-panel-resume
+    echo "Watching logind resume events: socket=''${NIRI_SOCKET:-unset}"
+    exec ${pkgs.swayidle}/bin/swayidle -d -w after-resume "${panelResume}/bin/snapdragon-panel-resume --after-resume"
   '';
   hpSession = pkgs.writeShellScriptBin "hp-os-session" ''
     ${environment}
