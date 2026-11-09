@@ -9,6 +9,9 @@ exec 9>"$XDG_RUNTIME_DIR/hp-os-fleet-session-${WAYLAND_DISPLAY//\//_}.lock"
 flock -n 9 || exit 0
 children=()
 cleanup() {
+  if command -v relay-control >/dev/null; then
+    relay-control session-stop >/dev/null 2>&1 || true
+  fi
   if (( ${#children[@]} )); then
     kill "${children[@]}" 2>/dev/null || true
     wait "${children[@]}" 2>/dev/null || true
@@ -67,6 +70,11 @@ fi
 if ! session_has_process '/(polkit[^ ]*agent[^ ]*|polkit-kde-authentication-agent-1|lxqt-policykit-agent|mate-polkit)( |$)'; then
   "$HP_OS_FLEET_POLKIT_AGENT" &
   children+=("$!")
+fi
+# Relay bridges to the real user manager and records this display without
+# exporting HP-OS's private D-Bus. This is a no-op until explicitly enrolled.
+if command -v relay-control >/dev/null; then
+  relay-control session-start || echo "Relay session startup unavailable" >&2
 fi
 # Niri removes its IPC socket at session exit. This keeps services tied to the
 # correct compositor without requiring a systemd manager on the private bus.
