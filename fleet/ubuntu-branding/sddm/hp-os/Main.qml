@@ -38,7 +38,7 @@ Rectangle {
         border.color: activeFocus ? "#6bdcff" : "#346075"
         opacity: enabled ? 1 : 0.5
         activeFocusOnTab: true
-        Text { anchors.centerIn: parent; width: parent.width - 20; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight; text: parent.label; color: "white"; font.pixelSize: 15; font.family: root.brandFont }
+        Text { font.family: root.brandFont; anchors.centerIn: parent; width: parent.width - 20; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight; text: parent.label; color: "white"; font.pixelSize: 15 }
         MouseArea { id: mouse; anchors.fill: parent; hoverEnabled: true; onClicked: parent.clicked() }
         Keys.onReturnPressed: clicked()
         Keys.onSpacePressed: clicked()
@@ -49,32 +49,32 @@ Rectangle {
         scale: Math.min(2, Math.max(1, root.height / 900)) * (root.authenticated ? 1.12 : (root.entered ? 1 : 0.94))
         Behavior on opacity { NumberAnimation { duration: root.authenticated ? 500 : 1400; easing.type: Easing.OutCubic } }
         Behavior on scale { NumberAnimation { duration: 1400; easing.type: Easing.OutCubic } }
-        Text { text: "HP-OS"; color: "#ffffff"; font.pixelSize: 64; font.family: root.brandFont; font.weight: Font.Normal; font.letterSpacing: -2 }
-        Text { text: sddm.hostName; color: "#9eb2c0"; font.pixelSize: 14; width: parent.width; elide: Text.ElideRight }
-        Text { text: root.message; color: "#c8d9e3"; font.pixelSize: 15; width: parent.width; wrapMode: Text.Wrap }
+        Text { font.family: root.brandFont; text: "HP-OS"; color: "#ffffff"; font.pixelSize: 64; font.weight: Font.Normal; font.letterSpacing: -2 }
+        Text { font.family: root.brandFont; text: sddm.hostName; color: "#9eb2c0"; font.pixelSize: 14; width: parent.width; elide: Text.ElideRight }
+        Text { font.family: root.brandFont; text: root.message; color: "#c8d9e3"; font.pixelSize: 15; width: parent.width; wrapMode: Text.Wrap }
         Rectangle {
             width: parent.width; height: 48; radius: 8; color: "#1b2b38"; border.color: username.activeFocus ? "#6bdcff" : "#405563"
-            TextInput {
+            TextInput { font.family: root.brandFont;
                 id: username; anchors.fill: parent; anchors.margins: 14
-                text: userModel.lastUser; color: "white"; font.pixelSize: 16; font.family: root.brandFont; clip: true
+                text: userModel.lastUser; color: "white"; font.pixelSize: 16; clip: true
                 selectByMouse: true; enabled: !root.busy
                 KeyNavigation.tab: password
                 Keys.onReturnPressed: password.forceActiveFocus()
-                Text { text: "Username"; color: "#9eb2c0"; visible: !username.text && !username.activeFocus }
+                Text { font.family: root.brandFont; text: "Username"; color: "#9eb2c0"; visible: !username.text && !username.activeFocus }
             }
         }
         Rectangle {
             width: parent.width; height: 48; radius: 8; color: "#1b2b38"; border.color: password.activeFocus ? "#6bdcff" : "#405563"
-            TextInput {
+            TextInput { font.family: root.brandFont;
                 id: password; anchors.fill: parent; anchors.margins: 14
-                color: "white"; font.pixelSize: 16; font.family: root.brandFont; clip: true; echoMode: TextInput.Password
+                color: "white"; font.pixelSize: 16; clip: true; echoMode: TextInput.Password
                 enabled: !root.busy; selectByMouse: true
                 Keys.onReturnPressed: root.login()
-                Text { text: "Password"; color: "#9eb2c0"; visible: !password.text && !password.activeFocus }
+                Text { font.family: root.brandFont; text: "Password"; color: "#9eb2c0"; visible: !password.text && !password.activeFocus }
             }
         }
         Action { width: parent.width; label: root.busy ? "Signing in…" : "Sign in"; enabled: !root.busy; onClicked: root.login() }
-        Text { text: "Desktop"; color: "#9eb2c0"; font.pixelSize: 13 }
+        Text { font.family: root.brandFont; text: "Desktop"; color: "#9eb2c0"; font.pixelSize: 13 }
         Flow {
             width: parent.width; spacing: 8
             Repeater {
