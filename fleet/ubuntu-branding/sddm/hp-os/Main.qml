@@ -46,7 +46,7 @@ Rectangle {
     Column {
         anchors.centerIn: parent; width: Math.min(420, root.width - 48); spacing: 18
         opacity: root.authenticated ? 0 : (root.entered ? 1 : 0)
-        scale: root.authenticated ? 1.12 : (root.entered ? 1 : 0.94)
+        scale: Math.min(2, Math.max(1, root.height / 900)) * (root.authenticated ? 1.12 : (root.entered ? 1 : 0.94))
         Behavior on opacity { NumberAnimation { duration: root.authenticated ? 500 : 1400; easing.type: Easing.OutCubic } }
         Behavior on scale { NumberAnimation { duration: 1400; easing.type: Easing.OutCubic } }
         Text { text: "HP-OS"; color: "#ffffff"; font.pixelSize: 64; font.family: root.brandFont; font.weight: Font.Normal; font.letterSpacing: -2 }
