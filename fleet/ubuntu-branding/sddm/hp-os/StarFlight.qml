@@ -5,11 +5,14 @@ Canvas {
     id: stars
     property real phase: 0
     property real warp: 0.12
+    canvasSize: Qt.size(Math.ceil(width / 2), Math.ceil(height / 2))
     renderTarget: Canvas.Image
     onPhaseChanged: requestPaint()
     onPaint: {
         var ctx = getContext("2d");
+        ctx.reset();
         ctx.clearRect(0, 0, width, height);
+        ctx.scale(0.5, 0.5);
         var cx = width * 0.5, cy = height * 0.42;
         var span = Math.max(width, height);
         for (var i = 0; i < 100; i++) {
