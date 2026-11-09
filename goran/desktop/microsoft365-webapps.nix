@@ -52,6 +52,24 @@ in {
     $DRY_RUN_CMD ${pkgs.python3}/bin/python3 ${./microsoft365-webapps/seed-desktop.py}
   '';
 
+  # A new account may activate Home Manager before HP-OS creates its layout.
+  # Seed that first layout when it appears; keep later user edits unchanged.
+  systemd.user.paths.microsoft365-desktop = {
+    Unit.Description = "Seed Microsoft 365 icons after the first HP-OS login";
+    Path.PathChanged = "%h/.local/state/hp-os/user/desktop-items.json";
+    Install.WantedBy = [ "default.target" ];
+  };
+  systemd.user.services.microsoft365-desktop = {
+    Unit = {
+      Description = "Seed the shared Microsoft 365 desktop catalogue";
+      ConditionPathExists = "!%h/.local/state/hp-os/user/microsoft365-desktop-v1.json";
+    };
+    Service = {
+      Type = "oneshot";
+      ExecStart = "${pkgs.python3}/bin/python3 ${./microsoft365-webapps/seed-desktop.py}";
+    };
+  };
+
   # Actual executable .desktop files give the HP-OS desktop the same app icons.
   home.file = builtins.listToAttrs (map ({ app, desktop }: {
     name = "${desktopDir}/${app.name}.desktop";
