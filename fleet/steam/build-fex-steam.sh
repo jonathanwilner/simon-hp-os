@@ -4,7 +4,7 @@ set -euo pipefail
 rev=14c92681f4d62cf84d901460e0358de09c8847a7
 src=${FEX_SOURCE:-$HOME/src/FEX-latest}
 depot=${FEX_STEAM_PREFIX:-$HOME/.local/opt/fex-steam-$rev}
-export PATH=/usr/bin:/bin CC=/usr/bin/clang-21 CXX=/usr/bin/clang++-21
+export PATH=/usr/lib/llvm-21/bin:/usr/bin:/bin CC=/usr/bin/clang-21 CXX=/usr/bin/clang++-21
 [[ $(git -C "$src" rev-parse HEAD) == "$rev" ]]
 cmake -S "$src" -B "$src/build-steam" -G Ninja \
   -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr \
