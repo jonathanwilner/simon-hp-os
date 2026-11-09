@@ -52,6 +52,11 @@ if [[ ! -f $state/complete ]]; then
 fi
 mkdir -p /usr/share/sddm/themes/hp-os
 cp -a "$base/sddm/hp-os/." /usr/share/sddm/themes/hp-os/
+# Proprietary HP font stays on the host; public source contains no font binary.
+font_source=${HP_OS_FORMA_FONT:-/usr/local/share/fonts/hp/HPFormaDJROffice-Regular.ttf}
+if [[ -f $font_source ]]; then
+    install -Dm644 "$font_source" /usr/share/sddm/themes/hp-os/fonts/HPForma-Regular.ttf
+fi
 printf '[General]\npreferredSession=%s.desktop\n' "$session" > /usr/share/sddm/themes/hp-os/theme.conf
 cat > "$conf" <<'EOF'
 [General]
