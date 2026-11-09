@@ -13,7 +13,7 @@ session. Packages alone did not provide those desktop integrations.
 | Input methods | Rime/Fcitx5 is opt-in; HP-OS owned touch keyboard keeps its input-method seat. Set environment variables only in the ordinary DMS launcher. |
 | Privileged desktop actions | A session-scoped polkit agent starts only when no matching agent exists on that display/bus. System polkitd alone is insufficient. |
 | DMS features | Monitoring, VPN, calendar, dynamic theme, clipboard paste belong in the DMS consumer. Never launch DMS inside HP-OS. |
-| User-manager services | Ordinary Niri exports its environment and starts graphical-session.target. HP-OS private D-Bus stays private. |
+| User-manager services | Ordinary Niri exports its environment and starts graphical-session.target. HP-OS private D-Bus stays private. Enrolled Relay starts with the current display through its existing user-manager bridge and stops when that display exits. |
 | Ask IQ | `goran/desktop/search-iq.nix`: portable CPU-only service now shared behind `session.searchIq.enable`, default false. Downloads a model, binds localhost:30002, retains 2 GiB and 200% CPU limits. |
 | Apps, Office, Chrome, media, Steam ARM, printing, Owly, Relay | Already shared fleet modules. Enrollment, credentials, sign-ins and games remain separate. |
 | HP theme and terminal styles | Portable assets, but Goran activation mutates writable files and restarts Goran DMS. Extract defaults while preserving user themes and active sessions. |
@@ -21,6 +21,6 @@ session. Packages alone did not provide those desktop integrations.
 | Headphones/KDE Connect | Executables already shared. Pairing, daemon activation and network/firewall integration remain explicit. |
 | Goran brightness/NVIDIA/HDR/EDID/Ghostty workaround | Hardware-specific. Never copy NVIDIA environment or panel overrides into Qualcomm defaults. |
 | Battery workaround/suspend | Goran firmware-specific. Do not install automatic suspend policy while Snapdragon resume remains unreliable. |
-| Artcraft | Simon wrapper forces NVIDIA. Needs architecture/GPU-neutral packaging before sharing. |
+| Artcraft | Shared `fleet/artcraft.nix` selects existing native ARM64/x86 releases without vendor overrides. Enabled on Snapdragon; Goran retains its host wrapper. |
 | Remote access/proxy/personal cloud-office | Host-owned identities, secrets and enrollment remain private. |
 | Fish/tmux/editor/MIME preferences | Reusable optional user preferences, not automatic replacement of existing defaults. |

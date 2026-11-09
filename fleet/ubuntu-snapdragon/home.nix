@@ -87,6 +87,7 @@ in {
     programs.hp-os-fleet.appearance = { enable = true; dmsPackage = snapdragonDms; };
     programs.hp-os-fleet.session.enable = true;
     programs.hp-os-fleet.session.searchIq.enable = true;
+    programs.hp-os-fleet.artcraft.enable = true;
     programs.hp-os-fleet.session.inputMethod.enable = true;
     fonts.fontconfig.enable = true;
     home.packages = [ (pkgs.writeTextFile { name = "hp-os-ubuntu-account-check"; destination = "/bin/hp-os-ubuntu-account-check"; executable = true; text = builtins.readFile ./account-check.py; }) (pkgs.callPackage ../../pkgs/nom-dashboard.nix {}) snapdragonHpOs snapdragonHpOsFonts snapdragonDms hpSession dmsSession pkgs.niri pkgs.xwayland-satellite pkgs.foot pkgs.fuzzel pkgs.brightnessctl pkgs.wireplumber ] ++ lib.optionals cfg.resumePanelRetrain [ panelResume resumeWatcher ];
