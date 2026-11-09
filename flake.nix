@@ -58,6 +58,8 @@
           '';
         }));
       };
+      packages.x86_64-linux.hp-os-ubuntu-branding = nixpkgs.legacyPackages.x86_64-linux.callPackage ./fleet/ubuntu-branding/package.nix {};
+      packages.aarch64-linux.hp-os-ubuntu-branding = nixpkgs.legacyPackages.aarch64-linux.callPackage ./fleet/ubuntu-branding/package.nix {};
       packages.x86_64-linux.fleet-mosh = nixpkgs.legacyPackages.x86_64-linux.callPackage ./fleet/mosh/package.nix {};
       packages.aarch64-linux.fleet-mosh = nixpkgs.legacyPackages.aarch64-linux.callPackage ./fleet/mosh/package.nix {};
       packages.x86_64-linux.fleet-release-tools = nixpkgs.legacyPackages.x86_64-linux.callPackage ./fleet/release/package.nix {};
