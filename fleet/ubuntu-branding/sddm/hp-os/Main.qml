@@ -3,16 +3,19 @@ import QtQuick
 Rectangle {
     id: root
     width: 1280; height: 800; color: "#030914"
-    property bool entered: false
+    property bool reducedMotion: String(config.reducedMotion).toLowerCase() === "true"
+    property bool entranceDone: false
+    property bool entered: reducedMotion
     property bool authenticated: false
     property real flight: 0
     property string brandFont: forma.status === FontLoader.Ready ? forma.name : "HP Forma DJR Office"
     FontLoader { id: forma; source: "fonts/HPForma-Regular.ttf" }
     Image { anchors.fill: parent; source: "images/starfield.png"; fillMode: Image.PreserveAspectCrop; opacity: 0.5; asynchronous: true }
     StarFlight { width: parent.width / 2; height: parent.height / 2; scale: 2; transformOrigin: Item.TopLeft; phase: root.flight; warp: root.busy ? 1.0 : 0.12; opacity: 0.75 }
-    Timer { interval: 33; running: true; repeat: true; onTriggered: root.flight += root.busy ? 0.045 : 0.008 }
-    Rectangle { anchors.fill: parent; color: "#030914"; opacity: root.entered ? 0 : 1; Behavior on opacity { NumberAnimation { duration: 1200 } } }
-    Timer { interval: 250; running: true; onTriggered: root.entered = true }
+    Timer { interval: 50; running: !root.reducedMotion && (!root.entranceDone || root.busy) && !root.authenticated; repeat: true; onTriggered: root.flight += root.busy ? 0.045 : 0.008 }
+    Rectangle { anchors.fill: parent; color: "#030914"; opacity: root.entered ? 0 : 1; Behavior on opacity { NumberAnimation { duration: root.reducedMotion ? 0 : 1200 } } }
+    Timer { interval: 250; running: !root.reducedMotion; onTriggered: root.entered = true }
+    Timer { interval: 3000; running: true; onTriggered: root.entranceDone = true }
     property int selectedSession: sessionModel.lastIndex >= 0 ? sessionModel.lastIndex : 0
     property bool busy: false
     property string message: "Sign in to your workspace"
@@ -26,7 +29,7 @@ Rectangle {
         target: sddm
         function onLoginSucceeded() { root.authenticated = true; root.message = "Welcome to HP-OS"; }
         function onLoginFailed() {
-            root.busy = false; root.message = "Sign-in failed. Check your password and try again.";
+            root.busy = false; root.entranceDone = true; root.message = "Sign-in failed. Check your password and try again.";
             password.text = ""; password.forceActiveFocus();
         }
     }
@@ -47,8 +50,8 @@ Rectangle {
         anchors.centerIn: parent; width: Math.min(420, root.width - 48); spacing: 18
         opacity: root.authenticated ? 0 : (root.entered ? 1 : 0)
         scale: Math.min(2, Math.max(1, root.height / 900)) * (root.authenticated ? 1.12 : (root.entered ? 1 : 0.94))
-        Behavior on opacity { NumberAnimation { duration: root.authenticated ? 500 : 1400; easing.type: Easing.OutCubic } }
-        Behavior on scale { NumberAnimation { duration: 1400; easing.type: Easing.OutCubic } }
+        Behavior on opacity { NumberAnimation { duration: root.reducedMotion ? 0 : (root.authenticated ? 500 : 1400); easing.type: Easing.OutCubic } }
+        Behavior on scale { NumberAnimation { duration: root.reducedMotion ? 0 : 1400; easing.type: Easing.OutCubic } }
         Text { font.family: root.brandFont; text: "HP-OS"; color: "#ffffff"; font.pixelSize: 64; font.weight: Font.Normal; font.letterSpacing: -2 }
         Text { font.family: root.brandFont; text: sddm.hostName; color: "#9eb2c0"; font.pixelSize: 14; width: parent.width; elide: Text.ElideRight }
         Text { font.family: root.brandFont; text: root.message; color: "#c8d9e3"; font.pixelSize: 15; width: parent.width; wrapMode: Text.Wrap }
