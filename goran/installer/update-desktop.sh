@@ -25,6 +25,9 @@ status() {
     printf 'Last successful desktop revision: '; cat "$record/source-revision"
     printf 'Desktop generation: %s\n' "$(readlink -f "$record/candidate")"
   fi
+  if [[ -r "${XDG_STATE_HOME:-$HOME/.local/state}/simon-desktop-update/branding-pending" ]]; then
+    printf '\nBoot/login setup pending: '; cat "${XDG_STATE_HOME:-$HOME/.local/state}/simon-desktop-update/branding-pending"
+  fi
   local reporter="${HP_OS_FLEET_STATUS:-$checkout/fleet/release/status.py}"
   if [[ -r "$reporter" ]]; then
     python3 "$reporter" --checkout "$checkout" --installed-record "$record" \
@@ -147,6 +150,13 @@ python3 "$checkout/goran/installer/snapshot-managed-files.py" "$HOME" "$candidat
 require_stable_checkout "$revision" || exit 1
 export HOME_MANAGER_BACKUP_EXT="simon-update-$stamp"
 activate_with_rollback "$candidate" "$profile" "$previous" || exit $?
+# Keep privileged boot/login assets aligned with the newly activated fleet source.
+# The tracked worker must report incomplete setup instead of claiming full refresh.
+if ! /usr/bin/sudo -n bash "$checkout/fleet/ubuntu-branding/refresh-managed.sh" simon; then
+  printf '%s\n' 'Desktop activated; run sudo bash fleet/ubuntu-branding/refresh-managed.sh simon from the checkout to finish boot/login setup. See the tracked update log for the failed preflight.' > "$state/branding-pending"
+  fail "$(cat "$state/branding-pending")"
+fi
+rm -f "$state/branding-pending"
 # Refresh an installed Owly service from this generation without interrupting
 # an active radio session. Initial setup remains an explicit desktop action.
 if [[ -e /etc/systemd/system/owlyd.service ]]; then
