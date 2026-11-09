@@ -47,3 +47,17 @@ The animation is intentionally silent. Frame time is deterministic. Reuse this
 motion in the native login only after translating the timeline to actual SDDM
 signals, bounding idle rendering, retaining keyboard/session controls, and
 providing reduced motion. Do not impose a simulated wait on real boot.
+
+## Review decision
+
+Recommend **01 Orbital aperture**. Its direct ring-to-O motion communicates the
+requested logo relationship most clearly. HP blue keeps the glow connected to
+the brand, and the radial flight remains active without adding camera rotation.
+02 adds an elegant edge-on ring but briefly weakens recognition. 03 has the most
+expressive vortex. 04 is the most restrained. 05 has the most intense starfield
+and a stronger pulse, which can compete with the final mark.
+
+All five final MP4s passed a full FFmpeg decode and report H.264, 1920×1080,
+30 fps and 12.0 seconds. The encoded frames were reviewed at six points per film.
+The final Files project is https://files.thewilners.com/#/project/hp-os-motion-variants.
+This selection is a design judgment; physical login performance is untested.
