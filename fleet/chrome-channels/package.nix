@@ -1,11 +1,11 @@
 # Reuse nixpkgs' maintained binary patching and runtime dependencies.
-{ lib, fetchurl, google-chrome, stdenv, channel, commandLineArgs ? "", sources ? builtins.fromJSON (builtins.readFile ./sources.json) }:
+{ lib, fetchurl, google-chrome, stdenv, channel, commandLineArgs ? "", withSymlink ? true, sources ? builtins.fromJSON (builtins.readFile ./sources.json) }:
 let
   dist = if channel == "dev" then "unstable" else channel;
   appname = if channel == "stable" then "chrome" else "chrome-${dist}";
   release = sources.${channel};
   source = release.platforms.${stdenv.hostPlatform.system};
-  upstream = google-chrome.override { inherit commandLineArgs; withSymlink = channel == "stable"; };
+  upstream = google-chrome.override { inherit commandLineArgs withSymlink; };
 in
 upstream.overrideAttrs (old: {
   pname = "google-chrome-${dist}";
@@ -22,6 +22,8 @@ upstream.overrideAttrs (old: {
   };
   passthru = (old.passthru or {}) // {
     inherit channel;
+    # Keep the original nixpkgs package when the overlay is imported twice.
+    fleetChromeUpstream = google-chrome;
     updateScript = ./update.py;
   };
 })
