@@ -3,10 +3,11 @@ const fs = require('fs');
 const assert = require('assert');
 const vm = require('vm');
 for (const file of process.argv.slice(2)) {
-  let rule;
+  const rules = [];
   vm.runInNewContext(JSON.parse(fs.readFileSync(file)).polkit, {
-    polkit: { addRule: fn => { rule = fn; }, Result: { YES: 'yes' } }
+    polkit: { addRule: fn => { rules.push(fn); }, Result: { YES: 'yes' } }
   });
+  const rule = (action, subject) => rules.map(fn => fn(action, subject)).find(value => value !== undefined);
   const subject = wheel => ({ isInGroup: group => wheel && group === 'wheel' });
   for (const action of ['org.freedesktop.color-manager.create-profile',
       'org.opensuse.cupspkhelper.mechanism.all-edit',
