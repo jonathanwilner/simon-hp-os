@@ -9,7 +9,7 @@ Rectangle {
     property string brandFont: forma.status === FontLoader.Ready ? forma.name : "HP Forma DJR Office"
     FontLoader { id: forma; source: "fonts/HPForma-Regular.ttf" }
     Image { anchors.fill: parent; source: "images/starfield.png"; fillMode: Image.PreserveAspectCrop; opacity: 0.5; asynchronous: true }
-    StarFlight { anchors.fill: parent; phase: root.flight; warp: root.busy ? 1.0 : 0.12; opacity: 0.75 }
+    StarFlight { width: parent.width / 2; height: parent.height / 2; scale: 2; transformOrigin: Item.TopLeft; phase: root.flight; warp: root.busy ? 1.0 : 0.12; opacity: 0.75 }
     Timer { interval: 33; running: true; repeat: true; onTriggered: root.flight += root.busy ? 0.045 : 0.008 }
     Rectangle { anchors.fill: parent; color: "#030914"; opacity: root.entered ? 0 : 1; Behavior on opacity { NumberAnimation { duration: 1200 } } }
     Timer { interval: 250; running: true; onTriggered: root.entered = true }
