@@ -13,6 +13,7 @@ let
     fi
     exec ${browser}/bin/google-chrome-stable \
       --ozone-platform=wayland \
+      --remote-debugging-address=127.0.0.1 --remote-debugging-port=9222 \
       --user-data-dir="$HOME/.config/google-chrome-live-control" "$@"
   '';
   desktopDir = if config.xdg.userDirs.desktop != null then config.xdg.userDirs.desktop else "${config.home.homeDirectory}/Desktop";

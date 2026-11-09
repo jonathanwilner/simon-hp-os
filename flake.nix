@@ -67,6 +67,7 @@
       packages.x86_64-linux.ghostty = (self.overlays.ghostty null nixpkgs.legacyPackages.x86_64-linux).ghostty;
       packages.aarch64-linux.ghostty = (self.overlays.ghostty null nixpkgs.legacyPackages.aarch64-linux).ghostty;
       overlays.chromeChannels = import ./fleet/chrome-channels/overlay.nix;
+      homeModules.microsoft365 = ./fleet/microsoft365/home.nix;
       homeModules.chromeChannels = ./fleet/chrome-channels/home.nix;
       nixosConfigurations.hp-os-test = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
