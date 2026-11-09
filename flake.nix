@@ -67,11 +67,12 @@
       packages.x86_64-linux.ghostty = (self.overlays.ghostty null nixpkgs.legacyPackages.x86_64-linux).ghostty;
       packages.aarch64-linux.ghostty = (self.overlays.ghostty null nixpkgs.legacyPackages.aarch64-linux).ghostty;
       overlays.chromeChannels = import ./fleet/chrome-channels/overlay.nix;
+      nixosModules.branding = import ./fleet/ubuntu-branding/nixos.nix;
       homeModules.microsoft365 = ./fleet/microsoft365/home.nix;
       homeModules.chromeChannels = ./fleet/chrome-channels/home.nix;
       nixosConfigurations.hp-os-test = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
-        modules = [ (import ./tests/desktop-vm/configuration.nix { inherit hp-os home-manager owly; }) ];
+        modules = [ self.nixosModules.branding { programs.hp-os-branding.enable = true; } (import ./tests/desktop-vm/configuration.nix { inherit hp-os home-manager owly; }) ];
       };
       homeModules.fleetApps = { pkgs, lib, ... }: {
         imports = [ ./fleet/home.nix ];
