@@ -20,6 +20,37 @@ class ReportTests(fixtures.DriftTests):
     def report(self):
         return reporter.collect(self.args)
 
+    def consumer(self):
+        self.args.checkout = None
+        self.args.release_url = str(self.remote)
+        self.record.write_text(json.dumps(dict(fleet_revision=self.revision, generation=str(self.generation))))
+
+    def test_consumer_needs_no_checkout(self):
+        self.consumer()
+        result = self.report()
+        self.assertEqual(result['status'], 'current')
+        self.assertNotIn('checkout', result['checks'])
+        self.assertNotIn('publication', result['checks'])
+
+    def test_consumer_lock_pending_and_generation_mismatch(self):
+        self.consumer()
+        lock = self.base / 'flake.lock'
+        lock.write_text(json.dumps({'nodes': {'root': {'inputs': {'desktop-fleet': 'fleet'}}, 'fleet': {'locked': {'rev': 'next'}}}}))
+        self.args.consumer_lock = lock
+        self.assertEqual(self.report()['checks']['activation']['status'], 'pending')
+        self.active.unlink()
+        other = self.base / 'other-generation'
+        other.mkdir()
+        self.active.symlink_to(other)
+        self.assertEqual(self.report()['checks']['activation']['status'], 'unknown')
+
+    def test_consumer_offline_and_missing_record_are_unknown(self):
+        self.consumer()
+        self.args.offline = True
+        self.assertEqual(self.report()['status'], 'unknown')
+        self.record.unlink()
+        self.assertEqual(self.report()['checks']['activation']['status'], 'unknown')
+
     def test_atomic_report_replaces_prior_and_leaves_no_temp(self):
         path = self.base / 'report.json'
         path.write_text('old')

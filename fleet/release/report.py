@@ -78,15 +78,54 @@ def generic_activation(args, report):
         pass
 
 
+def consumer_report(args):
+    """Observe consumer state without assuming a source checkout exists."""
+    report = {'schema_version': 1, 'mode': 'consumer', 'checks': {}}
+    checks = report['checks']
+    try:
+        record = json.loads(args.installed_record.read_text())
+        report['installed'] = record
+        installed = record['fleet_revision']
+        configured = status.lock_revision(args.consumer_lock, args.input) if args.consumer_lock else installed
+        report['configured_fleet_revision'] = configured
+        active = str(args.active_generation.resolve(strict=True))
+        recorded = str(Path(record['generation']).resolve(strict=True))
+        if active != recorded:
+            checks['activation'] = status.item('unknown', reason='Active generation differs from activation record', active=active, recorded=recorded)
+        elif installed == 'unknown' or configured == 'unknown':
+            checks['activation'] = status.item('unknown', reason='Fleet revision unavailable')
+        else:
+            checks['activation'] = status.item('current' if installed == configured else 'pending', installed=installed, configured=configured, generation=active)
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        checks['activation'] = status.item('unknown', reason=str(error))
+    if args.offline:
+        checks['release_pin'] = status.item('unknown', reason='Offline mode: release was not refreshed')
+    else:
+        try:
+            result = subprocess.run(['git', 'ls-remote', '--exit-code', args.release_url, 'refs/heads/fleet-stable'], text=True, capture_output=True, timeout=60)
+            if result.returncode:
+                raise RuntimeError(result.stderr.strip() or 'fleet-stable lookup failed')
+            stable = result.stdout.split()[0]
+            report['release_revision'] = stable
+            configured = report.get('configured_fleet_revision')
+            checks['release_pin'] = status.item('current' if configured == stable else 'differs', configured=configured, release=stable) if configured else status.item('unknown', reason='Configured fleet revision unavailable')
+        except (OSError, RuntimeError, IndexError, subprocess.TimeoutExpired) as error:
+            checks['release_pin'] = status.item('unknown', reason=str(error))
+    return report
+
+
 def collect(args):
     offline = args.offline
     # Reuse local inspection, while avoiding status.collect's all-branches fetch.
-    local = argparse.Namespace(**vars(args))
-    local.offline = True
-    report = status.collect(local)
-    generic_activation(args, report)
-    if not offline and 'source_revision' in report:
-        refresh_remote(args, report)
+    if args.checkout is None:
+        report = consumer_report(args)
+    else:
+        local = argparse.Namespace(**vars(args))
+        local.offline = True
+        report = status.collect(local)
+        generic_activation(args, report)
+        if not offline and 'source_revision' in report:
+            refresh_remote(args, report)
     status.finish(report)
     report['observed_at'] = datetime.now(timezone.utc).isoformat()
     report['machine'] = socket.gethostname()
@@ -127,13 +166,13 @@ def announce(report, output):
 def main():
     state = Path(os.environ.get('XDG_STATE_HOME', str(Path.home() / '.local/state')))
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--checkout', type=Path, required=True)
+    parser.add_argument('--checkout', type=Path, help='Optional source checkout for writer status')
     parser.add_argument('--consumer-lock', type=Path)
     parser.add_argument('--input', default='desktop-fleet')
     parser.add_argument('--remote', default='origin')
     parser.add_argument('--release-url', default='https://github.com/jonathanwilner/simon-hp-os.git')
     parser.add_argument('--installed-record', type=Path, default=state / 'hp-os-fleet/installed.json')
-    parser.add_argument('--active-generation', type=Path, default=state / 'nix/profiles/home-manager')
+    parser.add_argument('--active-generation', type=Path, default=state / 'hp-os-fleet/active-generation')
     parser.add_argument('--output', type=Path, default=state / 'hp-os-fleet/latest-report.json')
     parser.add_argument('--offline', action='store_true')
     args = parser.parse_args()

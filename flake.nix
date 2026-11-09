@@ -107,6 +107,7 @@
       packages.aarch64-linux.hp-os-aware-radio = pkgs.callPackage ./fleet/printing/radio.nix {};
       packages.x86_64-linux.hp-os-aware-install-system = nixpkgs.legacyPackages.x86_64-linux.callPackage ./fleet/printing/ubuntu-system.nix {};
       packages.aarch64-linux.hp-os-aware-install-system = pkgs.callPackage ./fleet/printing/ubuntu-system.nix {};
+      nixosModules.desktop = import ./fleet/desktop/nixos.nix;
       nixosModules.aware-printing = import ./fleet/printing/nixos.nix;
       packages.x86_64-linux.hp-os-aware-print-gui = nixpkgs.legacyPackages.x86_64-linux.callPackage ./fleet/printing/gui-package.nix {
         client = nixpkgs.legacyPackages.x86_64-linux.callPackage ./fleet/printing/package.nix {};

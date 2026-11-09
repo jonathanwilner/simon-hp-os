@@ -17,6 +17,9 @@ Examples:
 
 Attach:
   tmux attach -t SESSION
+
+Set NOM_TMUX_KEEP_SESSION=1 to retain an interactive shell after completion.
+Scheduled tasks close their session by default, including after failure.
 USAGE
 }
 
@@ -165,8 +168,11 @@ tmux_command=$(
   printf 'if command -v python3 >/dev/null 2>&1 && [ -f %q ]; then %s >/dev/null 2>&1 || true; fi; ' "$publish_script" "$publish_command"
   printf 'echo "[nom-tmux] exit=$rc"; '
   printf 'echo "[nom-tmux] status file: %q"; ' "$status_file"
-  printf 'echo "[nom-tmux] leaving shell open for attach"; '
-  printf 'exec "${SHELL:-bash}"'
+  if [[ "${NOM_TMUX_KEEP_SESSION:-0}" == 1 ]]; then
+    printf 'echo "[nom-tmux] retained by NOM_TMUX_KEEP_SESSION=1"; exec "${SHELL:-bash}"'
+  else
+    printf 'exit "$rc"'
+  fi
 )
 
 tmux_shell_command="$(printf '%q ' bash -lc "$tmux_command")"
