@@ -49,3 +49,12 @@ The shared `hp-os-motion-design` skill is installed under `.codex/skills` and
 `.agents/skills`; DeepSeek Harness discovers the latter through its filesystem
 skill provider. Its source and asset-generation prompt live in
 `skills/hp-os-motion-design`. Agent session data remains separate.
+
+Set `reducedMotion=true` in
+`/usr/share/sddm/themes/hp-os/theme.conf` to show the login form immediately
+without movement. Theme installation currently resets this setting to false.
+The normal entrance is bounded and the star redraw timer stops at idle.
+
+An editable alternative made with Open Design's motion-design skill is in
+`concepts/open-design-arrival`. Its browser controls simulate login. The native
+SDDM theme retains real authentication and system controls.
