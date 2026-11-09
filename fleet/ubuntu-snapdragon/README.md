@@ -27,3 +27,35 @@ its native PAM library. Nix PAM cannot parse Ubuntu's `@include` syntax directly
 Keep `/run/wrappers/bin/unix_chkpwd` linked to Ubuntu's privileged
 `/usr/sbin/unix_chkpwd` through a tmpfiles rule. Keep Ubuntu's existing login
 PAM stack intact. The consumer's root integration owns these system files.
+
+## Shared desktop parity
+
+Both sessions consume `fleet/niri` and `fleet/session`. HP-OS keeps its own
+lock, search and control-center actions. DMS keeps its launcher and lock actions.
+Home Manager synchronizes bindings with validation and preserves intentional
+user changes. The previous Snapdragon-only launcher include is migrated.
+
+| Shortcut | Action |
+| --- | --- |
+| Super+D, Alt+D | Focused application launcher |
+| Super+Return, Super+T | Terminal |
+| Print, Super+Shift+4 | Select screenshot area, save PNG and copy |
+| Ctrl+Print | Capture screen, save PNG and copy |
+| Alt+Print | Capture focused window, save PNG and copy |
+| Super+Alt+V | Clipboard history selection |
+| Super+Shift+/ | Show shortcut overlay |
+| Super+1 through 9 | Select workspace |
+| Super+Ctrl+1 through 9 | Move column to workspace |
+| Super+Alt+L | Lock the active shell |
+
+The session supervisor starts clipboard persistence/history and a graphical
+policy authorization agent inside the compositor's environment. HP-OS's private
+D-Bus stays private. DMS enables monitoring, VPN, calendar, dynamic theme and
+clipboard paste. Fcitx/Rime belongs to DMS; HP-OS retains its touch-keyboard seat.
+The CPU-only Ask IQ search service listens on localhost with bounded resources.
+Portable HP-OS fonts, palettes and Wallhaven assets are available; existing
+terminal, MIME and DMS preferences are preserved.
+
+The full comparison and host-specific exclusions are recorded in
+[`../session/PARITY-AUDIT.md`](../session/PARITY-AUDIT.md). NVIDIA environment,
+Goran panel calibration, pairing credentials and suspend policy stay host-owned.
