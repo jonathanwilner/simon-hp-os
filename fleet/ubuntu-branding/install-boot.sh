@@ -35,13 +35,14 @@ if [[ ! -e $state/saved ]]; then
   touch "$state/saved"
 fi
 if [[ $mode == install ]]; then
-  [[ -f $base/spinner/spinner.plymouth && -f $base/spinner/entry.png ]] || {
-    echo 'Install the Ubuntu plymouth and plymouth-theme-spinner packages first.' >&2; exit 2;
+  [[ -n $(find /usr/lib /usr/lib64 -path '*/plymouth/script.so' -print -quit 2>/dev/null || true) ]] || {
+    echo 'Install the Ubuntu plymouth package with its script plugin first.' >&2; exit 2;
   }
-  # Use distribution-owned animation and password-dialog assets. The custom
-  # watermark replaces Ubuntu branding; no GPU driver changes are needed.
+  # Native script owns animation and password/message callbacks. No GPU changes.
   mkdir -p "$theme"
-  cp -a "$base/spinner/"*.png "$theme/"
+  # Native script owns its assets, so obsolete Ubuntu assets are not copied.
+  install -m0644 "$source_dir/plymouth/"*.png "$theme/"
+  install -m0644 "$source_dir/plymouth/hp-os.script" "$theme/hp-os.script"
   install -m0644 "$source_dir/plymouth/hp-os.plymouth" "$theme/hp-os.plymouth"
   install -m0644 "$source_dir/plymouth/watermark.png" "$theme/watermark.png"
   update-alternatives --install "$base/default.plymouth" default.plymouth "$theme/hp-os.plymouth" 110
