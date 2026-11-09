@@ -22,6 +22,8 @@ in with pkgs; [
   (lib.lowPrio emacs-pgtk) (lib.lowPrio bluebubbles) kdePackages.kdeconnect-kde librepods openfreebudsCompatible
   networkmanagerapplet networkmanager_dmenu blueman
   pavucontrol easyeffects playerctl
+  # The dock image-viewer entry uses Exec=gwenview; install its executable too.
+  kdePackages.gwenview
   mpv celluloid vlc ffmpeg ffmpegthumbnailer
   simple-scan kdePackages.skanpage remmina moonlight obs-studio
   neovim vim yad ulauncher
