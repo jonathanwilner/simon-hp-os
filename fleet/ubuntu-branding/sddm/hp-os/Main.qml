@@ -4,7 +4,7 @@ Rectangle {
     id: root
     width: 1280; height: 800; color: "#030914"
     property bool reducedMotion: String(config.reducedMotion).toLowerCase() === "true"
-    property bool entranceDone: false
+    property bool entranceDone: reducedMotion
     property bool raised: reducedMotion
     property bool promptVisible: reducedMotion
     onPromptVisibleChanged: { if (promptVisible) { if(username.text) password.forceActiveFocus(); else username.forceActiveFocus(); } }
@@ -16,25 +16,38 @@ Rectangle {
     property bool authenticated: false
     property real flight: 0
     property string brandFont: forma.status === FontLoader.Ready ? forma.name : "HP Forma DJR Office"
+    property string headingFont: formaMedium.status === FontLoader.Ready ? formaMedium.name : brandFont
+    property real flightSpeed: reducedMotion || authenticated ? 0 : (busy ? 0.85 : (entranceDone ? 0 : 0.24))
+    Behavior on flightSpeed { NumberAnimation { duration: root.reducedMotion ? 0 : 900; easing.type: Easing.InOutSine } }
+    FontLoader { id: formaMedium; source: "fonts/HPForma-Medium.ttf" }
     FontLoader { id: forma; source: "fonts/HPForma-Regular.ttf" }
     Image { anchors.fill: parent; source: "images/starfield.png"; fillMode: Image.PreserveAspectCrop; opacity: 0.5; asynchronous: true }
-    StarFlight { width: parent.width / 2; height: parent.height / 2; scale: 2; transformOrigin: Item.TopLeft; phase: root.flight; warp: root.busy ? 1.0 : 0.12; opacity: 0.75 }
-    Timer { interval: 50; running: !root.reducedMotion && (!root.entranceDone || root.busy) && !root.authenticated; repeat: true; onTriggered: root.flight += root.busy ? 0.045 : 0.008 }
-    Rectangle { anchors.fill: parent; color: "#030914"; opacity: root.entered ? 0 : 1; Behavior on opacity { NumberAnimation { duration: root.reducedMotion ? 0 : 1200 } } }
-    Timer { interval: 250; running: !root.reducedMotion; onTriggered: root.entered = true }
-    Timer { interval: 4000; running: true; onTriggered: root.entranceDone = true }
-    Timer { interval: 1600; running: !root.reducedMotion; onTriggered: root.raised = true }
-    Timer { interval: 2650; running: !root.reducedMotion; onTriggered: root.promptVisible = true }
-    Text {
-        font.family: root.brandFont; text: "HP-OS"; color: "white"
-        font.pixelSize: 112 * root.uiScale; font.letterSpacing: -5 * root.uiScale
+    StarFlight { width: parent.width / 2; height: parent.height / 2; scale: 2; transformOrigin: Item.TopLeft; phase: root.flight; warp: root.flightSpeed; opacity: 0.6 }
+    // Time-based movement avoids a speed change under software-rendering load.
+    Timer {
+        property double previous: 0
+        interval: 16; running: !root.reducedMotion && root.flightSpeed > 0.001; repeat: true
+        onRunningChanged: previous = Date.now()
+        onTriggered: { var now = Date.now(); root.flight += Math.min(0.05, (now - previous) / 1000) * root.flightSpeed; previous = now; }
+    }
+    Rectangle { anchors.fill: parent; color: "#030914"; opacity: root.entered ? 0 : 1; Behavior on opacity { NumberAnimation { duration: root.reducedMotion ? 0 : 1000; easing.type: Easing.InOutSine } } }
+    Timer { interval: 100; running: !root.reducedMotion; onTriggered: root.entered = true }
+    Timer { interval: 3300; running: true; onTriggered: root.entranceDone = true }
+    Timer { interval: 1100; running: !root.reducedMotion; onTriggered: root.raised = true }
+    Timer { interval: 1850; running: !root.reducedMotion; onTriggered: root.promptVisible = true }
+    // Keep the approved logo intact. Its reveal and placement carry the brand.
+    Image {
+        source: "images/hp-logo.png"; fillMode: Image.PreserveAspectFit
+        width: 136 * root.uiScale; height: width
+        sourceSize.width: Math.ceil(width * 2); sourceSize.height: sourceSize.width
+        smooth: true; mipmap: true
         anchors.horizontalCenter: parent.horizontalCenter
-        y: root.height * (root.raised ? 0.24 : 0.5) - height / 2
-        scale: root.raised ? 0.57 : 1
+        y: root.height * (root.raised ? 0.23 : 0.5) - height / 2
+        scale: root.raised ? 0.66 : 1
         opacity: root.entered ? 1 : 0
-        Behavior on y { NumberAnimation { duration: root.reducedMotion ? 0 : 1100; easing.type: Easing.InOutCubic } }
-        Behavior on scale { NumberAnimation { duration: root.reducedMotion ? 0 : 1100; easing.type: Easing.InOutCubic } }
-        Behavior on opacity { NumberAnimation { duration: root.reducedMotion ? 0 : 650 } }
+        Behavior on y { NumberAnimation { duration: root.reducedMotion ? 0 : 1450; easing.type: Easing.InOutSine } }
+        Behavior on scale { NumberAnimation { duration: root.reducedMotion ? 0 : 1450; easing.type: Easing.InOutSine } }
+        Behavior on opacity { NumberAnimation { duration: root.reducedMotion ? 0 : 900; easing.type: Easing.InOutSine } }
     }
     property int selectedSession: sessionModel.lastIndex >= 0 ? sessionModel.lastIndex : 0
     property bool busy: false
@@ -47,7 +60,7 @@ Rectangle {
     }
     Connections {
         target: sddm
-        function onLoginSucceeded() { root.authenticated = true; root.message = "Welcome to HP-OS"; }
+        function onLoginSucceeded() { root.authenticated = true; root.message = "Welcome"; }
         function onLoginFailed() {
             root.busy = false; root.entranceDone = true; root.promptVisible = true; root.raised = true; root.message = "Sign-in failed. Check your password and try again.";
             password.text = ""; password.forceActiveFocus();
@@ -75,10 +88,10 @@ Rectangle {
         scale: root.uiScale
         opacity: root.authenticated ? 0 : (root.promptVisible ? 1 : 0)
         visible: opacity > 0
-        Behavior on y { NumberAnimation { duration: root.reducedMotion ? 0 : 650; easing.type: Easing.OutCubic } }
-        Behavior on opacity { NumberAnimation { duration: root.reducedMotion ? 0 : 650 } }
+        Behavior on y { NumberAnimation { duration: root.reducedMotion ? 0 : 900; easing.type: Easing.InOutSine } }
+        Behavior on opacity { NumberAnimation { duration: root.reducedMotion ? 0 : 900; easing.type: Easing.InOutSine } }
         Rectangle { width: 32; height: 2; color: "#024ad8"; anchors.horizontalCenter: parent.horizontalCenter }
-        Text { font.family: root.brandFont; text: "Welcome back"; color: "white"; font.pixelSize: 24; anchors.horizontalCenter: parent.horizontalCenter }
+        Text { font.family: root.headingFont; font.weight: Font.Medium; text: "Welcome back"; color: "white"; font.pixelSize: 28; anchors.horizontalCenter: parent.horizontalCenter }
         Text { font.family: root.brandFont; text: username.text || "Choose your account"; color: "#91a6bb"; font.pixelSize: 14; anchors.horizontalCenter: parent.horizontalCenter }
         Text { font.family: root.brandFont; text: root.message; color: "#c8d9e3"; font.pixelSize: 13; width: parent.width; wrapMode: Text.Wrap; horizontalAlignment: Text.AlignHCenter; visible: root.message !== "Sign in to your workspace" }
         Rectangle {
@@ -129,7 +142,9 @@ Rectangle {
     Column {
         anchors.horizontalCenter: parent.horizontalCenter; anchors.bottom: parent.bottom; anchors.bottomMargin: 22 * root.uiScale
         scale: root.uiScale; transformOrigin: Item.Bottom; spacing: 8
-        visible: root.promptVisible
+        opacity: root.promptVisible ? 1 : 0
+        visible: opacity > 0
+        Behavior on opacity { NumberAnimation { duration: root.reducedMotion ? 0 : 900; easing.type: Easing.InOutSine } }
         Row {
             spacing: 12
             Action { width: 144; height: 32; label: "Restart"; enabled: sddm.canReboot && !root.busy; onClicked: root.pendingPower = "restart" }

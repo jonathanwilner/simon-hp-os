@@ -35,15 +35,19 @@ from an active desktop merely to preview the theme.
 
 ## Motion and typography
 
-The boot theme reveals the HP-OS wordmark, followed by sparse outward star
-motion. The login theme uses the same dark space direction, a generated
-background and native text. Login animation never controls authentication or
+The boot and login themes use the approved HP logo as their primary identity.
+The logo stays intact, with clear space and restrained outward star motion.
+The login theme uses HP Forma Medium for the welcome heading and Regular for
+controls. HP-OS remains the technical theme/session name where identification
+requires it; it is not repeated as decorative copy. Native sine easing and
+time-based motion soften the entrance and deceleration. Login animation never controls authentication or
 adds a fixed delay before the desktop starts.
 
 HP Forma is supplied privately from
 `/usr/local/share/fonts/hp/HPFormaDJROffice-Regular.ttf`, or an explicit
-`HP_OS_FORMA_FONT` path passed to the installer. Public source includes the
-rendered boot wordmark, without redistributing the font binary.
+`HP_OS_FORMA_FONT` path passed to the installer. The matching Medium face is
+loaded alongside Regular when available. Public source includes the
+approved rendered HP logo, without redistributing the font binary.
 
 The shared `hp-os-motion-design` skill is installed under `.codex/skills` and
 `.agents/skills`; DeepSeek Harness discovers the latter through its filesystem

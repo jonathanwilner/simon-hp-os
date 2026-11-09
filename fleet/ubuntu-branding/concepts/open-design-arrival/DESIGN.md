@@ -1,9 +1,20 @@
-# HP-OS / Arrival
+# HP Arrival
 
-Open Design functional skill: upstream skills/motion-design/SKILL.md, revision 87a4f91c308170a8270458fc40fc66a86ed69aac. Interactive prototype route. No Open Design daemon or cloud generator used.
+The approved electric-blue HP keyline logo carries the identity. Keep its
+geometry and clear space intact. HP Forma Medium supplies the welcome heading;
+HP Forma Regular supplies controls. The licensed fonts stay private. The
+technical HP-OS session name remains only where explicit identification helps.
 
-Use existing HP Forma, electric blue #024AD8, white #F4F8FC, midnight #030914. Typography is the focal object. No imitation HP corporate logo; exact OS name HP-OS. Hardware runtime integration is a separate native Plymouth/QML implementation.
+The 8 Nov 2026 revision supersedes the original wordmark-led comparison.
+The existing Open Design-derived browser prototype remains editable; this
+revision does not invoke an Open Design service or start a new comparison.
 
-Beat map: 0–0.6s black to white wordmark; 0.6–1.6s crisp centered hold; 1.6–2.7s outward star acceleration while wordmark moves upward and settles; 2.7–3.4s login controls resolve beneath it; 3.4s+ still, quiet login. Preview sign-in triggers 0.8s forward flight and a welcome state; this is simulated, never real authentication. No fixed delay should be carried into production boot.
+Beat map: 0.1–1.0s logo fades in; 1.1–2.55s logo rises with sine easing;
+1.85–2.75s controls resolve with overlapping movement; 2.3–3.1s secondary
+controls appear. Star travel follows a quintic curve over four seconds, then
+stops. Preview sign-in uses a 1.2s eased flight; authentication is simulated.
+Native SDDM retains real authentication and may close immediately on success.
 
-Use 120 deterministic projected stars. Pause idle motion to conserve energy and retain reading clarity. Respect prefers-reduced-motion. Keep authored HTML, local assets, timeline and seek method editable. HP Forma binary is private and must not enter public git.
+Keep the dark blue foundation, HP blue #024AD8 accents, and clear input states.
+Use 120 bounded stars and honor reduced motion. No fixed boot duration, browser
+runtime at boot, or proprietary font binary belongs in the public package.

@@ -6,8 +6,9 @@ height = Window.GetHeight();
 cx = Window.GetX() + width / 2;
 cy = Window.GetY() + height / 2;
 logo.image = Image("watermark.png");
-if (logo.image.GetWidth() > width * 0.42)
-  logo.image = logo.image.Scale(width * 0.42, logo.image.GetHeight() * width * 0.42 / logo.image.GetWidth());
+# One resize at startup. The approved circular HP logo retains its aspect ratio.
+logo_size = Math.Min(width * 0.16, height * 0.18);
+logo.image = logo.image.Scale(logo_size, logo.image.GetHeight() * logo_size / logo.image.GetWidth());
 logo.sprite = Sprite(logo.image);
 logo.sprite.SetPosition(cx - logo.image.GetWidth() / 2, cy - logo.image.GetHeight() / 2, 100);
 logo.sprite.SetOpacity(0);
@@ -19,8 +20,8 @@ for (i = 0; i < 72; i++) {
   star[i].dx = Math.Cos(angle);
   star[i].dy = Math.Sin(angle);
   star[i].depth = 0.08 + (i * 37 % 100) / 108;
-  for (j = 0; j < 4; j++)
-    star[i].image[j] = trail.Scale(4 + j * 24, 1 + j).Rotate(angle);
+  for (j = 0; j < 12; j++)
+    star[i].image[j] = trail.Scale(4 + j * 6, 1 + j / 4).Rotate(angle);
   star[i].sprite = Sprite(star[i].image[0]);
   star[i].sprite.SetZ(1);
   star[i].sprite.SetOpacity(0);
@@ -29,20 +30,24 @@ status = "normal";
 frame = 0;
 fun refresh() {
   global.frame++;
-  reveal = Math.Min(1, frame / 38);
-  logo.sprite.SetOpacity(reveal * (0.999 + (frame % 2) * 0.001));
+  reveal = Math.Min(1, frame / 50);
+  # Quintic easing has zero velocity and acceleration at both endpoints.
+  reveal = reveal * reveal * reveal * (reveal * (reveal * 6 - 15) + 10);
+  logo.sprite.SetOpacity(reveal);
   logo.sprite.SetY(cy - logo.image.GetHeight() / 2 + (1 - reveal) * 10);
   if (status == "normal") {
     for (i = 0; i < 72; i++) {
-      star[i].depth -= 0.0042;
+      star[i].depth -= 0.0028;
       if (star[i].depth < 0.06) star[i].depth = 1;
       distance = (1 / star[i].depth - 1) * 90 + 110;
       x = cx + star[i].dx * distance;
       y = cy + star[i].dy * distance * 0.66;
-      level = Math.Min(3, Math.Int(distance / 170));
+      level = Math.Min(11, Math.Int(distance / 62));
       star[i].sprite.SetImage(star[i].image[level]);
       star[i].sprite.SetPosition(x, y, 1);
-      opacity = Math.Clamp((frame - 32) / 36, 0, 1) * Math.Clamp((distance - 110) / 230, 0, 0.85);
+      entrance = Math.Clamp((frame - 25) / 65, 0, 1);
+      entrance = entrance * entrance * (3 - 2 * entrance);
+      opacity = entrance * Math.Clamp((distance - 110) / 250, 0, 0.65) * Math.Clamp((star[i].depth - 0.06) / 0.12, 0, 1);
       if (x < 0 || x > width || y < 0 || y > height) opacity = 0;
       star[i].sprite.SetOpacity(opacity);
     }

@@ -8,18 +8,14 @@ Serve this directory with a local HTTP server, then open `index.html`. Copy a pr
 
 The page is a design preview. Its password field, sign-in button, session switch and power control do not authenticate or modify the host. The input is cleared when preview sign-in is pressed. No data is transmitted.
 
-## Comparison with native Plymouth/QML theme
+## Current logo-led revision
 
-| Aspect | Native theme | Open Design Arrival concept |
-|---|---|---|
-| Typography | HP Forma, left-aligned form/wordmark | HP Forma, centered reveal and centered settled wordmark |
-| Motion | Wordmark/form entrance with outward stars | Wordmark holds alone, then moves upward as star flight reveals controls |
-| Login layout | User/password, visible session choices and power buttons | Known-user greeting, one password field; secondary controls reduced |
-| Brand emphasis | Cyan outlines and dark teal controls | HP electric-blue primary action and single accent rule |
-| Runtime | Actual Plymouth and SDDM contracts | Browser prototype, simulated authentication |
-| Idle behavior | Parent is adding bounded entrance/reduced motion | Animation ends at four seconds; no continuous frame loop afterward |
-| Integration | Ready for native staging and boot test | Port composition/choreography to QML; keep native session/error/power behavior |
+The 8 Nov revision uses the approved HP keyline logo, HP Forma Medium headings,
+Regular controls, overlapping sine-eased entrances and quintic star travel.
+The native QML version follows the same visual hierarchy while retaining real
+authentication, errors, user/session selection, keyboard navigation and power
+confirmation. The browser remains a simulated design preview.
 
-Recommendation: use Arrival's centered reveal, restrained blue action and quieter hierarchy as visual direction, while retaining the native implementation's real authentication, session selection and recovery controls. Do not run a browser as the boot/login runtime. A known-user layout still needs an explicit switch-user path in a production greeter.
-
-Evidence was captured at 1440×900 in isolated Chromium on Armstrong. This proves the concept's appearance and deterministic timeline; it does not prove Qualcomm performance or actual login.
+Serve the repository root so the canonical logo path resolves. Supply the
+licensed Medium font privately at `assets/HPForma-Medium.ttf` as well as Regular.
+The fallback sequence is Inter, Arial, sans-serif. Do not commit font binaries.

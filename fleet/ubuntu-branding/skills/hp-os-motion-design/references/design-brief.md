@@ -1,6 +1,6 @@
 # HP-OS star-flight direction
 
-The user requested HP branding and fonts, a crisp OS-name reveal inspired by HarmonyOS, then a transition resembling movement through stars. Use original assets and choreography; no HarmonyOS assets are copied.
+The user requested HP branding and fonts, an HP-logo reveal followed by a transition resembling movement through stars. The 8 Nov revision removes repeated HP-OS display text, uses HP Forma Medium/Regular, and softens acceleration and deceleration. Use original assets and choreography; no HarmonyOS assets are copied.
 
 Native implementation lives in `fleet/ubuntu-branding/plymouth` and `fleet/ubuntu-branding/sddm/hp-os` in the simon-hp-os repository. The public package stages the theme; licensed HP Forma is supplied from the host at installation.
 

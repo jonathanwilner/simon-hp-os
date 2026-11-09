@@ -13,15 +13,19 @@ Canvas {
         ctx.clearRect(0, 0, width, height);
         var cx = width * 0.5, cy = height * 0.42;
         var span = Math.max(width, height);
-        for (var i = 0; i < 100; i++) {
+        for (var i = 0; i < 72; i++) {
             var angle = i * 2.399963;
             var radius = 0.08 + ((i * 37) % 100) / 100;
             var z = 0.12 + (((i * 0.618034 - phase * 0.16) % 1 + 1) % 1) * 1.8;
             var x = cx + Math.cos(angle) * radius * span * 0.18 / z;
             var y = cy + Math.sin(angle) * radius * span * 0.18 / z;
             var tail = 0.012 + warp * 0.09;
+            // Fade both ends of the depth cycle, keeping respawns invisible.
+            var farFade = Math.min(1, (1.92 - z) / 0.35);
+            var nearFade = Math.min(1, (z - 0.12) / 0.12);
+            var centerFade = Math.min(1, Math.max(0, Math.hypot(x-cx, y-cy) / span - 0.08) / 0.12);
             ctx.beginPath();
-            ctx.strokeStyle = "rgba(160,218,255," + Math.min(0.85, 0.35 / z) + ")";
+            ctx.strokeStyle = "rgba(160,218,255," + Math.min(0.7, 0.3 / z) * farFade * nearFade * centerFade + ")";
             ctx.lineWidth = Math.max(0.6, 1.3 / z);
             ctx.moveTo(x, y);
             ctx.lineTo(cx + (x-cx) * (1+tail), cy + (y-cy) * (1+tail));

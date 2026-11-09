@@ -1,18 +1,18 @@
 # HP-OS Ubuntu animated boot splash
 
-The native Plymouth script reveals an HP Forma HP-OS wordmark and starts a
-cyan-white starflight against near-black. Seventy-two sprites use precomputed
-rotations and sizes. Animation never holds boot completion, imposes a minimum
-duration, or invents a completion percentage. Password/question input pauses
-motion. Plymouth messages and real system-update progress retain callbacks.
+The native Plymouth script reveals the approved HP electric-blue keyline logo
+against near-black. Seventy-two cyan-white star sprites use precomputed
+rotations and twelve size steps, with eased opacity and hidden depth resets.
+Animation never holds boot completion, imposes a minimum duration, or invents
+a completion percentage. Password/question input pauses motion. Plymouth
+messages and real system-update progress retain callbacks.
 
-The committed wordmark is a raster asset rendered from the available licensed
-HP Forma Bold font. The font binary is not distributed here. Regenerate with:
-
-```sh
-magick -background none -fill '#f5fbff' -font /path/to/hp-forma-bold.ttf \
-  -pointsize 94 label:HP-OS -bordercolor none -border 8 watermark.png
-```
+`watermark.png` is an unchanged copy of the authorized brand-kit asset
+`logo_HP_Electric_Blue_keyline.png`. Its aspect ratio, color and keyline stay
+intact; the native script scales it once at startup to fit the display.
+The same source is `sddm/hp-os/images/hp-logo.png`. Do not replace the logo with
+typed letters or regenerate a logo from a font. Proprietary font binaries are
+not distributed in this repository.
 
 Script APIs were checked against upstream Plymouth's native example and
 `src/plugins/splash/script` implementation at commit
@@ -34,6 +34,6 @@ baseline and artifact manifests coherently.
 
 Native preview passed on Ubuntu ARM64 Plymouth 24.004 using its X11 renderer
 inside isolated mount/network/PID namespaces and Xvfb. The running desktop and
-installed theme were untouched. A wordmark reveal/starflight recording and
-password prompt were published to the private debug gallery. A physical boot
+installed theme were untouched. The previous wordmark reveal/starflight recording and
+password prompt were published to the private debug gallery. The revised logo theme needs its own native preview; a physical boot
 is still required to verify firmware-to-splash handoff and display rendering.

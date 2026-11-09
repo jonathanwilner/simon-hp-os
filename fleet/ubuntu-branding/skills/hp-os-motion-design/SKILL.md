@@ -9,8 +9,8 @@ Deliver editable source, reproducible assets, runtime themes and a reviewed prev
 
 ## Design and assets
 
-- Use the existing HP brand kit and licensed HP Forma font available on the host. Keep proprietary font binaries and credentials out of public source. Render exact `HP-OS` text with the font; never rely on generated lettering.
-- For this direction: crisp white wordmark, near-black blue space, restrained HP blue accents, quiet center and sparse stars that travel outward from a central vanishing point. Keep the password and session controls clear throughout motion.
+- Use the existing HP brand kit and licensed HP Forma font available on the host. Keep proprietary font binaries and credentials out of public source. Use the approved HP logo as the primary identity. Keep `HP-OS` text only where the product or session needs explicit identification. Use HP Forma Medium for headings and Regular for controls; never rely on generated lettering or redraw logo geometry.
+- For this direction: intact approved HP logo, near-black blue space, restrained HP blue accents, quiet center and sparse stars that travel outward from a central vanishing point. Keep the password and session controls clear throughout motion.
 - Generate bitmap atmosphere with the available image-generation tool. Ask for no text, logos or controls. Save the prompt, output provenance and resulting asset in the project. Draw typography and motion in code.
 - Offer a distinct alternative only when requested. Label concept previews separately from actual native renderer output.
 
@@ -34,7 +34,7 @@ The current fleet implementation uses native QML and Plymouth procedural motion,
 ## Review and deployment
 
 - Preview SDDM on an isolated Xvfb display; never restart the live display manager to preview. Test Plymouth in an isolated namespace/display without claiming it proves physical boot.
-- Publish screenshots and clips through the repository's evidence workflow. Review readability, wordmark sharpness, star direction, clipping, idle cost and error states.
+- Publish screenshots and clips through the repository's evidence workflow. Review readability, logo sharpness, star direction, clipping, idle cost and error states.
 - Build ARM64 and x86-64 consumers through the repository build tracker. Publish shared source before refreshing consumer locks.
 - Stage theme files without ending the session. Rebuild every affected initrd using its host workflow. Preserve backups and known-good defaults. Ask for readiness before a reboot that closes user apps.
 - Report source/build, isolated rendering and physical acceptance separately. A screenshot cannot prove animation or successful password login.

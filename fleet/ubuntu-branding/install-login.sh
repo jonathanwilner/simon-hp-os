@@ -57,6 +57,10 @@ font_source=${HP_OS_FORMA_FONT:-/usr/local/share/fonts/hp/HPFormaDJROffice-Regul
 if [[ -f $font_source ]]; then
     install -Dm644 "$font_source" /usr/share/sddm/themes/hp-os/fonts/HPForma-Regular.ttf
 fi
+medium_source=${HP_OS_FORMA_MEDIUM_FONT:-${font_source%/*}/HPFormaDJROffice-Medium.ttf}
+if [[ -f $medium_source ]]; then
+    install -Dm644 "$medium_source" /usr/share/sddm/themes/hp-os/fonts/HPForma-Medium.ttf
+fi
 printf '[General]\npreferredSession=%s.desktop\nreducedMotion=false\n' "$session" > /usr/share/sddm/themes/hp-os/theme.conf
 cat > "$conf" <<'EOF'
 [General]
