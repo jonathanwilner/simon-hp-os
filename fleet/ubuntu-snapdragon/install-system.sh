@@ -79,7 +79,19 @@ if [[ $default_session == hp-os ]]; then
   busctl call org.freedesktop.Accounts "$account" org.freedesktop.Accounts.User SetSessionType s wayland
 fi
 # Refresh the shared greeter on hosts that explicitly selected HP-OS branding.
-# Boot images use the dedicated candidate-aware host workflow.
+# Boot-only branding preserves GDM and existing login/session selection. Custom
+# initrds without matching modules require their original owning workflow.
+can_rebuild=yes
+for image in /boot/initrd.img-*; do
+  [[ -e $image && ! -L $image ]] || continue
+  [[ -d /lib/modules/${image#/boot/initrd.img-} ]] || can_rebuild=no
+done
+if [[ $can_rebuild == yes ]]; then
+  "$user_home/.nix-profile/bin/hp-os-install-branding" "$user" hp-os-snapdragon install --boot-only
+else
+  echo 'Boot branding deferred: custom initrd has no matching installed kernel modules. Keep the working boot image and use its owning rebuild workflow.'
+  touch "$backup/boot-branding-deferred"
+fi
 if [[ -e /var/lib/hp-os-ubuntu-branding/login/complete ]]; then
   "$user_home/.nix-profile/bin/hp-os-install-branding" "$user" hp-os-snapdragon install --login-only
 fi

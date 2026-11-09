@@ -41,7 +41,7 @@ if [[ -z $revision && -z $channel ]]; then
 fi
 sudo -v
 sudo apt-get update
-sudo apt-get install -y curl git tmux rsync ca-certificates python3 dbus-daemon brightnessctl xdg-desktop-portal-gnome xdg-desktop-portal-gtk apparmor-utils
+sudo apt-get install -y curl git tmux rsync ca-certificates python3 dbus-daemon brightnessctl xdg-desktop-portal-gnome xdg-desktop-portal-gtk apparmor-utils plymouth plymouth-themes
 if ! command -v nix >/dev/null && [[ ! -x /nix/var/nix/profiles/default/bin/nix ]]; then
   installer=$(mktemp)
   curl --fail --location --proto '=https' --tlsv1.2 https://nixos.org/nix/install -o "$installer"
@@ -79,7 +79,11 @@ status=$NOM_DASHBOARD_STATE_DIR/$session.status
 while [[ ! -f $status ]]; do sleep 3; done
 [[ $(cat "$status") == 0 ]] || fail "Build or activation failed. See $NOM_DASHBOARD_STATE_DIR/$session.log; rerun setup to retry."
 [[ $build_only == false ]] || { echo "Built without activation: $run/candidate"; exit 0; }
-sudo bash "$run/source/fleet/ubuntu-snapdragon/install-system.sh" "$user"
+# Privileged boot integration can rebuild initramfs. Track and await it too.
+root_tracking=$state/system-tracking
+sudo env NOM_DASHBOARD_STATE_DIR="$root_tracking" NOM_DASHBOARD_ASSET_DIR="$NOM_DASHBOARD_ASSET_DIR" bash "$tracker" install-hp-os-system -- bash "$run/source/fleet/ubuntu-snapdragon/install-system.sh" "$user"
+while ! sudo test -f "$root_tracking/install-hp-os-system.status"; do sleep 3; done
+[[ $(sudo cat "$root_tracking/install-hp-os-system.status") == 0 ]] || fail "Native integration failed. See $root_tracking/install-hp-os-system.log; rerun setup to retry."
 mkdir -p "$HOME/.local/bin" "$HOME/.local/share/applications"
 # Repeatable updates default to this working pinned release. A tested channel is opt-in.
 python3 "$run/source/fleet/ubuntu-snapdragon/prepare-profile.py" --launcher "$run" "$HOME"

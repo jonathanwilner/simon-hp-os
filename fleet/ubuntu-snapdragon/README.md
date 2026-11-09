@@ -92,7 +92,11 @@ there is no automatic fallback to development `main`. `--build-only` builds the
 candidate and skips Home Manager activation and native integration, but may
 install build prerequisites. Bootstrap refuses a Casper live session and root.
 
-The current bootstrap adds the desktop and login choices. Changing the active
-display manager, applying boot/login branding, enrolling accounts and installing
-optional hardware services remain separate explicit actions. Existing branding
-is refreshed by the same native integration used by the live Snapdragon host.
+The bootstrap installs the shared HP-OS Plymouth boot theme and rebuilds boot
+initrds through tracked native integration. Existing boot images are backed up by
+the shared branding installer. A custom initrd without matching installed kernel
+modules is preserved and boot branding is explicitly deferred to that image's
+owning rebuild workflow. GDM and its login screen stay selected. Changing to the
+HP-OS SDDM login screen, enrolling accounts and installing optional hardware
+services remain explicit actions. Already-selected HP-OS login branding refreshes
+through the existing native integration.
