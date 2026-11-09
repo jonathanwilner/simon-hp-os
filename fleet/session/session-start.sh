@@ -25,19 +25,47 @@ if [[ "${HP_OS_OWNED_SESSION:-}" != 1 ]]; then
   systemctl --user start graphical-session.target || true
 fi
 
-# Existing Goran services and desktop-owned watchers remain authoritative.
-# The shared helper starts only missing processes and owns only its children.
-if ! pgrep -u "$(id -u)" -x wl-clip-persist >/dev/null; then
+# Match only processes attached to this display or bus. Another login's
+# clipboard or input method must not suppress this session's services.
+session_has_process() {
+  python3 - "$1" <<'PYCODE'
+import os, pathlib, re, sys
+pattern = re.compile(sys.argv[1])
+for proc in pathlib.Path('/proc').iterdir():
+    if not proc.name.isdigit():
+        continue
+    try:
+        if proc.stat().st_uid != os.getuid():
+            continue
+        cmd = (proc / 'cmdline').read_bytes().replace(b'\0', b' ').decode(errors='replace')
+        if not pattern.search(cmd):
+            continue
+        env = dict(item.split(b'=', 1) for item in (proc / 'environ').read_bytes().split(b'\0') if b'=' in item)
+        for key in ('WAYLAND_DISPLAY', 'DBUS_SESSION_BUS_ADDRESS'):
+            value = os.environ.get(key)
+            if value and env.get(key.encode()) == value.encode():
+                sys.exit(0)
+    except (OSError, ValueError):
+        continue
+sys.exit(1)
+PYCODE
+}
+
+if ! session_has_process '/wl-clip-persist( |$)'; then
   wl-clip-persist --clipboard both --write-timeout 5000 --reconnect-tries INF &
   children+=("$!")
 fi
-if ! pgrep -u "$(id -u)" -f 'wl-paste .*--watch .*cliphist' >/dev/null; then
+if ! session_has_process '/wl-paste .*--watch .*cliphist'; then
   wl-paste --watch cliphist store &
   children+=("$!")
 fi
-if [[ "${HP_OS_FLEET_INPUT_METHOD:-0}" == 1 && "${HP_OS_OWNED_SESSION:-}" != 1 ]] && ! pgrep -u "$(id -u)" -x fcitx5 >/dev/null; then
+if [[ "${HP_OS_FLEET_INPUT_METHOD:-0}" == 1 && "${HP_OS_OWNED_SESSION:-}" != 1 ]] && ! session_has_process '/fcitx5( |$)'; then
   # Run in the foreground so the compositor supervisor owns its lifetime.
   fcitx5 &
+  children+=("$!")
+fi
+if ! session_has_process '/(polkit[^ ]*agent[^ ]*|polkit-kde-authentication-agent-1|lxqt-policykit-agent|mate-polkit)( |$)'; then
+  "$HP_OS_FLEET_POLKIT_AGENT" &
   children+=("$!")
 fi
 # Niri removes its IPC socket at session exit. This keeps services tied to the
