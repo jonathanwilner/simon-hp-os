@@ -15,15 +15,13 @@ No separate branding command or second update is part of the successful path.
 The shared refresh selects the existing HP-OS Wayland session, retains active
 sessions, and validates the rebuilt current-kernel initrd before replacing it.
 Driver and firmware files and resume support must survive. Recovery images remain
-unchanged. A custom boot entry without `splash`, absent dependencies, or missing
-licensed fonts produces a pending result in Update Status and the tracked log.
+unchanged. A custom boot entry without `splash`, absent dependencies, or invalid
+font assets produces a pending result in Update Status and the tracked log.
 Retry **Update Applications** after host provisioning resolves the reported gap.
 
-HP Forma Regular and Medium are licensed host assets. Provision them in
-`/usr/local/share/fonts/hp/HPFormaDJROffice-{Regular,Medium}.ttf` on the original
-host image. Updates copy these fonts into the theme and can recover them from an
-existing HP-OS theme. They never publish font binaries in the public repository
-or silently substitute another font.
+HP Forma Regular and Medium are bundled unmodified with HP-OS under HP's explicit
+distribution authorization. Their embedded copyright metadata is retained. The
+same update installs both faces automatically; no separate font setup is needed.
 
 The source bootstrap `bash update-hp-os.sh --attach` uses the same tested channel.
 `main` becomes available to the default updater only after the trusted controller

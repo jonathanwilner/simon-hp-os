@@ -11,8 +11,7 @@ messages and real system-update progress retain callbacks.
 `logo_HP_Electric_Blue_keyline.png`. Its aspect ratio, color and keyline stay
 intact; the native script scales it once at startup to fit the display.
 The same source is `sddm/hp-os/images/hp-logo.png`. Do not replace the logo with
-typed letters or regenerate a logo from a font. Proprietary font binaries are
-not distributed in this repository.
+typed letters or regenerate a logo from a font. HP authorized distribution of the unmodified HP Forma faces in the shared `fonts/` directory.
 
 Script APIs were checked against upstream Plymouth's native example and
 `src/plugins/splash/script` implementation at commit

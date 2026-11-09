@@ -25,8 +25,8 @@ in {
   options.programs.hp-os-branding = {
     enable = lib.mkEnableOption "shared HP-OS boot and authenticated login motion";
     reducedMotion = lib.mkOption { type = lib.types.bool; default = false; };
-    formaRegular = lib.mkOption { type = lib.types.str; default = "/usr/local/share/fonts/hp/HPFormaDJROffice-Regular.ttf"; description = "Host-local licensed font. Never copied into the public flake."; };
-    formaMedium = lib.mkOption { type = lib.types.str; default = "/usr/local/share/fonts/hp/HPFormaDJROffice-Medium.ttf"; };
+    formaRegular = lib.mkOption { type = lib.types.str; default = "${./fonts/HPFormaDJROffice-Regular.ttf}"; description = "Bundled HP Forma Regular; an explicit font override remains supported."; };
+    formaMedium = lib.mkOption { type = lib.types.str; default = "${./fonts/HPFormaDJROffice-Medium.ttf}"; description = "Bundled HP Forma Medium."; };
   };
   config = lib.mkIf cfg.enable {
     boot.plymouth = { enable = lib.mkDefault true; theme = "hp-os"; themePackages = [ bootTheme ]; };

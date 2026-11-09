@@ -18,5 +18,5 @@ authentication, errors, user/session selection, keyboard navigation and power
 confirmation. The browser remains a simulated design preview.
 
 Serve the repository root so the canonical logo path resolves. Supply the
-licensed Medium font privately at `assets/HPForma-Medium.ttf` as well as Regular.
-The fallback sequence is Inter, Arial, sans-serif. Do not commit font binaries.
+bundled Medium font at `assets/HPForma-Medium.ttf` as well as Regular.
+The fallback sequence is Inter, Arial, sans-serif. The shared HP-OS font bundle is authorized for distribution.

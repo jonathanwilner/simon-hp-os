@@ -20,7 +20,7 @@ python verify.py
 python render.py --native
 ```
 
-Output defaults to `~/Videos/hp-logo-morph-v4`; set `HP_MOTION_OUTPUT` to change it. `HP_BRAND_ASSETS` defaults to the authorized pdf-ppt-kit assets. Private font binaries remain outside public source.
+Output defaults to `~/Videos/hp-logo-morph-v4`; set `HP_MOTION_OUTPUT` to change it. `HP_BRAND_ASSETS` defaults to the authorized pdf-ppt-kit assets. HP authorized the unmodified Regular and Medium font bundle in `../../fonts/` for HP-OS distribution.
 
 The native export is 480×200 at 30 fps. Frames 0–105 reveal the wordmark, which remains held at frame 105 while the user logs in. Frames 106–183 form the success-only continuation. SDDM must start these continuation frames only on its real authentication-success signal. Native rendering never adds an authentication wait or simulates a successful password. Boot completion retains its actual runtime callbacks.
 

@@ -2,7 +2,7 @@
 
 The corrected direction restores the original circular HP logo, the visible HP-OS identity, luminous transitions, and the modern four-slash HP logo. Reveal the circular mark, move and reshape its circle continuously into the O of HP-OS exactly once, hold the wordmark at the usable login prompt, then move into the starfield and modern logo after successful sign-in. The O must be the actual HP Forma glyph with the same weight, size, baseline and font-derived spacing as the rest of HP-OS, not a substitute ellipse. Concept videos must show the login interaction and label simulated authentication in their provenance. Use HP Forma Medium/Regular and eased position, opacity, glow and star velocity. The user explicitly requested the circle-to-O transformation. Avoid repeating HP-OS in decorative footers or adding a second reveal. Use original assets and choreography; no HarmonyOS assets are copied.
 
-Native implementation lives in `fleet/ubuntu-branding/plymouth` and `fleet/ubuntu-branding/sddm/hp-os` in the simon-hp-os repository. The public package stages the theme; licensed HP Forma is supplied from the host at installation.
+Native implementation lives in `fleet/ubuntu-branding/plymouth` and `fleet/ubuntu-branding/sddm/hp-os` in the simon-hp-os repository. The public package includes the theme and the unmodified HP Forma Regular and Medium faces authorized by HP for HP-OS distribution.
 
 ## Generated background provenance
 

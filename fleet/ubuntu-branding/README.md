@@ -46,11 +46,10 @@ sequence keeps the O in place while it fades into the final slash logo after
 authentication. The concept video shows password entry and sign-in with a
 clearly labelled simulated authentication sequence.
 
-HP Forma is supplied privately from
-`/usr/local/share/fonts/hp/HPFormaDJROffice-Regular.ttf`, or an explicit
-`HP_OS_FORMA_FONT` path passed to the installer. The matching Medium face is
-loaded alongside Regular when available. Public source includes the
-approved rendered HP logo, without redistributing the font binary.
+HP Forma Regular and Medium are bundled unmodified in `fonts/` with their
+embedded copyright metadata. HP authorized distribution with HP-OS. Both the
+Ubuntu installer/updater and NixOS module use these faces automatically. An
+explicit `HP_OS_FORMA_FONT` override remains available for managed hosts.
 
 The shared `hp-os-motion-design` skill is installed under `.codex/skills` and
 `.agents/skills`; DeepSeek Harness discovers the latter through its filesystem
