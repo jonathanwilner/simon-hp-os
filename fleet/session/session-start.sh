@@ -32,7 +32,7 @@ session_has_process() {
 import os, pathlib, re, sys
 pattern = re.compile(sys.argv[1])
 for proc in pathlib.Path('/proc').iterdir():
-    if not proc.name.isdigit():
+    if not proc.name.isdigit() or int(proc.name) == os.getpid():
         continue
     try:
         if proc.stat().st_uid != os.getuid():

@@ -46,6 +46,9 @@ let
   '';
   dmsSession = pkgs.writeShellScriptBin "snapdragon-dms-session" ''
     ${environment}
+    export GTK_IM_MODULE=fcitx
+    export QT_IM_MODULE=fcitx
+    export XMODIFIERS=@im=fcitx
     export XDG_CURRENT_DESKTOP=niri
     exec ${pkgs.niri}/bin/niri --session --config ${config.xdg.configHome}/niri/snapdragon.kdl "$@"
   '';
@@ -69,7 +72,22 @@ in {
       package = snapdragonDms;
       # Niri starts DMS within its own session.
       systemd.enable = false;
+      enableSystemMonitoring = true;
+      enableVPN = true;
+      enableDynamicTheming = true;
+      enableCalendarEvents = true;
+      enableClipboardPaste = true;
     };
+    programs.hp-os-fleet.niri = {
+      enable = true;
+      hpOsPackage = snapdragonHpOs;
+      dmsPackage = snapdragonDms;
+      niriPackage = snapdragonHpOs.niri;
+    };
+    programs.hp-os-fleet.appearance = { enable = true; dmsPackage = snapdragonDms; };
+    programs.hp-os-fleet.session.enable = true;
+    programs.hp-os-fleet.session.searchIq.enable = true;
+    programs.hp-os-fleet.session.inputMethod.enable = true;
     fonts.fontconfig.enable = true;
     home.packages = [ (pkgs.writeTextFile { name = "hp-os-ubuntu-account-check"; destination = "/bin/hp-os-ubuntu-account-check"; executable = true; text = builtins.readFile ./account-check.py; }) (pkgs.callPackage ../../pkgs/nom-dashboard.nix {}) snapdragonHpOs snapdragonHpOsFonts snapdragonDms hpSession dmsSession pkgs.niri pkgs.xwayland-satellite pkgs.foot pkgs.fuzzel pkgs.brightnessctl pkgs.wireplumber ] ++ lib.optionals cfg.resumePanelRetrain [ panelResume resumeWatcher ];
     # Preserve HP-OS's editable startup file and unrelated startup entries.
@@ -79,7 +97,8 @@ in {
       touch "$startup"
       ${pkgs.gnused}/bin/sed -i '/\/\/ snapdragon-panel-resume$/d' "$startup"
       ${pkgs.gnused}/bin/sed -i '/\/\/ snapdragon-launcher$/d' "$startup"
-      printf '%s\n' 'binds { Mod+D { spawn "${pkgs.fuzzel}/bin/fuzzel"; }; } // snapdragon-launcher' >> "$startup"
+      ${pkgs.gnused}/bin/sed -i '/\/\/ fleet-session$/d' "$startup"
+      printf '%s\n' 'spawn-at-startup "${config.programs.hp-os-fleet.session.package}/bin/hp-os-fleet-session-start" // fleet-session' >> "$startup"
       ${lib.optionalString cfg.resumePanelRetrain ''
         printf '%s\n' 'spawn-at-startup "${resumeWatcher}/bin/snapdragon-resume-watch" // snapdragon-panel-resume' >> "$startup"
       ''}
@@ -95,22 +114,9 @@ in {
       ${lib.optionalString cfg.resumePanelRetrain ''spawn-at-startup "${resumeWatcher}/bin/snapdragon-resume-watch"''}
       prefer-no-csd
       screenshot-path "~/Pictures/Screenshot-%Y-%m-%d-%H-%M-%S.png"
+      spawn-at-startup "${config.programs.hp-os-fleet.session.package}/bin/hp-os-fleet-session-start"
       binds {
-        Mod+Return { spawn "${pkgs.foot}/bin/foot"; }
-        Mod+D { spawn "${pkgs.fuzzel}/bin/fuzzel"; }
-        Mod+A { spawn "${snapdragonDms}/bin/dms" "ipc" "call" "spotlight" "toggle"; }
-        Mod+Q { close-window; }
-        Mod+Left { focus-column-left; }
-        Mod+Right { focus-column-right; }
-        Mod+Up { focus-window-up; }
-        Mod+Down { focus-window-down; }
-        Mod+Shift+E { quit; }
-        Mod+Space { toggle-window-floating; }
-        XF86AudioRaiseVolume allow-when-locked=true { spawn "${pkgs.wireplumber}/bin/wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%+"; }
-        XF86AudioLowerVolume allow-when-locked=true { spawn "${pkgs.wireplumber}/bin/wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%-"; }
-        XF86AudioMute allow-when-locked=true { spawn "${pkgs.wireplumber}/bin/wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle"; }
-        XF86MonBrightnessUp { spawn "${pkgs.brightnessctl}/bin/brightnessctl" "set" "5%+"; }
-        XF86MonBrightnessDown { spawn "${pkgs.brightnessctl}/bin/brightnessctl" "set" "5%-"; }
+        ${config.programs.hp-os-fleet.niri.dmsBindings}
       }
     '';
     xdg.configFile."xdg-desktop-portal/niri-portals.conf".text = ''

@@ -19,8 +19,18 @@ let
       exec fuzzel --layer=overlay --keyboard-focus=exclusive --no-exit-on-keyboard-focus-loss "$@"
     '';
   };
+  clipboard = pkgs.writeShellApplication {
+    name = "hp-os-clipboard-menu";
+    runtimeInputs = [ pkgs.cliphist pkgs.fuzzel pkgs.wl-clipboard ];
+    text = ''
+      selected=$(cliphist list | fuzzel --dmenu --prompt="Clipboard> ") || exit 0
+      [ -n "$selected" ] || exit 0
+      printf '%s\n' "$selected" | cliphist decode | wl-copy
+    '';
+  };
   media = config.programs.hp-os-fleet.mediaKeys.package;
   common = builtins.readFile ./navigation.kdl + ''
+    Mod+Alt+V hotkey-overlay-title="Clipboard History" { spawn "${clipboard}/bin/hp-os-clipboard-menu"; }
     Mod+Return { spawn "${pkgs.foot}/bin/foot"; }
     Mod+T { spawn "${pkgs.cosmic-term}/bin/cosmic-term"; }
     Alt+T { spawn "${pkgs.cosmic-term}/bin/cosmic-term"; }
@@ -56,7 +66,7 @@ let
     Mod+Shift+Right { move-column-right; }
     Mod+Shift+Page_Up { move-column-to-workspace-up; }
     Mod+Shift+Page_Down { move-column-to-workspace-down; }
-    Mod+Shift+Tab { spawn "hp-os" "ipc" "wallpaperSelector" "toggle"; }
+    Mod+Shift+Tab { spawn "hp-os" "settings"; }
   '';
   dmsBindings = common + lib.optionalString (cfg.dmsPackage != null) ''
     Mod+Space { spawn "${cfg.dmsPackage}/bin/dms" "ipc" "call" "spotlight" "toggle"; }
@@ -100,7 +110,7 @@ in {
     dmsBindings = lib.mkOption { type = lib.types.lines; readOnly = true; default = dmsBindings; };
   };
   config = lib.mkIf (config.programs.hp-os-fleet.enable && cfg.enable) {
-    home.packages = [ screenshot focused sync pkgs.wl-clip-persist pkgs.cliphist ];
+    home.packages = [ screenshot focused sync clipboard pkgs.wl-clip-persist pkgs.cliphist ];
     home.activation.hpOsFleetBindings = lib.mkIf (cfg.hpOsPackage != null)
       (lib.hm.dag.entryAfter [ "linkGeneration" "hposNiriBindings" "snapdragonSessionStartup" ] ''
         $DRY_RUN_CMD ${sync}/bin/hp-os-fleet-sync-bindings
