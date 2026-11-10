@@ -30,8 +30,12 @@ trap 'exit 0' INT TERM HUP
 # Do not export HP-OS's private bus to the global user manager: that would
 # redirect services belonging to another desktop/login session.
 if [[ "${HP_OS_OWNED_SESSION:-}" != 1 ]]; then
-  systemctl --user import-environment WAYLAND_DISPLAY NIRI_SOCKET XDG_CURRENT_DESKTOP XDG_SESSION_TYPE DBUS_SESSION_BUS_ADDRESS || true
-  dbus-update-activation-environment --systemd WAYLAND_DISPLAY NIRI_SOCKET XDG_CURRENT_DESKTOP XDG_SESSION_TYPE DBUS_SESSION_BUS_ADDRESS || true
+  activation_vars=(WAYLAND_DISPLAY NIRI_SOCKET XDG_CURRENT_DESKTOP XDG_SESSION_TYPE DBUS_SESSION_BUS_ADDRESS PATH)
+  for name in XDG_DATA_DIRS XDG_CONFIG_DIRS BROWSER; do
+    [[ -z "${!name:-}" ]] || activation_vars+=("$name")
+  done
+  systemctl --user import-environment "${activation_vars[@]}" || true
+  dbus-update-activation-environment --systemd "${activation_vars[@]}" || true
   systemctl --user start graphical-session.target || true
 fi
 

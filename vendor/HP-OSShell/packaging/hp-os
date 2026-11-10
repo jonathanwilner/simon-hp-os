@@ -87,7 +87,10 @@ case "$command" in
     # session bus so portal activation can reach this compositor. Deliberately
     # omit --systemd, which would alter the shared per-user service manager.
     if [[ "${HP_OS_OWNED_SESSION:-0}" == 1 ]]; then
-      activation_vars=(WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE XDG_RUNTIME_DIR NIRI_SOCKET)
+      activation_vars=(WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE XDG_RUNTIME_DIR NIRI_SOCKET PATH)
+      for name in XDG_DATA_DIRS XDG_CONFIG_DIRS BROWSER; do
+        [[ -z "${!name:-}" ]] || activation_vars+=("$name")
+      done
       [[ -z "${DISPLAY:-}" ]] || activation_vars+=(DISPLAY)
       dbus-update-activation-environment "${activation_vars[@]}"
     fi
