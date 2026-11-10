@@ -59,3 +59,21 @@ terminal, MIME and DMS preferences are preserved.
 The full comparison and host-specific exclusions are recorded in
 [`../session/PARITY-AUDIT.md`](../session/PARITY-AUDIT.md). NVIDIA environment,
 Goran panel calibration, pairing credentials and suspend policy stay host-owned.
+
+## Install from a fresh Ubuntu account
+
+Run `bootstrap.sh --source-revision FULL_COMMIT` as the installed desktop user.
+Use the SHA-256-verified copy supplied by the OmniBook installer's first-login
+launcher, or download the script from the same immutable public commit.
+`--build-only` builds the generated profile without activating it.
+
+The bootstrap generates account identity from the current login, builds the
+public `homeModules.ubuntuSnapdragon` module, and installs additive Ubuntu login
+entries with ordinary sudo prompts. It preserves GNOME, the active session,
+the Ubuntu kernel and board firmware. Private SSH aliases and administrator
+credentials are not required. It does not install passwordless sudo.
+
+The build is tracked through `nom-tmux`. A failed activation attempts the prior
+Home Manager generation. After successful setup, `hp-os-snapdragon-update`
+reuses the pinned revision unless an explicit compatible revision is supplied.
+Keep the working pin until a Snapdragon-compatible fleet-stable is validated.
