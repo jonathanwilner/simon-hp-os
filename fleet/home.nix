@@ -23,6 +23,7 @@ in {
     # change. The controller touches only explicitly owned HP-OS shell PIDs.
     home.activation.refreshHpOsRuntime = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
       # Launch from the persistent user unit, outside the activation cgroup.
+      $DRY_RUN_CMD ${pkgs.systemd}/bin/systemctl --user start --no-block hp-os-runtime-refresh.timer
       $DRY_RUN_CMD ${pkgs.systemd}/bin/systemctl --user start --no-block hp-os-runtime-refresh.service
     '';
     # A locked shell remains running. Retry the generation comparison after
