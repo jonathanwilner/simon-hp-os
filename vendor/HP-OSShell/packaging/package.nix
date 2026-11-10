@@ -92,6 +92,11 @@ in pkgs.stdenvNoCC.mkDerivation {
   installPhase = ''
     mkdir -p "$out/bin" "$out/share/hp-os" "$out/share/wayland-sessions" "$out/share/applications" "$out/share/hp-os/applications"
     cp -r . "$out/share/hp-os/packaging"
+    # DMS and other desktops resolve the icon theme selected by HP-OS through
+    # the standard XDG icon directory, outside the HP-OS session wrapper.
+    mkdir -p "$out/share/icons"
+    ln -s ../hp-os/packaging/files/data/icons/HP-OS "$out/share/icons/HP-OS"
+    ln -s ../hp-os/packaging/files/data/icons/HP-OS-Files "$out/share/icons/HP-OS-Files"
     cp hp-os "$out/bin/hp-os"
     chmod +x "$out/bin/hp-os"
     substituteInPlace "$out/bin/hp-os" \

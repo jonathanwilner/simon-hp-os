@@ -19,6 +19,8 @@ in {
     wallpapers.enable = lib.mkEnableOption "original HP-OS wallpaper collection" // { default = true; };
   };
   config = lib.mkIf cfg.enable {
+    # Keep the HP-OS theme's fallback chain complete in every login session.
+    home.packages = [ pkgs.adwaita-icon-theme pkgs.hicolor-icon-theme ];
     # Reconcile installed and running HP-OS generations after package links
     # change. The controller touches only explicitly owned HP-OS shell PIDs.
     home.activation.refreshHpOsRuntime = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
