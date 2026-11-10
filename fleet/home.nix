@@ -29,7 +29,12 @@ in {
     # A locked shell remains running. Retry the generation comparison after
     # unlock; current generations and other desktop sessions are no-ops.
     systemd.user.services.hp-os-runtime-refresh = {
-      Unit.Description = "Refresh an outdated unlocked HP-OS shell";
+      Unit = {
+        Description = "Refresh an outdated unlocked HP-OS shell";
+        # Preserve a refresh already between stopping and launching its shell.
+        # sd-switch applies this to both active and activating old units.
+        X-SwitchMethod = "keep-old";
+      };
       Service = {
         Type = "oneshot";
         ExecStart = "${refreshRuntime}";

@@ -34,7 +34,12 @@ let cfg = config.programs.hp-os; in {
       $DRY_RUN_CMD ${pkgs.systemd}/bin/systemctl --user start --no-block hp-os-package-runtime-refresh.service
     '';
     systemd.user.services.hp-os-package-runtime-refresh = {
-      Unit.Description = "Refresh an outdated unlocked HP-OS shell";
+      Unit = {
+        Description = "Refresh an outdated unlocked HP-OS shell";
+        # Preserve a refresh already between stopping and launching its shell.
+        # sd-switch applies this to both active and activating old units.
+        X-SwitchMethod = "keep-old";
+      };
       Service = {
         Type = "oneshot";
         ExecStart = "${cfg.package}/bin/hp-os refresh";
