@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
-runtime="${HP_OS_RUNTIME:-@runtime@}"
+installed_runtime="@runtime@"
+runtime="$installed_runtime"
+# Source development can supply a runtime. Installed launches always select the
+# installed generation, even when Niri inherited HP_OS_RUNTIME before an update.
+if [[ "$installed_runtime" == '@'runtime'@' || "${HP_OS_ALLOW_RUNTIME_OVERRIDE:-0}" == 1 ]]; then
+  runtime="${HP_OS_RUNTIME:-$installed_runtime}"
+fi
 packaging="${HP_OS_PACKAGING:-@packaging@}"
 if [[ ! -d "$packaging" ]]; then packaging="$(cd -- "$(dirname -- "$0")" && pwd)"; fi
 source "$packaging/session-environment.sh"
@@ -102,29 +108,11 @@ case "$command" in
     fi
     exec qs -n -p "$runtime" "$@"
     ;;
-  ipc)
-    exec qs ipc -p "$runtime" call "$@"
-    ;;
-  settings)
-    exec qs ipc -p "$runtime" call settings toggle
-    ;;
-  stop)
-    exec qs kill -p "$runtime"
-    ;;
-  restart)
-    qs kill -p "$runtime"
-    # Wait only for the selected runtime; never control an iNiR systemd unit.
-    for attempt in {1..30}; do
-      if ! qs ipc -p "$runtime" show >/dev/null 2>&1; then break; fi
-      sleep 0.1
-    done
-    exec "$0" run "$@"
-    ;;
-  logs)
-    exec qs log -p "$runtime" "$@"
+  ipc|settings|stop|logs|refresh|restart)
+    exec python3 "$packaging/runtime-control.py" "$command" "$runtime" "$0" "$@"
     ;;
   *)
-    echo 'Usage: hp-os [run|session|sync-bindings|doctor|ipc TARGET FUNCTION [ARGS...]|settings|restart|stop|logs]' >&2
+    echo 'Usage: hp-os [run|session|sync-bindings|doctor|ipc TARGET FUNCTION [ARGS...]|settings|refresh|restart|stop|logs]' >&2
     exit 2
     ;;
 esac

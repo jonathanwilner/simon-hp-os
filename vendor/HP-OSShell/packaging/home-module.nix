@@ -30,6 +30,9 @@ let cfg = config.programs.hp-os; in {
         UMask = "0077";
       };
     };
+    home.activation.hposRuntimeRefresh = lib.hm.dag.entryAfter [ "installPackages" "linkGeneration" ] ''
+      $DRY_RUN_CMD ${cfg.package}/bin/hp-os refresh
+    '';
     # Intentionally no Niri service autostart: selection happens at login.
     fonts.fontconfig.enable = true;
     # Sync only shortcuts after regular Niri files have been activated. Niri

@@ -87,6 +87,7 @@
           cp -r ${./.} source
           chmod -R u+w source
           python3 source/tests/test_packaging.py
+          python3 source/tests/test_runtime_control.py
           python3 source/tests/test_brand_migration.py
           python3 source/tests/test_floating_all.py
           python3 source/tests/test_niri_bindings.py
