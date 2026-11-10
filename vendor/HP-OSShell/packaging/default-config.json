@@ -78,5 +78,11 @@
   },
   "dock": {
     "monochromeIcons": false
+  },
+  "apps": {
+    "network": "nm-connection-editor",
+    "networkEthernet": "nm-connection-editor",
+    "browser": "google-chrome-stable",
+    "terminal": "ghostty"
   }
 }
