@@ -81,6 +81,28 @@ class RuntimeControlTests(unittest.TestCase):
             control.refresh(dict(runtime='/old', env={}), '/new', '/runner')
         run.assert_not_called()
 
+    def test_refresh_retains_outer_wrapper_to_reconstruct_qt_imports(self):
+        import subprocess
+        source = Path(__file__).resolve().parents[1] / 'packaging/hp-os'
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            outer = base / 'hp-os'
+            hidden = base / '.hp-os-wrapped'
+            packaging = base / 'packaging'
+            packaging.mkdir()
+            (packaging / 'session-environment.sh').write_text('hpos_clean_data_dirs() { :; }')
+            (packaging / 'migrate-brand.py').write_text('')
+            # The initial process resembles makeWrapper: the outer executable
+            # sets its generation's imports and execs the hidden Bash runner.
+            outer.write_text('#!' + __import__('shutil').which('bash') + '\nexport HP_OS_LAUNCHER="' + str(outer) + '"\nexport QML2_IMPORT_PATH=/new/Qt5Compat\nexec bash "' + str(hidden) + '" "$@"\n')
+            outer.chmod(0o755)
+            hidden.write_text(source.read_text().replace('@runtime@', '/new/inir'))
+            # Simulate the controller's clean-environment relaunch and report
+            # what the relaunched wrapper actually supplies to its shell.
+            (packaging / 'runtime-control.py').write_text('import os,subprocess,sys\nif sys.argv[1] == "logs": print(os.environ.get("QML2_IMPORT_PATH", "missing"))\nelse:\n env=dict(os.environ); env.pop("QML2_IMPORT_PATH",None)\n subprocess.run([sys.argv[3],"logs"], env=env, check=True)\n')
+            result = subprocess.run([str(outer), 'refresh'], env=dict(os.environ, HP_OS_PACKAGING=str(packaging)), capture_output=True, text=True, check=True)
+            self.assertEqual(result.stdout.strip(), '/new/Qt5Compat')
+
     def test_installed_wrapper_ignores_stale_inherited_runtime(self):
         source = Path(__file__).resolve().parents[1] / 'packaging/hp-os'
         with tempfile.TemporaryDirectory() as directory:

@@ -109,7 +109,9 @@ case "$command" in
     exec qs -n -p "$runtime" "$@"
     ;;
   ipc|settings|stop|logs|refresh|restart)
-    exec python3 "$packaging/runtime-control.py" "$command" "$runtime" "$0" "$@"
+    # makeWrapper runs this script as .hp-os-wrapped. Reload through the outer
+    # executable so the installed generation restores its Qt module paths.
+    exec python3 "$packaging/runtime-control.py" "$command" "$runtime" "${HP_OS_LAUNCHER:-$0}" "$@"
     ;;
   *)
     echo 'Usage: hp-os [run|session|sync-bindings|doctor|ipc TARGET FUNCTION [ARGS...]|settings|refresh|restart|stop|logs]' >&2

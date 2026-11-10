@@ -131,6 +131,7 @@ in pkgs.stdenvNoCC.mkDerivation {
     substituteInPlace "$out/bin/hp-os-search" --replace-fail '@python@' '${pkgs.python3}/bin/python3'
     wrapProgram "$out/bin/hp-os-search" --prefix PERL5LIB : '${pkgs.perlPackages.makeFullPerlPath [ pkgs.perlPackages.JSON ]}' --prefix PATH : '${lib.makeBinPath [ pkgs.recoll searchOcr pkgs.poppler-utils ]}'
     wrapProgram "$out/bin/hp-os" \
+      --set HP_OS_LAUNCHER "$out/bin/hp-os" \
       --set HP_OS_TOUCH_PATCHED "${if touchGestures then "1" else "0"}" \
       --set FONTCONFIG_FILE "${fontsConf}" \
       --prefix XDG_DATA_DIRS : "$out/share/hp-os/packaging/files/data:$out/share/hp-os:$out/share:${pkgs.adwaita-icon-theme}/share:${pkgs.hicolor-icon-theme}/share:${lib.makeSearchPath "share" desktopApps}" \
