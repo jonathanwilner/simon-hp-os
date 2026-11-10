@@ -35,6 +35,10 @@ def discover(proc=Path('/proc'), uid=None):
 
 def select(instances, env):
     for key in ('WAYLAND_DISPLAY', 'DBUS_SESSION_BUS_ADDRESS'):
+        # SSH normally exports the shared user bus, not a graphical session's
+        # private bus. With no display, require one unique owned shell instead.
+        if key == 'DBUS_SESSION_BUS_ADDRESS' and not env.get('WAYLAND_DISPLAY') and env.get(key) in (f'unix:path=/run/user/{os.getuid()}/bus', f'unix:path=/run/user/{os.getuid()}/bus,guid='):
+            continue
         if env.get(key):
             instances = [p for p in instances if p['env'].get(key) == env[key]]
     if len(instances) > 1:

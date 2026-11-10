@@ -21,14 +21,20 @@ in {
   config = lib.mkIf cfg.enable {
     # Reconcile installed and running HP-OS generations after package links
     # change. The controller touches only explicitly owned HP-OS shell PIDs.
-    home.activation.refreshHpOsRuntime = lib.hm.dag.entryAfter [ "installPackages" "linkGeneration" ] ''
-      $DRY_RUN_CMD ${refreshRuntime}
+    home.activation.refreshHpOsRuntime = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
+      # Launch from the persistent user unit, outside the activation cgroup.
+      $DRY_RUN_CMD ${pkgs.systemd}/bin/systemctl --user start --no-block hp-os-runtime-refresh.service
     '';
     # A locked shell remains running. Retry the generation comparison after
     # unlock; current generations and other desktop sessions are no-ops.
     systemd.user.services.hp-os-runtime-refresh = {
       Unit.Description = "Refresh an outdated unlocked HP-OS shell";
-      Service = { Type = "oneshot"; ExecStart = "${refreshRuntime}"; };
+      Service = {
+        Type = "oneshot";
+        ExecStart = "${refreshRuntime}";
+        # A replacement shell outlives this generation-comparison process.
+        KillMode = "process";
+      };
     };
     systemd.user.timers.hp-os-runtime-refresh = {
       Unit.Description = "Retry deferred HP-OS runtime upgrades";

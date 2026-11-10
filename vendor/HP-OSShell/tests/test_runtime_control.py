@@ -39,6 +39,21 @@ class RuntimeControlTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             control.select([first, second], {})
 
+    def test_ssh_shared_bus_selects_unique_private_shell(self):
+        shell = dict(env=dict(WAYLAND_DISPLAY='wayland-1', DBUS_SESSION_BUS_ADDRESS='private'))
+        ssh = dict(DBUS_SESSION_BUS_ADDRESS=f'unix:path=/run/user/{os.getuid()}/bus')
+        self.assertIs(control.select([shell], ssh), shell)
+        with self.assertRaises(RuntimeError):
+            control.select([shell, shell], ssh)
+
+    def test_activation_launches_persistent_unit_and_shell_survives_unit_exit(self):
+        root = Path(__file__).resolve().parents[3]
+        for path, unit in [(root / 'fleet/home.nix', 'hp-os-runtime-refresh.service'), (root / 'vendor/HP-OSShell/packaging/home-module.nix', 'hp-os-package-runtime-refresh.service')]:
+            source = path.read_text()
+            self.assertIn('entryAfter [ "reloadSystemd" ]', source)
+            self.assertIn('start --no-block ' + unit, source)
+            self.assertIn('KillMode = "process"', source)
+
     def test_launch_preserves_compositor_and_private_bus_but_cleans_qt_generation(self):
         old = dict(HP_OS_RUNTIME='/old', INIR_RUNTIME_DIR='/old', QML_IMPORT_PATH='/old/qml', QT_PLUGIN_PATH='/old/plugins', HP_OS_PACKAGING='/old/packaging', WAYLAND_DISPLAY='wayland-1', DBUS_SESSION_BUS_ADDRESS='private', NIRI_SOCKET='/run/niri.sock')
         new = control.launch_env(dict(env=old), '/new')

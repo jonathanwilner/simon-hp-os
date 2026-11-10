@@ -30,9 +30,17 @@ let cfg = config.programs.hp-os; in {
         UMask = "0077";
       };
     };
-    home.activation.hposRuntimeRefresh = lib.hm.dag.entryAfter [ "installPackages" "linkGeneration" ] ''
-      $DRY_RUN_CMD ${cfg.package}/bin/hp-os refresh
+    home.activation.hposRuntimeRefresh = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
+      $DRY_RUN_CMD ${pkgs.systemd}/bin/systemctl --user start --no-block hp-os-package-runtime-refresh.service
     '';
+    systemd.user.services.hp-os-package-runtime-refresh = {
+      Unit.Description = "Refresh an outdated unlocked HP-OS shell";
+      Service = {
+        Type = "oneshot";
+        ExecStart = "${cfg.package}/bin/hp-os refresh";
+        KillMode = "process";
+      };
+    };
     # Intentionally no Niri service autostart: selection happens at login.
     fonts.fontconfig.enable = true;
     # Sync only shortcuts after regular Niri files have been activated. Niri
