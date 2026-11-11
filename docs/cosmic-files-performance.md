@@ -30,6 +30,11 @@ is added. Restore those remote items through the remote system or by browsing
 its Trash directory. Local disk and USB Trash remain in the aggregate view.
 The upstream report is https://github.com/pop-os/cosmic-files/issues/1986.
 
+The patched ARM64 package passed its build and tests. In the normal session with
+both remote mounts present, a fresh Downloads window opened in 0.52 seconds and
+closed in 0.52 seconds. Measurements used 0.5-second polling. The application log
+contained no startup errors.
+
 ## Focused verification
 
 1. Read the actual Niri session environment, including its private D-Bus address.
