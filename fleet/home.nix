@@ -12,7 +12,7 @@ let
     ''}
   '';
 in {
-  imports = [ ./hp-os-controls/home.nix ./artcraft.nix ./appearance/home.nix ./session/home.nix ./niri/home.nix ./microsoft365/home.nix ../goran/desktop/microsoft365-webapps.nix ./ubuntu-branding/home.nix ./steam/home.nix ./mosh/home.nix ./release/home.nix ./chrome-channels/home.nix ../goran/desktop/upscayl/home.nix ./launcher-apps.nix ./media-keys.nix ./owly/home.nix ./relay/home.nix ./printing/home.nix ];
+  imports = [ ./cosmic/home.nix ./hp-os-controls/home.nix ./artcraft.nix ./appearance/home.nix ./session/home.nix ./niri/home.nix ./microsoft365/home.nix ../goran/desktop/microsoft365-webapps.nix ./ubuntu-branding/home.nix ./steam/home.nix ./mosh/home.nix ./release/home.nix ./chrome-channels/home.nix ../goran/desktop/upscayl/home.nix ./launcher-apps.nix ./media-keys.nix ./owly/home.nix ./relay/home.nix ./printing/home.nix ];
   options.programs.hp-os-fleet = {
     enable = lib.mkEnableOption "shared HP-OS fleet desktop defaults" // { default = true; };
     upscayl.enable = lib.mkEnableOption "native Upscayl" // { default = true; };

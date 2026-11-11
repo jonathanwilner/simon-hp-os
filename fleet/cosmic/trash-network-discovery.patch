@@ -1,0 +1,23 @@
+--- a/src/freedesktop.rs
++++ b/src/freedesktop.rs
+@@ -24,6 +24,8 @@
+ use crate::{Error, TrashContext, TrashItem, TrashItemMetadata, TrashItemSize};
+ 
+ type FsError = (PathBuf, std::io::Error);
++
++include!("hpos_remote_trash.rs");
+ 
+ #[derive(Clone, Default, Debug)]
+ pub struct PlatformTrashContext;
+@@ -269,6 +271,11 @@
+     let uid = unsafe { libc::getuid() };
+     let sorted_mount_points = get_sorted_mount_points()?;
+     for mount in &sorted_mount_points {
++        // Keep remote mounts in sorted_mount_points for correct deletion and
++        // restore boundaries, but never probe them during global trash scans.
++        if skip_background_trash_discovery(&mount._mnt_type) {
++            continue;
++        }
+         execute_on_mounted_trash_folders(uid, &mount.mnt_dir, false, false, |trash_path| {
+             trash_folders.insert(trash_path);
+             Ok(())

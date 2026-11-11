@@ -2,15 +2,7 @@
 # work for every normal account. Never add personal data or hardware overrides.
 { pkgs, ghostty ? pkgs.ghostty }:
 let
-  cosmicFiles = pkgs.symlinkJoin {
-    name = "cosmic-files-gvfs";
-    paths = [ pkgs.cosmic-files ];
-    nativeBuildInputs = [ pkgs.makeWrapper ];
-    postBuild = ''
-      wrapProgram "$out/bin/cosmic-files" \
-        --prefix GIO_EXTRA_MODULES : "${pkgs.gvfs}/lib/gio/modules"
-    '';
-  };
+  cosmicFiles = pkgs.callPackage ./cosmic/files-package.nix { };
   moonlight = pkgs.callPackage ./pkgs/moonlight-qt-foundation { };
   openfreebudsCompatible = import ./pkgs/openfreebuds { inherit pkgs; };
 in with pkgs; [
