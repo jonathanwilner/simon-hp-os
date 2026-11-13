@@ -158,6 +158,33 @@ def adapt(text):
                 values = ['spawn', *values[2:]]
                 executable = Path(values[1]).name
                 edits.append((action.start, action.end, 'spawn ' + ' '.join(json.dumps(v) for v in values[1:])))
+            # Host bindings can call hardware tools directly. Preserve their
+            # arguments and behavior, then mark the successful key as user intent.
+            feedback = None
+            args = values[2:]
+            if executable == 'wpctl' and args and args[0] in ('set-volume', 'set-mute'):
+                if '@DEFAULT_AUDIO_SINK@' in args:
+                    feedback = 'hp-os ipc osd volume'
+                elif '@DEFAULT_AUDIO_SOURCE@' in args:
+                    feedback = 'hp-os ipc osd mic'
+            elif executable == 'goran-brightness' and args in (['up'], ['down']):
+                feedback = ('hp-os-media-key brightness-osd "$(cat '
+                            '"${XDG_STATE_HOME:-$HOME/.local/state}/goran-brightness/percent")"')
+            elif executable == 'playerctl' and len(args) == 1:
+                feedback = {
+                    'next': 'hp-os ipc osd media next',
+                    'previous': 'hp-os ipc osd media previous',
+                    'stop': 'hp-os ipc osd media pause',
+                    'play-pause': 'if [ "$("$1" status)" = Playing ]; then hp-os ipc osd media play; else hp-os ipc osd media pause; fi',
+                }.get(args[0])
+            if feedback is not None:
+                script = ('"$@"; result=$?; if [ "$result" -eq 0 ]; then '
+                          + feedback + ' >/dev/null 2>&1 || true; fi; exit "$result"')
+                replacement = 'spawn ' + ' '.join(json.dumps(v) for v in
+                    ['sh', '-c', script, 'hp-os-hotkey', *values[1:]])
+                if edits and edits[-1][:2] == (action.start, action.end): edits.pop()
+                edits.append((action.start, action.end, replacement))
+                continue
             if executable in ('lock-screen', 'niri-shutdown'):
                 if len(values) != 2: raise ValueError('Unsupported session helper arguments')
                 replacement = 'quit' if executable == 'niri-shutdown' else 'spawn "hp-os" "ipc" "lock" "activate"'

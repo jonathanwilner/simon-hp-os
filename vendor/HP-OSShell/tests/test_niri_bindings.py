@@ -59,6 +59,27 @@ Mod+Return { spawn "foot"; }
             with self.assertRaises(ValueError):
                 MOD.adapt(f'F1 {{ spawn "dms" "ipc" "call" "brightness" "increment" {extra}; }}')
 
+    def test_direct_host_media_commands_keep_hardware_and_add_feedback(self):
+        import json
+        import subprocess
+        commands = [
+            (["/nix/store/example/bin/wpctl", "set-volume", "-l", "1.0", "@DEFAULT_AUDIO_SINK@", "10%+"], "hp-os ipc osd volume"),
+            (["wpctl", "set-mute", "@DEFAULT_AUDIO_SOURCE@", "toggle"], "hp-os ipc osd mic"),
+            (["goran-brightness", "up"], "hp-os-media-key brightness-osd"),
+            (["playerctl", "play-pause"], "hp-os ipc osd media play"),
+        ]
+        for argv, expected in commands:
+            original = 'F1 { spawn ' + ' '.join(json.dumps(v) for v in argv) + '; }'
+            result = MOD.adapt(original)
+            action = MOD.nodes(result)[0].children[0]
+            values = [t.value for t in action.head]
+            self.assertEqual(values[1:3], ['sh', '-c'])
+            self.assertEqual(values[5:], argv)
+            self.assertIn(expected, values[3])
+            self.assertEqual(subprocess.run(['sh', '-n', '-c', values[3]]).returncode, 0)
+            self.assertEqual(MOD.adapt(result), result)
+        self.assertEqual(MOD.adapt('F1 { spawn "wpctl" "status"; }'), 'F1 { spawn "wpctl" "status"; }')
+
     def test_native_conflicts_and_idempotence(self):
         self.sync()
         first = self.target.read_text()
