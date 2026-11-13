@@ -2,7 +2,8 @@
 { config, lib, pkgs, ... }:
 let
   enabled = config.programs.hp-os-fleet.enable
-    && lib.attrByPath [ "programs" "hp-os" "enable" ] false config
+    && (lib.attrByPath [ "programs" "hp-os" "enable" ] false config
+      || lib.attrByPath [ "programs" "goran-hp-os" "enable" ] false config)
     && lib.attrByPath [ "programs" "hp-cde-lockscreen" "enable" ] false config;
   launcher = pkgs.writeShellScript "dms-hp-cde-run" (builtins.replaceStrings
     [ "chmod -R u+w \"$stage\"" ]
