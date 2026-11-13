@@ -24,9 +24,13 @@ in {
     # Reconcile installed and running HP-OS generations after package links
     # change. The controller touches only explicitly owned HP-OS shell PIDs.
     home.activation.refreshHpOsRuntime = lib.hm.dag.entryAfter [ "reloadSystemd" ] ''
-      # Launch from the persistent user unit, outside the activation cgroup.
-      $DRY_RUN_CMD ${pkgs.systemd}/bin/systemctl --user start --no-block hp-os-runtime-refresh.timer
-      $DRY_RUN_CMD ${pkgs.systemd}/bin/systemctl --user start --no-block hp-os-runtime-refresh.service
+      # System activation also updates homes without a running user manager.
+      # The installed timer starts with timers.target at the next user login.
+      if ${pkgs.systemd}/bin/systemctl --user show-environment >/dev/null 2>&1; then
+        # Launch from the persistent user unit, outside the activation cgroup.
+        $DRY_RUN_CMD ${pkgs.systemd}/bin/systemctl --user start --no-block hp-os-runtime-refresh.timer
+        $DRY_RUN_CMD ${pkgs.systemd}/bin/systemctl --user start --no-block hp-os-runtime-refresh.service
+      fi
     '';
     # A locked shell remains running. Retry the generation comparison after
     # unlock; current generations and other desktop sessions are no-ops.
