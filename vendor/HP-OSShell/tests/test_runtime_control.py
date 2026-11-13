@@ -13,6 +13,27 @@ spec.loader.exec_module(control)
 
 
 class RuntimeControlTests(unittest.TestCase):
+    def test_readiness_retries_transient_ipc_timeout(self):
+        from unittest.mock import Mock
+        predicate = Mock(side_effect=[control.subprocess.TimeoutExpired(['qs', 'ipc'], 2), False, True])
+        with patch.object(control.time, 'monotonic', side_effect=[0, 0, 2, 3]), patch.object(control.time, 'sleep'):
+            self.assertTrue(control.wait_for(predicate))
+        self.assertEqual(predicate.call_count, 3)
+
+    def test_readiness_timeouts_still_obey_deadline(self):
+        from unittest.mock import Mock
+        predicate = Mock(side_effect=control.subprocess.TimeoutExpired(['qs', 'ipc'], 2))
+        with patch.object(control.time, 'monotonic', side_effect=[0, 0, 2, 8]), patch.object(control.time, 'sleep'):
+            self.assertFalse(control.wait_for(predicate))
+        self.assertEqual(predicate.call_count, 2)
+
+    def test_readiness_preserves_other_errors(self):
+        from unittest.mock import Mock
+        for error in (FileNotFoundError('qs'), RuntimeError('bad readiness check'),
+                      control.subprocess.CalledProcessError(1, ['qs'])):
+            with self.subTest(error=error), self.assertRaises(type(error)):
+                control.wait_for(Mock(side_effect=error))
+
     def test_discovery_requires_same_uid_and_hp_os_identity(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

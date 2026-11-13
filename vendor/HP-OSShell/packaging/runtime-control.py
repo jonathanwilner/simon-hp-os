@@ -57,8 +57,13 @@ def alive(instance):
 def wait_for(predicate, seconds=8):
     deadline = time.monotonic() + seconds
     while time.monotonic() < deadline:
-        if predicate():
-            return True
+        try:
+            if predicate():
+                return True
+        except subprocess.TimeoutExpired:
+            # IPC can time out while the new shell loads its first frame.
+            # Retry within the overall deadline; other errors still propagate.
+            pass
         time.sleep(.1)
     return False
 
