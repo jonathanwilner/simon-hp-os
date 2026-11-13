@@ -52,6 +52,33 @@ class HposContract(unittest.TestCase):
     def read(self, name):
         return (self.runtime / name).read_text()
 
+    def test_hotkeys_use_independent_centered_osd(self):
+        panels = self.read('modules/iris/ShellIrisPanelsImpl.qml')
+        loader = panels.split('identifier: "irisOnScreenDisplay"', 1)[1].split('component: IrisOSD {}', 1)[0]
+        self.assertIn('extraCondition: Config.options?.iris?.modules?.osd ?? true', loader)
+        self.assertNotIn('barOpen', loader)
+        island = self.read('modules/iris/bar/IrisIsland.qml')
+        self.assertIn('readonly property bool feedback: false', island)
+        for consumer in ('onOsdVolumeOpenChanged', 'onOsdBrightnessOpenChanged',
+                         'onOsdMicOpenChanged', 'onOsdKeyboardLayoutOpenChanged',
+                         'onOsdMediaActionTriggered', 'onPopupSequenceChanged',
+                         'clearOsdRequests', 'showFeedback('):
+            self.assertNotIn(consumer, island)
+        self.assertNotRegex(island, r'GlobalStates\.osd\w+\s*=')
+        # Device and battery notices and spontaneous track changes remain available.
+        for event in ('onHappened', 'onTrackChanged', 'onSinkProtectionTriggered'):
+            self.assertIn(event, island)
+        osd = self.read('modules/iris/onScreenDisplay/IrisOSD.qml')
+        self.assertIn('readonly property bool atTop: false', osd)
+        self.assertIn('(root.screen?.height ?? 0) * 0.12', osd)
+        self.assertIn('IrisFrame.safeClear("bottom")) + 18 * IrisStyle.density', osd)
+        self.assertIn('x: Math.round((osdWindow.width - width) / 2)', osd)
+        self.assertIn('WlrLayershell.keyboardFocus: WlrKeyboardFocus.None', osd)
+        self.assertIn('mask: Region {}', osd)
+        self.assertIn('if (root.islandAvailable) return', osd)
+        for kind in ('Volume', 'Brightness', 'Mic'):
+            self.assertIn('onOsd' + kind + 'OpenChanged', osd)
+
     def test_separate_taskbar_search(self):
         dock = self.read('modules/iris/dock/IrisDock.qml')
         palette = self.read('modules/iris/palette/IrisPalette.qml')

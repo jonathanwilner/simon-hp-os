@@ -1,0 +1,209 @@
+--- a/modules/iris/ShellIrisPanelsImpl.qml
++++ b/modules/iris/ShellIrisPanelsImpl.qml
+@@ -159,12 +159,7 @@
+ 
+     PanelLoader {
+         identifier: "irisOnScreenDisplay"
+-        extraCondition: (Config.options?.iris?.modules?.osd ?? true)
+-            && (!GlobalStates.barOpen
+-                || (CompositorService.isNiri && GameMode.hasFullscreenOnOutput(GlobalStates.focusedScreen?.name ?? "") && !NiriService.inOverview)
+-                || !(Config.options?.enabledPanels ?? []).includes("irisBar")
+-                || ((Config.options?.iris?.bar?.screenList ?? []).length > 0
+-                    && !(Config.options.iris.bar.screenList).includes(GlobalStates.focusedScreen?.name ?? "")))
++        extraCondition: Config.options?.iris?.modules?.osd ?? true
+         component: IrisOSD {}
+     }
+ 
+--- a/modules/iris/bar/IrisIsland.qml
++++ b/modules/iris/bar/IrisIsland.qml
+@@ -333,7 +333,8 @@
+ 
+     property string feedbackKind: "volume"
+     property bool wheelHold: false
+-    readonly property bool feedback: (feedbackTimer.running || root.wheelHold) && !root.expanded && !root.fullscreenCovered
++    // Level feedback belongs to the independent lower-center OSD.
++    readonly property bool feedback: false
+     readonly property var brightnessMonitor: Brightness.getMonitorForScreen(root.targetScreen)
+     readonly property real feedbackValue: root.feedbackKind === "brightness"
+         ? (GlobalStates.externalBrightnessPercent >= 0 ? GlobalStates.externalBrightnessPercent / 100 : (root.brightnessMonitor?.brightness ?? 0))
+@@ -352,17 +353,6 @@
+     readonly property string levelStyle: String(root.osdPrefs?.style ?? "capsule")
+     readonly property bool levelFigure: root.osdPrefs?.figure ?? true
+     readonly property bool osdKeyboard: (root.osdPrefs?.keyboard ?? true) && root.osdGameRule === "show"
+-    function showFeedback(kind: string, requested = false): void {
+-        if (Date.now() < GlobalStates.irisLevelQuietUntil) return
+-        if (!(Config.options?.iris?.modules?.osd ?? true) || root.expanded || root.fullscreenCovered
+-            || root.osdGameRule === "hide" || root.targetScreen?.name !== GlobalStates.focusedScreen?.name) return
+-        const mode = String(root.osdPrefs?.levels ?? "yours")
+-        const touched = kind === "brightness" ? Brightness.lastUserChange : Audio.lastUserChange
+-        if (!requested && (mode === "off" || (mode === "yours" && Date.now() - touched > 1200))) return
+-        root.feedbackKind = kind
+-        feedbackTimer.restart()
+-    }
+-
+     readonly property bool eventsEnabled: root.options?.events ?? true
+     property var event: ({ icon: "", tint: IrisStyle.text, title: "", detail: "", value: -1 })
+     readonly property bool eventShown: eventTimer.running && !root.expanded && !root.feedback
+@@ -376,16 +366,8 @@
+         root.event = { icon: icon, tint: tint, title: title, detail: detail, value: value }
+         eventTimer.restart()
+     }
+-    Timer { id: eventTimer; interval: 2600; onTriggered: root.clearOsdRequests() }
+-    // The Island answers these requests, so it owns clearing them: a flag left
+-    // set is never seen again by the OSD fallback on another output.
+-    function clearOsdRequests(): void {
+-        GlobalStates.osdVolumeOpen = false
+-        GlobalStates.osdBrightnessOpen = false
+-        GlobalStates.osdMicOpen = false
+-        GlobalStates.osdMediaOpen = false
+-        GlobalStates.osdKeyboardLayoutOpen = false
+-    }
++    Timer { id: eventTimer; interval: 2600 }
++
+     Connections {
+         target: GameMode
+         function onManuallyActivatedChanged(): void {
+@@ -423,7 +405,7 @@
+         root.badge = { icon: icon, tint: tint, text: text }
+         badgeTimer.restart()
+     }
+-    Timer { id: badgeTimer; interval: 1600; onTriggered: root.clearOsdRequests() }
++    Timer { id: badgeTimer; interval: 1600 }
+     Timer { id: eventsWarm; property bool ready: false; interval: 4000; running: true; onTriggered: ready = true }
+     Connections {
+         target: root.eventsEnabled && Battery.available ? Battery : null
+@@ -485,12 +467,6 @@
+         }
+     }
+     Connections {
+-        target: root.eventsEnabled ? GlobalStates : null
+-        function onOsdMediaActionTriggered(action: string): void {
+-            if (root.osdMediaMode !== "off") root.showTrack(action)
+-        }
+-    }
+-    Connections {
+         target: root.eventsEnabled && root.osdMediaMode === "every" ? MprisController : null
+         function onTrackChanged(reverse: bool): void {
+             if (root.eventShown || root.title.length === 0) return
+@@ -505,19 +481,7 @@
+             title.length > 0 ? title : Translation.tr("Now playing"),
+             root.ytMusic ? YtMusic.currentArtist : String(MprisController.artistOf(root.player) ?? ""), -1)
+     }
+-    Connections {
+-        target: root.eventsEnabled ? KeyboardIndicators : null
+-        function onPopupSequenceChanged(): void {
+-            if (!KeyboardIndicators.ready || !root.osdKeyboard) return
+-            const kind = KeyboardIndicators.popupKind
+-            const active = KeyboardIndicators.popupActive
+-            root.showBadge(KeyboardIndicators.popupMaterialIcon,
+-                kind === "layout" ? IrisStyle.accent : active ? IrisStyle.secondaryAccent : IrisStyle.subtext,
+-                kind === "layout"
+-                    ? (KeyboardIndicators.currentLayoutCodeInline || KeyboardIndicators.popupText)
+-                    : KeyboardIndicators.popupText)
+-        }
+-    }
++
+     function durationText(seconds: real): string {
+         const m = Math.round(seconds / 60)
+         return m >= 60 ? Math.floor(m / 60) + " h " + (m % 60) + " min" : m + " min"
+@@ -1056,7 +1020,6 @@
+     Timer {
+         id: feedbackTimer
+         interval: Math.max(800, Math.min(5000, Number(root.osdPrefs?.duration ?? 1500))) + 300
+-        onTriggered: root.clearOsdRequests()
+     }
+     Timer {
+         interval: 1000
+@@ -1065,20 +1028,6 @@
+         onTriggered: root.player?.positionChanged()
+     }
+     Connections {
+-        target: Audio.sink?.audio ?? null
+-        function onVolumeChanged(): void { root.showFeedback("volume") }
+-        function onMutedChanged(): void { root.showFeedback("volume") }
+-    }
+-    Connections {
+-        target: Audio
+-        function onMicVolumeChanged(): void { root.showFeedback("mic") }
+-        function onMicMutedChanged(): void { root.showFeedback("mic") }
+-    }
+-    Connections {
+-        target: Brightness
+-        function onBrightnessChanged(): void { root.showFeedback("brightness") }
+-    }
+-    Connections {
+         target: Notifications
+         function onPopupListChanged(): void {
+             if ((Notifications.popupList?.length ?? 0) > 0 && !root.pinned) root.expanded = false
+@@ -1086,14 +1035,6 @@
+     }
+     Connections {
+         target: GlobalStates
+-        function onOsdVolumeOpenChanged(): void { if (GlobalStates.osdVolumeOpen) root.showFeedback("volume", true) }
+-        function onOsdBrightnessOpenChanged(): void { if (GlobalStates.osdBrightnessOpen) root.showFeedback("brightness", true) }
+-        function onOsdMicOpenChanged(): void { if (GlobalStates.osdMicOpen) root.showFeedback("mic", true) }
+-        function onOsdKeyboardLayoutOpenChanged(): void {
+-            if (!GlobalStates.osdKeyboardLayoutOpen || !root.osdKeyboard) return
+-            root.showBadge("language", IrisStyle.accent,
+-                KeyboardIndicators.currentLayoutCodeInline || KeyboardIndicators.currentLayoutName)
+-        }
+         function onWallpaperSelectorOpenChanged(): void {
+             root.publishRestOrigin()
+             if (GlobalStates.wallpaperSelectorOpen) root.expanded = false
+--- a/modules/iris/onScreenDisplay/IrisOSD.qml
++++ b/modules/iris/onScreenDisplay/IrisOSD.qml
+@@ -35,10 +35,15 @@
+     readonly property var brightnessMonitor: Brightness.getMonitorForScreen(root.screen)
+     readonly property bool fullscreen: CompositorService.isNiri
+         && GameMode.hasFullscreenOnOutput(root.screen?.name ?? "") && !NiriService.inOverview
++    readonly property bool islandAvailable: GlobalStates.barOpen && !root.fullscreen
++        && (Config.options?.enabledPanels ?? []).includes("irisBar")
++        && ((Config.options?.iris?.bar?.screenList ?? []).length === 0
++            || (Config.options.iris.bar.screenList).includes(root.screen?.name ?? ""))
+     readonly property var prefs: Config.options?.iris?.osd
+-    readonly property bool atTop: root.prefs?.position === "top"
+-    readonly property real edgeMargin: Math.max(0, Math.min(240, Number(root.prefs?.offset ?? 18))) * IrisStyle.density
+-        + (root.fullscreen ? 0 : IrisFrame.safeClear(root.atTop ? "top" : "bottom"))
++    // OpenHarmony PC places the panel bottom at 88% of display height.
++    readonly property bool atTop: false
++    readonly property real edgeMargin: Math.max((root.screen?.height ?? 0) * 0.12,
++        (root.fullscreen ? 0 : IrisFrame.safeClear("bottom")) + 18 * IrisStyle.density)
+     readonly property int holdMs: Math.max(800, Math.min(5000, Number(root.prefs?.duration ?? 1500)))
+     readonly property string gameRule: root.fullscreen || GameMode.active ? String(root.prefs?.fullscreen ?? "show") : "show"
+     readonly property string levelsMode: String(root.prefs?.levels ?? "yours")
+@@ -155,6 +160,7 @@
+         function onMicVolumeChanged(): void { root.showLevel("mic") }
+         function onMicMutedChanged(): void { root.showLevel("mic") }
+         function onSinkProtectionTriggered(reason: string): void {
++            if (root.islandAvailable) return
+             root.warningText = reason
+             root.show("warning", root.holdMs + 1100)
+         }
+@@ -168,6 +174,7 @@
+     Connections {
+         target: DeviceEvents
+         function onHappened(event: var): void {
++            if (root.islandAvailable) return
+             root.connection = event
+             root.show("connection", root.holdMs + 1100)
+         }
+@@ -187,7 +194,7 @@
+     Connections {
+         target: MprisController
+         function onTrackChanged(reverse: bool): void {
+-            if (!warm.ready || root.mediaTitle.length === 0) return
++            if (root.islandAvailable || !warm.ready || root.mediaTitle.length === 0) return
+             if (root.kind === "media" && root.open) {
+                 hideTimer.restart()
+                 return
+@@ -234,8 +241,8 @@
+         }
+         anchors { bottom: !root.atTop; top: root.atTop; left: true; right: true }
+         margins {
+-            left: root.fullscreen ? 0 : IrisFrame.safeClear("left")
+-            right: root.fullscreen ? 0 : IrisFrame.safeClear("right")
++            left: 0
++            right: 0
+         }
+         implicitHeight: Math.round(root.edgeMargin + 110 * IrisStyle.density)
+         mask: Region {}
