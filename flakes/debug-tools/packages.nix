@@ -47,7 +47,7 @@ let
     }
     // lib.optionalAttrs isLinux {
       nativeBuildInputs = old.nativeBuildInputs ++ [ pkgs.zip ];
-      postInstall = (old.postInstall or "") + ''
+      installPhase = old.installPhase + ''
         zip -qd "$out/libexec/apktool/apktool.jar" prebuilt/linux/aapt2
       '';
     }

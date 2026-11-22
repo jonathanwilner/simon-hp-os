@@ -81,7 +81,7 @@ runCommandCC "fleet-debug-tools-smoke"
                     throw new IllegalStateException(decompiler.getLastMessage());
                 }
                 for (Function function : currentProgram.getFunctionManager().getFunctions(true)) {
-                    if (function.getName().equals("main") || function.getName().equals("_main")) {
+                    if (!function.isThunk()) {
                         var result = decompiler.decompileFunction(function, 30, monitor);
                         if (!result.decompileCompleted()) {
                             throw new IllegalStateException(result.getErrorMessage());
@@ -90,7 +90,7 @@ runCommandCC "fleet-debug-tools-smoke"
                         return;
                     }
                 }
-                throw new IllegalStateException("main was not found");
+                throw new IllegalStateException("No function was found in the fixture");
             } finally {
                 decompiler.dispose();
             }
