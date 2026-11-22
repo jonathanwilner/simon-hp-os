@@ -98,6 +98,7 @@ runCommandCC "fleet-debug-tools-smoke"
     }
     JAVA
     mkdir projects
+    export JAVA_TOOL_OPTIONS="-Duser.home=$HOME"
     ghidra-analyzeHeadless projects smoke -import tiny -scriptPath "$PWD" \
       -postScript FleetSmoke.java -deleteProject > ghidra.log 2>&1 &&
       grep 'Fleet Ghidra decompilation passed' ghidra.log || {
