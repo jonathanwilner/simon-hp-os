@@ -9,7 +9,7 @@ This flake supports x86-64 Linux, ARM64 Linux, and Apple Silicon macOS. It keeps
 | `nm` | GNU Binutils | Apple cctools |
 | `ghidra`, `ghidra-analyzeHeadless` | Ghidra release on x86-64 and the Nixpkgs source build on ARM64 | Nixpkgs source build with Apple Silicon native components |
 
-On ARM64 Linux, Apktool rebuilds Android resources with a pinned, native [AAPT2 build](https://github.com/SuperJMN/DotnetAndroidArm64Shims/releases/tag/35.0.105). Its official JAR bundles an x86-64 Linux resource compiler. This flake uses Apktool's existing PATH fallback to make rebuilds work on both Linux architectures. Apktool on macOS uses its bundled universal resource compiler.
+On ARM64 Linux, Apktool rebuilds Android resources with a pinned, native [AAPT2 build](https://github.com/SuperJMN/DotnetAndroidArm64Shims/releases/tag/35.0.105). Its official JAR bundles an x86-64 Linux resource compiler. This flake replaces the bundled Linux binary with a launcher for the Nix-managed compiler. Apktool on macOS uses its bundled universal resource compiler.
 
 ## Add it to a fleet
 

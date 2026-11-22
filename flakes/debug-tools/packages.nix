@@ -10,8 +10,8 @@ let
       ln -s "${target}" "$out/bin/${name}"
     '';
 
-  # Apktool's Linux jar carries an x86-64 AAPT2. On Linux, use the Nix-managed
-  # compiler through Apktool's existing PATH fallback.
+  # Apktool's Linux jar carries an x86-64 AAPT2. Replace that resource
+  # with a launcher for the Nix-managed compiler.
   aapt =
     if isAarch64 && isLinux then
       pkgs.stdenvNoCC.mkDerivation {
@@ -48,7 +48,10 @@ let
     // lib.optionalAttrs isLinux {
       nativeBuildInputs = old.nativeBuildInputs ++ [ pkgs.zip ];
       installPhase = old.installPhase + ''
-        zip -qd "$out/libexec/apktool/apktool.jar" prebuilt/linux/aapt2
+        mkdir -p prebuilt/linux
+        printf '%s\n' '#!${stdenv.shell}' 'exec "${lib.getExe aapt}" "$@"' > prebuilt/linux/aapt2
+        touch -t 198001010000 prebuilt/linux/aapt2
+        zip -Xq "$out/libexec/apktool/apktool.jar" prebuilt/linux/aapt2
       '';
     }
   );
