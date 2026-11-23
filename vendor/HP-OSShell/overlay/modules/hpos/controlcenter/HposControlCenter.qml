@@ -15,7 +15,7 @@ import qs.modules.iris.components
 import qs.modules.iris.style
 import qs.modules.hpos.design
 
-// PC composition; services and detail lists remain owned by iNiR.
+// PC composition using iNiR services and shared controls.
 ColumnLayout {
     id: root
     property var touchPolicy: ({})
@@ -240,6 +240,21 @@ ColumnLayout {
         showPlayers: false
         active: root.visible
     }
+    function outputName(node): string {
+        switch (node?.name) {
+        case "sink-sunshine-stereo":
+            return HposTokens.tr("Sunshine Stereo", "Sunshine 立体声")
+        case "sink-sunshine-surround51":
+            return HposTokens.tr("Sunshine Surround 5.1", "Sunshine 5.1 环绕声")
+        case "sink-sunshine-surround71":
+            return HposTokens.tr("Sunshine Surround 7.1", "Sunshine 7.1 环绕声")
+        case "sink-sunshine-surround714":
+            return HposTokens.tr("Sunshine Surround 7.1.4", "Sunshine 7.1.4 环绕声")
+        default:
+            return Audio.friendlyDeviceName(node)
+        }
+    }
+
     RowLayout {
         Layout.fillWidth: true
         spacing: 6 * root.d
@@ -252,11 +267,25 @@ ColumnLayout {
         }
         IrisIconButton { materialIcon: "display_settings"; Accessible.name: Translation.tr("Display"); onClicked: root.togglePicker("display") }
     }
+    IrisText {
+        Layout.fillWidth: true
+        text: Audio.rawSink
+            ? HposTokens.tr("Default output: %1", "默认输出：%1").arg(root.outputName(Audio.rawSink))
+            : HposTokens.tr("No audio output", "无音频输出")
+        elide: Text.ElideRight
+        font.pixelSize: IrisStyle.typeCaption
+        color: IrisStyle.subtext
+    }
     RowLayout {
         Layout.fillWidth: true
         spacing: 6 * root.d
         Level { kind: "volume" }
-        IrisIconButton { materialIcon: "speaker_group"; Accessible.name: Translation.tr("Audio devices"); onClicked: root.togglePicker("devices") }
+        IrisButton {
+            text: HposTokens.tr("Audio devices", "音频设备")
+            selected: root.picker === "devices"
+            implicitHeight: 42 * root.d
+            onClicked: root.togglePicker("devices")
+        }
     }
     IrisText {
         Layout.fillWidth: true
@@ -278,7 +307,7 @@ ColumnLayout {
     Component { id: bluetoothDetails; IrisBluetoothList {} }
     Component { id: displayDetails; IrisDisplayList { targetScreen: root.targetScreen } }
     Component { id: systemDetails; IrisSystemList {} }
-    Component { id: audioDetails; IrisDeviceList {} }
+    Component { id: audioDetails; HposAudioDevices { outputName: root.outputName } }
     ColumnLayout {
         Layout.fillWidth: true
         visible: !root.editing && root.actions.includes("profiles")
@@ -513,7 +542,7 @@ ColumnLayout {
         Layout.fillWidth: true
         implicitHeight: 42 * root.d
         readonly property bool brightness: kind === "brightness"
-        readonly property bool ready: brightness ? Boolean(root.monitor?.ready) && Number.isFinite(Number(root.monitor?.brightness)) : Audio.sink !== null
+        readonly property bool ready: brightness ? Boolean(root.monitor?.ready) && Number.isFinite(Number(root.monitor?.brightness)) : Boolean(Audio.rawSink?.audio)
         enabled: ready
         opacity: ready ? 1 : 0.4
         vertical: false
@@ -533,13 +562,13 @@ ColumnLayout {
         readout: true
         fillColor: HposTokens.dark ? "#586577" : "#dce2ed"
         filledForeground: HposTokens.text
-        muted: !brightness && (Audio.sink?.audio?.muted ?? false)
+        muted: !brightness && (Audio.rawSink?.audio?.muted ?? false)
         icon: brightness ? "light_mode" : muted ? "volume_off" : "volume_up"
-        value: ready ? brightness ? root.monitor.brightness : Math.min(1, Audio.value ?? 0) : 0
+        value: ready ? brightness ? root.monitor.brightness : Math.min(1, Audio.rawSink.audio.volume) : 0
         Accessible.onIncreaseAction: if (enabled) moved(Math.min(1, value + 0.05))
         Accessible.onDecreaseAction: if (enabled) moved(Math.max(0, value - 0.05))
-        Accessible.name: brightness ? Translation.tr("Brightness") : Translation.tr("Volume")
+        Accessible.name: brightness ? Translation.tr("Brightness") : HposTokens.tr("Default output volume", "默认输出音量")
         onMoved: next => { if (brightness) root.monitor?.setBrightness(next); else Audio.setSinkVolume(next) }
-        onIconClicked: if (!brightness) Audio.toggleMute()
+        onIconClicked: if (!brightness && Audio.rawSink?.audio) Audio.rawSink.audio.muted = !muted
     }
 }
