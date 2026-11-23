@@ -14,7 +14,9 @@ let
     cp ${./dms-brightness/goran_panel.go} internal/server/brightness/goran_panel.go
     cp ${./dms-brightness/goran_panel_test.go} internal/server/brightness/goran_panel_test.go
   '';
-  postFixup = (old.postFixup or "") + pkgs.lib.optionalString nativePam ''
+  postFixup = (old.postFixup or "") + ''
+    ${pkgs.python3}/bin/python3 ${../../fleet/dms-audio-controls/patch.py} "$out/share/quickshell/dms"
+  '' + pkgs.lib.optionalString nativePam ''
     # PAM dlopens its modules from a library loaded by the Go executable.
     # The executable's RPATH supplies that transitive search path as well.
     elf="$out/bin/.dms-wrapped"

@@ -52,6 +52,7 @@
           text = ''exec python3 ${./fleet/chrome-channels/update.py} --output "$PWD/fleet/chrome-channels/sources.json" "$@"'';
         };
       in { type = "app"; program = "${updater}/bin/update-chrome-channels"; };
+      lib.dmsAudioControlsPatch = ./fleet/dms-audio-controls/patch.py;
       overlays.ghostty = final: prev: {
         ghostty = (ghostty-upstream.packages.${prev.stdenv.hostPlatform.system}.default.overrideAttrs (old: {
           patches = (old.patches or [ ]) ++ nixpkgs.lib.optionals prev.stdenv.hostPlatform.isAarch64 [
@@ -94,7 +95,11 @@
           hpOs = hp-os.packages.${pkgs.stdenv.hostPlatform.system}.default;
         };
         _module.args.snapdragonHpOsFonts = pkgs.callPackage (hp-os + "/packaging/fonts") { };
-        _module.args.snapdragonDms = dank-material-shell.packages.${pkgs.stdenv.hostPlatform.system}.default;
+        _module.args.snapdragonDms = dank-material-shell.packages.${pkgs.stdenv.hostPlatform.system}.default.overrideAttrs (old: {
+          postFixup = (old.postFixup or "") + ''
+            ${pkgs.python3}/bin/python3 ${self.lib.dmsAudioControlsPatch} "$out/share/quickshell/dms"
+          '';
+        });
         programs.hp-os-snapdragon.enable = true;
         programs.fleet-debug-tools.enable = true;
         # Goran's N1X CPU presentation workaround is specific to its NVIDIA GPU.
