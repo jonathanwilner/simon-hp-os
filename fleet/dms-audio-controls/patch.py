@@ -18,16 +18,48 @@ FOCUSED_MARKER = "readonly property bool audioOutputsOpen:"
 MAIN_VOLUME_MARKER = "readonly property PwNode mainVolumeSink:"
 
 MAIN_VOLUME = '''
-    // Sunshine may own the default while local audio plays through Studio Display.
+    readonly property string preferredMainOutput: (primaryOutputFile.text() || "").trim()
+    readonly property bool mainVolumeUnavailable: !!preferredMainOutput && !mainVolumeSink
     readonly property PwNode mainVolumeSink: {
-        if (!sink?.name?.startsWith("sink-sunshine-"))
+        if (!preferredMainOutput && !sink?.name?.startsWith("sink-sunshine-"))
             return sink;
-        const speakers = Pipewire.nodes.values.filter(node => node?.audio && node.isSink && !node.isStream
-            && node.name?.startsWith("alsa_output.usb-Apple_Inc._Studio_Display_")
-            && node.name.endsWith(".analog-stereo"));
+        const speakers = Pipewire.nodes.values.filter(node => {
+            if (!isPhysicalOutput(node))
+                return false;
+            return preferredMainOutput ? node.name === preferredMainOutput
+                : node.name?.startsWith("alsa_output.usb-Apple_Inc._Studio_Display_")
+                    && node.name.endsWith(".analog-stereo");
+        });
+        if (preferredMainOutput)
+            return speakers.length === 1 ? speakers[0] : null;
         return speakers.length === 1 ? speakers[0] : sink;
     }
     readonly property int mainVolumeMax: getMaxVolumePercent(mainVolumeSink)
+
+    FileView {
+        id: primaryOutputFile
+        path: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/hp-os-primary-audio-output"
+        blockLoading: true
+        blockWrites: true
+        atomicWrites: true
+        watchChanges: true
+        printErrors: false
+        onFileChanged: reload()
+    }
+
+    function isPhysicalOutput(node) {
+        return !!node?.audio && node.isSink && !node.isStream
+            && !node.name?.startsWith("sink-sunshine-") && !isVirtualOutput(node);
+    }
+
+    function selectMainVolumeOutput(node) {
+        if (isPhysicalOutput(node))
+            primaryOutputFile.setText(node.name + "\\n");
+    }
+
+    function followDefaultVolumeOutput() {
+        primaryOutputFile.setText("");
+    }
 '''
 
 OUTPUT_NAME = '''    function outputDisplayName(node) {
@@ -327,6 +359,20 @@ def patch_main_volume(service, slider, grid, bar, osd):
                 if (root.mainVolumeSink !== root.sink)
                     result += `Local output: ${root.outputDisplayName(root.mainVolumeSink)}\\n`;''',
     )
+    service = service.replace("adjustDefaultSinkVolume", "adjustMainVolume")
+    service = service.replace(
+        '"No audio sink available"', '(root.mainVolumeUnavailable ? "Primary speaker unavailable" : "No audio sink available")',
+    ).replace(
+        'result += "Output: No sink available\\n";',
+        'result += (root.mainVolumeUnavailable ? "Output: Primary speaker unavailable\\n" : "Output: No sink available\\n");',
+    )
+    service = replace(
+        service, '        if (isVirtualOutput(node))\n',
+        '''        if (node === mainVolumeSink)
+            status.push(I18n.tr("Main volume"));
+        if (isVirtualOutput(node))
+''',
+    )
 
     def volume_target(qml):
         qml = re.sub(r"\bAudioService\.sink\b", "AudioService.mainVolumeSink", qml)
@@ -335,12 +381,69 @@ def patch_main_volume(service, slider, grid, bar, osd):
     slider = volume_target(slider)
     grid = volume_target(grid)
     grid = replace(
+        grid, 'return AudioService.outputDisplayName(AudioService.mainVolumeSink) || I18n.tr("No output device", "audio status");',
+        '''return AudioService.mainVolumeUnavailable ? I18n.tr("Primary speaker unavailable")
+                        : AudioService.outputDisplayName(AudioService.mainVolumeSink) || I18n.tr("No output device", "audio status");''',
+    )
+    grid = replace(
         grid, 'return I18n.tr("Default output") + " · " + Math.round(volume * 100) + "%";',
         '''const role = AudioService.mainVolumeSink === AudioService.sink ? I18n.tr("Default output") : I18n.tr("Local output");
                         return role + " · " + Math.round(volume * 100) + "%";''',
     )
     osd = replace(volume_target(osd), "function onSinkChanged()", "function onMainVolumeSinkChanged()")
     return {SERVICE: service, SLIDER: slider, GRID: grid, BAR: volume_target(bar), VOLUME_OSD: osd}
+
+
+def patch_main_output_picker(detail):
+    detail = replace(
+        detail, "width: parent.width - headerText.width - settingsButton.width",
+        "width: parent.width - headerText.width - settingsButton.width - (followDefaultButton.visible ? followDefaultButton.width : 0)",
+    )
+    detail = replace(
+        detail, "        DankActionButton {\n            id: settingsButton",
+        '''        DankButton {
+            id: followDefaultButton
+            visible: !!AudioService.preferredMainOutput
+            anchors.verticalCenter: parent.verticalCenter
+            text: I18n.tr("Follow system default")
+            buttonHeight: 28
+            horizontalPadding: Theme.spacingS
+            onClicked: AudioService.followDefaultVolumeOutput()
+        }
+
+        DankActionButton {
+            id: settingsButton''',
+    )
+    detail = replace(
+        detail, "                    Rectangle {\n                        anchors.right: parent.right\n                        anchors.rightMargin: Theme.spacingM\n                        anchors.top: parent.top\n                        anchors.topMargin: 10\n                        width: pinOutputRow.width",
+        '''                    DankButton {
+                        id: mainOutputButton
+                        visible: AudioService.isPhysicalOutput(modelData) && modelData.name !== AudioService.preferredMainOutput
+                        anchors.right: pinOutputButton.left
+                        anchors.rightMargin: Theme.spacingS
+                        anchors.verticalCenter: pinOutputButton.verticalCenter
+                        text: I18n.tr("Use for main volume")
+                        buttonHeight: 28
+                        horizontalPadding: Theme.spacingS
+                        onClicked: AudioService.selectMainVolumeOutput(modelData)
+                    }
+
+                    Rectangle {
+                        id: pinOutputButton
+                        anchors.right: parent.right
+                        anchors.rightMargin: Theme.spacingM
+                        anchors.top: parent.top
+                        anchors.topMargin: 10
+                        width: pinOutputRow.width''',
+    )
+    detail = replace(
+        detail, "const pinButtonWidth = pinOutputRow.width + Theme.spacingS * 4 + Theme.spacingM;",
+        "const pinButtonWidth = pinOutputRow.width + Theme.spacingS * 4 + Theme.spacingM + (mainOutputButton.visible ? mainOutputButton.width + Theme.spacingS : 0);",
+    )
+    return replace(
+        detail, "anchors.rightMargin: pinOutputRow.width + Theme.spacingS * 4",
+        "anchors.rightMargin: pinOutputRow.width + Theme.spacingS * 4 + (mainOutputButton.visible ? mainOutputButton.width + Theme.spacingS : 0)",
+    )
 
 
 def patch(shell):
@@ -362,6 +465,7 @@ def patch(shell):
     if supports_focused_outputs and FOCUSED_MARKER not in popout:
         changes.update(patch_focused_outputs(changes.get(DETAIL, detail), popout))
     if not is_dux and MAIN_VOLUME_MARKER not in service:
+        changes[DETAIL] = patch_main_output_picker(changes.get(DETAIL, detail))
         changes.update(patch_main_volume(
             changes.get(SERVICE, service),
             changes[SLIDER] if SLIDER in changes else (shell / SLIDER).read_text(),
