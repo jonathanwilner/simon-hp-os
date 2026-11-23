@@ -30,6 +30,7 @@ ColumnLayout {
     Process { id: touchToggle; command: ["touch-support", "toggle"] }
     property var targetScreen: null
     property string picker: ""
+    readonly property bool showingAudioDevices: picker === "devices"
     property bool editing: false
     readonly property real d: IrisStyle.density
     readonly property var monitor: Brightness.getMonitorForScreen(targetScreen)
@@ -42,9 +43,24 @@ ColumnLayout {
         return list.filter((id, index) => root.defaults.includes(id) && list.indexOf(id) === index)
     }
     spacing: 12 * d
-    function focusInitial() { editButton.forceActiveFocus() }
+    function focusInitial() {
+        if (showingAudioDevices) audioBack.forceActiveFocus()
+        else editButton.forceActiveFocus()
+    }
+    function closeAudioDevices() {
+        root.picker = ""
+        audioDevicesButton.forceActiveFocus()
+    }
     onVisibleChanged: if (visible) { root.monitor?.refresh(); hotspot.refreshStatus(); omdrop.refresh(); relay.refresh(); printing.refresh() }
-    Keys.onEscapePressed: event => { root.picker = ""; root.editing = false; GlobalStates.controlPanelOpen = false; event.accepted = true }
+    Keys.onEscapePressed: event => {
+        if (root.showingAudioDevices) root.closeAudioDevices()
+        else {
+            root.picker = ""
+            root.editing = false
+            GlobalStates.controlPanelOpen = false
+        }
+        event.accepted = true
+    }
     function togglePicker(name) { picker = picker === name ? "" : name }
     function takePickerRequest() {
         const next = GlobalStates.irisControlPickerRequest
@@ -174,72 +190,6 @@ ColumnLayout {
             modelFor(id)?.mainAction()
         }
     }
-    RowLayout {
-        Layout.fillWidth: true
-        IrisText { Layout.fillWidth: true; text: HposTokens.tr("Control Center", "控制中心"); role: IrisText.Title }
-        IrisIconButton {
-            id: editButton
-            activeFocusOnTab: true
-            materialIcon: root.editing ? "done" : "edit"
-            Accessible.name: root.editing ? Translation.tr("Done") : Translation.tr("Arrange the controls")
-            onClicked: root.editing = !root.editing
-        }
-    }
-    IrisText {
-        Layout.fillWidth: true
-        visible: root.actionError.length > 0
-        text: root.actionError
-        color: IrisStyle.danger
-        wrapMode: Text.WordWrap
-    }
-    GridLayout {
-        Layout.fillWidth: true
-        columns: 2
-        rowSpacing: 8 * root.d
-        columnSpacing: 8 * root.d
-        ConnectionCard { model: network; detailPage: "network" }
-        ConnectionCard { model: bluetooth; detailPage: "bluetooth" }
-        ConnectionCard { model: hotspot; detailPage: "network" }
-        ConnectionCard { model: vpn; detailPage: "network" }
-    }
-    RelayControl {
-        id: relay
-        Layout.fillWidth: true
-        expanded: root.picker === "relay"
-        onDetailsRequested: root.togglePicker("relay")
-    }
-    OmdropControl {
-        id: omdrop
-        Layout.fillWidth: true
-        expanded: root.picker === "omdrop"
-        onDetailsRequested: root.togglePicker("omdrop")
-    }
-    PrintingControl {
-        id: printing
-        Layout.fillWidth: true
-        expanded: root.picker === "printing"
-        onDetailsRequested: root.togglePicker("printing")
-    }
-    IrisText {
-        Layout.fillWidth: true
-        visible: Network.ethernet
-        text: HposTokens.tr("Ethernet connected", "以太网已连接")
-        font.pixelSize: IrisStyle.typeCaption
-        color: IrisStyle.subtext
-    }
-    IrisText {
-        Layout.fillWidth: true
-        visible: Vpn.lastError.length > 0
-        text: Vpn.errorText || Vpn.lastError
-        wrapMode: Text.WordWrap
-        color: IrisStyle.danger
-    }
-    IrisMediaCard {
-        Layout.fillWidth: true
-        compact: true
-        showPlayers: false
-        active: root.visible
-    }
     function outputName(node): string {
         switch (node?.name) {
         case "sink-sunshine-stereo":
@@ -257,226 +207,322 @@ ColumnLayout {
 
     RowLayout {
         Layout.fillWidth: true
-        spacing: 6 * root.d
-        Level { kind: "brightness" }
         IrisIconButton {
-            visible: root.touchPolicy.enable === true && root.touchPolicy.keyboard?.mode !== "off" && root.touchPolicy.keyboard?.backend !== "none" && root.touchPolicy.keyboard?.showPanelButton !== false
-            materialIcon: "keyboard"
-            Accessible.name: HposTokens.tr("Toggle touch keyboard", "切换触控键盘")
-            onClicked: { GlobalStates.controlPanelOpen = false; touchToggle.running = true }
+            id: audioBack
+            visible: root.showingAudioDevices
+            activeFocusOnTab: true
+            materialIcon: "arrow_back"
+            Accessible.name: HposTokens.tr("Back to Control Center", "返回控制中心")
+            onClicked: root.closeAudioDevices()
         }
-        IrisIconButton { materialIcon: "display_settings"; Accessible.name: Translation.tr("Display"); onClicked: root.togglePicker("display") }
-    }
-    IrisText {
-        Layout.fillWidth: true
-        text: Audio.rawSink
-            ? HposTokens.tr("Default output: %1", "默认输出：%1").arg(root.outputName(Audio.rawSink))
-            : HposTokens.tr("No audio output", "无音频输出")
-        elide: Text.ElideRight
-        font.pixelSize: IrisStyle.typeCaption
-        color: IrisStyle.subtext
-    }
-    RowLayout {
-        Layout.fillWidth: true
-        spacing: 6 * root.d
-        Level { kind: "volume" }
-        IrisButton {
-            text: HposTokens.tr("Audio devices", "音频设备")
-            selected: root.picker === "devices"
-            implicitHeight: 42 * root.d
-            onClicked: root.togglePicker("devices")
+        IrisText {
+            Layout.fillWidth: true
+            text: root.showingAudioDevices
+                ? HposTokens.tr("Audio devices", "音频设备")
+                : HposTokens.tr("Control Center", "控制中心")
+            role: IrisText.Title
+        }
+        IrisIconButton {
+            id: editButton
+            visible: !root.showingAudioDevices
+            activeFocusOnTab: true
+            materialIcon: root.editing ? "done" : "edit"
+            Accessible.name: root.editing ? Translation.tr("Done") : Translation.tr("Arrange the controls")
+            onClicked: root.editing = !root.editing
         }
     }
-    IrisText {
-        Layout.fillWidth: true
-        visible: Boolean(root.monitor?.writePending) || Number(root.monitor?._writeFailures ?? 0) > 3
-        text: Number(root.monitor?._writeFailures ?? 0) > 3
-            ? HposTokens.tr("Brightness change failed. Check display permissions.", "亮度更改失败，请检查显示权限。")
-            : HposTokens.tr("Applying requested brightness…", "正在应用请求的亮度…")
-        color: Number(root.monitor?._writeFailures ?? 0) > 3 ? IrisStyle.danger : IrisStyle.subtext
-        wrapMode: Text.WordWrap
-    }
-    // A single loader keeps inactive detail lists and their delegates out of the scene.
     Loader {
         Layout.fillWidth: true
-        active: root.picker.length > 0 && root.picker !== "power" && root.picker !== "omdrop" && root.picker !== "relay" && root.picker !== "printing"
-        sourceComponent: root.picker === "network" ? networkDetails : root.picker === "bluetooth" ? bluetoothDetails
-            : root.picker === "display" ? displayDetails : root.picker === "system" ? systemDetails : audioDetails
+        visible: active
+        active: root.showingAudioDevices
+        sourceComponent: HposAudioDevices { outputName: root.outputName }
     }
-    Component { id: networkDetails; IrisNetworkList {} }
-    Component { id: bluetoothDetails; IrisBluetoothList {} }
-    Component { id: displayDetails; IrisDisplayList { targetScreen: root.targetScreen } }
-    Component { id: systemDetails; IrisSystemList {} }
-    Component { id: audioDetails; HposAudioDevices { outputName: root.outputName } }
     ColumnLayout {
         Layout.fillWidth: true
-        visible: !root.editing && root.actions.includes("profiles")
-        spacing: 6 * root.d
-        // HP-OS control-center features expose one tile with a detail view.
-        // The three choices here reflect the native Linux PowerProfiles service.
-        IrisButton {
-            id: powerModeButton
+        visible: !root.showingAudioDevices
+        spacing: root.spacing
+        IrisText {
             Layout.fillWidth: true
-            implicitHeight: 54 * root.d
-            selected: root.picker === "power"
-            activeFocusOnTab: true
-            Accessible.name: HposTokens.tr("Power mode", "电源模式") + ": " + powerModeLabel.text
-            onClicked: root.togglePicker("power")
-            RowLayout {
-                anchors.fill: parent
-                anchors.margins: 12 * root.d
-                spacing: 10 * root.d
-                MaterialSymbol {
-                    text: PowerProfiles.profile === PowerProfile.PowerSaver ? "energy_savings_leaf"
-                        : PowerProfiles.profile === PowerProfile.Performance ? "speed" : "balance"
-                    iconSize: 24 * root.d
-                    color: powerModeButton.foreground
+            text: Audio.rawSink
+                ? HposTokens.tr("Default output: %1 · %2%", "默认输出：%1 · %2%")
+                    .arg(root.outputName(Audio.rawSink)).arg(Math.round((Audio.rawSink.audio?.volume ?? 0) * 100))
+                : HposTokens.tr("No audio output", "无音频输出")
+            elide: Text.ElideRight
+            font.pixelSize: IrisStyle.typeCaption
+            color: IrisStyle.subtext
+        }
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 6 * root.d
+            Level { kind: "volume" }
+            IrisButton {
+                id: audioDevicesButton
+                text: HposTokens.tr("Audio devices", "音频设备")
+                activeFocusOnTab: true
+                implicitHeight: 42 * root.d
+                onClicked: {
+                    root.picker = "devices"
+                    audioBack.forceActiveFocus()
                 }
-                IrisText {
+            }
+        }
+        IrisText {
+            Layout.fillWidth: true
+            visible: root.actionError.length > 0
+            text: root.actionError
+            color: IrisStyle.danger
+            wrapMode: Text.WordWrap
+        }
+        GridLayout {
+            Layout.fillWidth: true
+            columns: 2
+            rowSpacing: 8 * root.d
+            columnSpacing: 8 * root.d
+            ConnectionCard { model: network; detailPage: "network" }
+            ConnectionCard { model: bluetooth; detailPage: "bluetooth" }
+            ConnectionCard { model: hotspot; detailPage: "network" }
+            ConnectionCard { model: vpn; detailPage: "network" }
+        }
+        RelayControl {
+            id: relay
+            Layout.fillWidth: true
+            expanded: root.picker === "relay"
+            onDetailsRequested: root.togglePicker("relay")
+        }
+        OmdropControl {
+            id: omdrop
+            Layout.fillWidth: true
+            expanded: root.picker === "omdrop"
+            onDetailsRequested: root.togglePicker("omdrop")
+        }
+        PrintingControl {
+            id: printing
+            Layout.fillWidth: true
+            expanded: root.picker === "printing"
+            onDetailsRequested: root.togglePicker("printing")
+        }
+        IrisText {
+            Layout.fillWidth: true
+            visible: Network.ethernet
+            text: HposTokens.tr("Ethernet connected", "以太网已连接")
+            font.pixelSize: IrisStyle.typeCaption
+            color: IrisStyle.subtext
+        }
+        IrisText {
+            Layout.fillWidth: true
+            visible: Vpn.lastError.length > 0
+            text: Vpn.errorText || Vpn.lastError
+            wrapMode: Text.WordWrap
+            color: IrisStyle.danger
+        }
+        IrisMediaCard {
+            Layout.fillWidth: true
+            compact: true
+            showPlayers: false
+            active: root.visible && !root.showingAudioDevices
+        }
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 6 * root.d
+            Level { kind: "brightness" }
+            IrisIconButton {
+                visible: root.touchPolicy.enable === true && root.touchPolicy.keyboard?.mode !== "off" && root.touchPolicy.keyboard?.backend !== "none" && root.touchPolicy.keyboard?.showPanelButton !== false
+                materialIcon: "keyboard"
+                Accessible.name: HposTokens.tr("Toggle touch keyboard", "切换触控键盘")
+                onClicked: { GlobalStates.controlPanelOpen = false; touchToggle.running = true }
+            }
+            IrisIconButton { materialIcon: "display_settings"; Accessible.name: Translation.tr("Display"); onClicked: root.togglePicker("display") }
+        }
+        IrisText {
+            Layout.fillWidth: true
+            visible: Boolean(root.monitor?.writePending) || Number(root.monitor?._writeFailures ?? 0) > 3
+            text: Number(root.monitor?._writeFailures ?? 0) > 3
+                ? HposTokens.tr("Brightness change failed. Check display permissions.", "亮度更改失败，请检查显示权限。")
+                : HposTokens.tr("Applying requested brightness…", "正在应用请求的亮度…")
+            color: Number(root.monitor?._writeFailures ?? 0) > 3 ? IrisStyle.danger : IrisStyle.subtext
+            wrapMode: Text.WordWrap
+        }
+        // A single loader keeps inactive detail lists and their delegates out of the scene.
+        Loader {
+            Layout.fillWidth: true
+            active: ["network", "bluetooth", "display", "system"].includes(root.picker)
+            sourceComponent: root.picker === "network" ? networkDetails : root.picker === "bluetooth" ? bluetoothDetails
+                : root.picker === "display" ? displayDetails : systemDetails
+        }
+        Component { id: networkDetails; IrisNetworkList {} }
+        Component { id: bluetoothDetails; IrisBluetoothList {} }
+        Component { id: displayDetails; IrisDisplayList { targetScreen: root.targetScreen } }
+        Component { id: systemDetails; IrisSystemList {} }
+        ColumnLayout {
+            Layout.fillWidth: true
+            visible: !root.editing && root.actions.includes("profiles")
+            spacing: 6 * root.d
+            // HP-OS control-center features expose one tile with a detail view.
+            // The three choices here reflect the native Linux PowerProfiles service.
+            IrisButton {
+                id: powerModeButton
+                Layout.fillWidth: true
+                implicitHeight: 54 * root.d
+                selected: root.picker === "power"
+                activeFocusOnTab: true
+                Accessible.name: HposTokens.tr("Power mode", "电源模式") + ": " + powerModeLabel.text
+                onClicked: root.togglePicker("power")
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.margins: 12 * root.d
+                    spacing: 10 * root.d
+                    MaterialSymbol {
+                        text: PowerProfiles.profile === PowerProfile.PowerSaver ? "energy_savings_leaf"
+                            : PowerProfiles.profile === PowerProfile.Performance ? "speed" : "balance"
+                        iconSize: 24 * root.d
+                        color: powerModeButton.foreground
+                    }
+                    IrisText {
+                        Layout.fillWidth: true
+                        text: HposTokens.tr("Power mode", "电源模式")
+                        color: powerModeButton.foreground
+                    }
+                    IrisText {
+                        id: powerModeLabel
+                        text: PowerProfiles.profile === PowerProfile.PowerSaver ? HposTokens.tr("Power Saver", "节能")
+                            : PowerProfiles.profile === PowerProfile.Performance ? HposTokens.tr("Performance", "性能")
+                            : HposTokens.tr("Balanced", "均衡")
+                        color: powerModeButton.foreground
+                    }
+                    MaterialSymbol {
+                        text: root.picker === "power" ? "expand_less" : "expand_more"
+                        iconSize: 20 * root.d
+                        color: powerModeButton.foreground
+                    }
+                }
+            }
+            ColumnLayout {
+                Layout.fillWidth: true
+                visible: root.picker === "power"
+                spacing: 4 * root.d
+                Repeater {
+                    model: [
+                        { profile: PowerProfile.PowerSaver, icon: "energy_savings_leaf", label: HposTokens.tr("Power Saver", "节能"), detail: HposTokens.tr("Reduce power use for longer battery life.", "降低功耗，延长续航。") },
+                        { profile: PowerProfile.Balanced, icon: "balance", label: HposTokens.tr("Balanced", "均衡"), detail: HposTokens.tr("Adjust performance to your workload and power source.", "根据工作负载和电源调整性能。") },
+                        { profile: PowerProfile.Performance, icon: "speed", label: HposTokens.tr("Performance", "性能"), detail: HposTokens.tr("Prioritize performance with higher power use.", "优先提供性能，耗电量较高。") }
+                    ]
+                    IrisButton {
+                        id: modeButton
+                        required property var modelData
+                        Layout.fillWidth: true
+                        implicitHeight: 42 * root.d
+                        visible: modelData.profile !== PowerProfile.Performance || PowerProfiles.hasPerformanceProfile
+                        selected: PowerProfiles.profile === modelData.profile
+                        activeFocusOnTab: true
+                        Accessible.name: modelData.label
+                        Accessible.description: modelData.detail
+                        Accessible.role: Accessible.RadioButton
+                        Accessible.checkable: true
+                        Accessible.checked: selected
+                        ToolTip.visible: hovered
+                        ToolTip.delay: 500
+                        ToolTip.text: modelData.detail
+                        onClicked: {
+                            PowerProfiles.profile = modelData.profile
+                            root.picker = ""
+                        }
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.margins: 10 * root.d
+                            spacing: 10 * root.d
+                            MaterialSymbol {
+                                text: modeButton.modelData.icon
+                                iconSize: 22 * root.d
+                                fill: modeButton.selected ? 1 : 0
+                                color: modeButton.foreground
+                            }
+                            IrisText {
+                                Layout.fillWidth: true
+                                text: modeButton.modelData.label
+                                font.weight: modeButton.selected ? Font.DemiBold : Font.Medium
+                                color: modeButton.foreground
+                            }
+                            MaterialSymbol {
+                                text: "check"
+                                visible: modeButton.selected
+                                iconSize: 20 * root.d
+                                color: modeButton.foreground
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        GridLayout {
+            Layout.fillWidth: true
+            visible: !root.editing
+            columns: root.width >= 300 * root.d ? 5 : 4
+            rowSpacing: 14 * root.d
+            columnSpacing: 4 * root.d
+            Repeater {
+                model: root.actions.filter(id => id !== "profiles")
+                ColumnLayout {
+                    id: action
+                    required property string modelData
+                    readonly property var control: root.modelFor(modelData)
+                    readonly property bool on: modelData === "darkMode" ? HposTokens.dark : modelData === "focus" ? Notifications.silent : Boolean(control?.toggled ?? false)
                     Layout.fillWidth: true
-                    text: HposTokens.tr("Power mode", "电源模式")
-                    color: powerModeButton.foreground
-                }
-                IrisText {
-                    id: powerModeLabel
-                    text: PowerProfiles.profile === PowerProfile.PowerSaver ? HposTokens.tr("Power Saver", "节能")
-                        : PowerProfiles.profile === PowerProfile.Performance ? HposTokens.tr("Performance", "性能")
-                        : HposTokens.tr("Balanced", "均衡")
-                    color: powerModeButton.foreground
-                }
-                MaterialSymbol {
-                    text: root.picker === "power" ? "expand_less" : "expand_more"
-                    iconSize: 20 * root.d
-                    color: powerModeButton.foreground
+                    Layout.preferredWidth: 1
+                    spacing: 5 * root.d
+                    IrisIconButton {
+                        Layout.alignment: Qt.AlignHCenter
+                        implicitWidth: 48 * root.d
+                        implicitHeight: 48 * root.d
+                        buttonRadius: height / 2
+                        materialIcon: root.iconFor(action.modelData)
+                        enabled: action.control?.available ?? true
+                        colBackground: action.on ? IrisStyle.accent : IrisStyle.fillQuiet
+                        colBackgroundHover: action.on ? IrisStyle.accent : IrisStyle.fillHover
+                        foreground: action.on ? IrisStyle.inkOnAccent : IrisStyle.text
+                        Accessible.name: root.titleFor(action.modelData)
+                        Accessible.checkable: ["focus", "darkMode", "nightLight", "mic", "idle"].includes(action.modelData)
+                        Accessible.checked: action.on
+                        onClicked: root.activate(action.modelData)
+                    }
+                    IrisText {
+                        Layout.fillWidth: true
+                        text: root.titleFor(action.modelData)
+                        font.pixelSize: IrisStyle.typeCaption
+                        Layout.preferredHeight: Math.ceil(IrisStyle.typeCaption * 2.7)
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignTop
+                        wrapMode: Text.WordWrap
+                        maximumLineCount: 2
+                        elide: Text.ElideRight
+                    }
                 }
             }
         }
         ColumnLayout {
             Layout.fillWidth: true
-            visible: root.picker === "power"
-            spacing: 4 * root.d
+            visible: root.editing
+            IrisText { Layout.fillWidth: true; text: HposTokens.tr("Choose and reorder quick actions", "选择和排列快捷操作"); wrapMode: Text.WordWrap }
             Repeater {
-                model: [
-                    { profile: PowerProfile.PowerSaver, icon: "energy_savings_leaf", label: HposTokens.tr("Power Saver", "节能"), detail: HposTokens.tr("Reduce power use for longer battery life.", "降低功耗，延长续航。") },
-                    { profile: PowerProfile.Balanced, icon: "balance", label: HposTokens.tr("Balanced", "均衡"), detail: HposTokens.tr("Adjust performance to your workload and power source.", "根据工作负载和电源调整性能。") },
-                    { profile: PowerProfile.Performance, icon: "speed", label: HposTokens.tr("Performance", "性能"), detail: HposTokens.tr("Prioritize performance with higher power use.", "优先提供性能，耗电量较高。") }
-                ]
+                model: root.actions
+                RowLayout {
+                    id: editRow
+                    required property string modelData
+                    required property int index
+                    Layout.fillWidth: true
+                    IrisText { Layout.fillWidth: true; text: root.titleFor(editRow.modelData) }
+                    IrisIconButton { materialIcon: "arrow_upward"; enabled: editRow.index > 0; Accessible.name: Translation.tr("Move up"); onClicked: root.moveAction(editRow.index, -1) }
+                    IrisIconButton { materialIcon: "arrow_downward"; enabled: editRow.index < root.actions.length - 1; Accessible.name: Translation.tr("Move down"); onClicked: root.moveAction(editRow.index, 1) }
+                    IrisIconButton { materialIcon: "remove"; Accessible.name: Translation.tr("Remove"); onClicked: root.saveActions(root.actions.filter(id => id !== editRow.modelData)) }
+                }
+            }
+            Repeater {
+                model: root.defaults.filter(id => !root.actions.includes(id))
                 IrisButton {
-                    id: modeButton
-                    required property var modelData
+                    required property string modelData
                     Layout.fillWidth: true
-                    implicitHeight: 42 * root.d
-                    visible: modelData.profile !== PowerProfile.Performance || PowerProfiles.hasPerformanceProfile
-                    selected: PowerProfiles.profile === modelData.profile
-                    activeFocusOnTab: true
-                    Accessible.name: modelData.label
-                    Accessible.description: modelData.detail
-                    Accessible.role: Accessible.RadioButton
-                    Accessible.checkable: true
-                    Accessible.checked: selected
-                    ToolTip.visible: hovered
-                    ToolTip.delay: 500
-                    ToolTip.text: modelData.detail
-                    onClicked: {
-                        PowerProfiles.profile = modelData.profile
-                        root.picker = ""
-                    }
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.margins: 10 * root.d
-                        spacing: 10 * root.d
-                        MaterialSymbol {
-                            text: modeButton.modelData.icon
-                            iconSize: 22 * root.d
-                            fill: modeButton.selected ? 1 : 0
-                            color: modeButton.foreground
-                        }
-                        IrisText {
-                            Layout.fillWidth: true
-                            text: modeButton.modelData.label
-                            font.weight: modeButton.selected ? Font.DemiBold : Font.Medium
-                            color: modeButton.foreground
-                        }
-                        MaterialSymbol {
-                            text: "check"
-                            visible: modeButton.selected
-                            iconSize: 20 * root.d
-                            color: modeButton.foreground
-                        }
-                    }
+                    text: "+ " + root.titleFor(modelData)
+                    onClicked: root.saveActions(root.actions.concat([modelData]))
                 }
-            }
-        }
-    }
-    GridLayout {
-        Layout.fillWidth: true
-        visible: !root.editing
-        columns: root.width >= 300 * root.d ? 5 : 4
-        rowSpacing: 14 * root.d
-        columnSpacing: 4 * root.d
-        Repeater {
-            model: root.actions.filter(id => id !== "profiles")
-            ColumnLayout {
-                id: action
-                required property string modelData
-                readonly property var control: root.modelFor(modelData)
-                readonly property bool on: modelData === "darkMode" ? HposTokens.dark : modelData === "focus" ? Notifications.silent : Boolean(control?.toggled ?? false)
-                Layout.fillWidth: true
-                Layout.preferredWidth: 1
-                spacing: 5 * root.d
-                IrisIconButton {
-                    Layout.alignment: Qt.AlignHCenter
-                    implicitWidth: 48 * root.d
-                    implicitHeight: 48 * root.d
-                    buttonRadius: height / 2
-                    materialIcon: root.iconFor(action.modelData)
-                    enabled: action.control?.available ?? true
-                    colBackground: action.on ? IrisStyle.accent : IrisStyle.fillQuiet
-                    colBackgroundHover: action.on ? IrisStyle.accent : IrisStyle.fillHover
-                    foreground: action.on ? IrisStyle.inkOnAccent : IrisStyle.text
-                    Accessible.name: root.titleFor(action.modelData)
-                    Accessible.checkable: ["focus", "darkMode", "nightLight", "mic", "idle"].includes(action.modelData)
-                    Accessible.checked: action.on
-                    onClicked: root.activate(action.modelData)
-                }
-                IrisText {
-                    Layout.fillWidth: true
-                    text: root.titleFor(action.modelData)
-                    font.pixelSize: IrisStyle.typeCaption
-                    Layout.preferredHeight: Math.ceil(IrisStyle.typeCaption * 2.7)
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignTop
-                    wrapMode: Text.WordWrap
-                    maximumLineCount: 2
-                    elide: Text.ElideRight
-                }
-            }
-        }
-    }
-    ColumnLayout {
-        Layout.fillWidth: true
-        visible: root.editing
-        IrisText { Layout.fillWidth: true; text: HposTokens.tr("Choose and reorder quick actions", "选择和排列快捷操作"); wrapMode: Text.WordWrap }
-        Repeater {
-            model: root.actions
-            RowLayout {
-                id: editRow
-                required property string modelData
-                required property int index
-                Layout.fillWidth: true
-                IrisText { Layout.fillWidth: true; text: root.titleFor(editRow.modelData) }
-                IrisIconButton { materialIcon: "arrow_upward"; enabled: editRow.index > 0; Accessible.name: Translation.tr("Move up"); onClicked: root.moveAction(editRow.index, -1) }
-                IrisIconButton { materialIcon: "arrow_downward"; enabled: editRow.index < root.actions.length - 1; Accessible.name: Translation.tr("Move down"); onClicked: root.moveAction(editRow.index, 1) }
-                IrisIconButton { materialIcon: "remove"; Accessible.name: Translation.tr("Remove"); onClicked: root.saveActions(root.actions.filter(id => id !== editRow.modelData)) }
-            }
-        }
-        Repeater {
-            model: root.defaults.filter(id => !root.actions.includes(id))
-            IrisButton {
-                required property string modelData
-                Layout.fillWidth: true
-                text: "+ " + root.titleFor(modelData)
-                onClicked: root.saveActions(root.actions.concat([modelData]))
             }
         }
     }
