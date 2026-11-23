@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -45,6 +46,47 @@ class MediaKeyOverlayTests(unittest.TestCase):
                 result = subprocess.run(['bash', str(ROOT/'fleet/media-key.sh'), 'brightness-up', step], env=env)
                 self.assertEqual(result.returncode, 2)
             self.assertEqual(before, Path(d, 'log').read_text())
+
+    def test_selected_main_speaker_and_sunshine_guard(self):
+        studio = "alsa_output.usb-Apple_Inc._Studio_Display_unit.analog-stereo"
+        with tempfile.TemporaryDirectory() as d:
+            directory = Path(d)
+            preference = directory / "hp-os-primary-audio-output"
+            pactl = directory / "pactl"
+            pactl.write_text(
+                '#!/bin/sh\n'
+                'if [ "$1" = "get-default-sink" ]; then echo "$TEST_DEFAULT"; exit 0; fi\n'
+                'printf "%s\\n" "$TEST_SINKS"\n'
+            )
+            wpctl = directory / "wpctl"
+            wpctl.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$TEST_LOG"\n')
+            pactl.chmod(0o755)
+            wpctl.chmod(0o755)
+            studio_entry = {"name": studio, "properties": {"object.id": "222"}}
+            other = {"name": "other-speaker", "properties": {"object.id": "111"}}
+            scenarios = [
+                ("", "other-speaker", [studio_entry, other], "@DEFAULT_AUDIO_SINK@"),
+                ("", "sink-sunshine-stereo", [studio_entry, other], "222"),
+                ("other-speaker", "sink-sunshine-stereo", [studio_entry, other], "111"),
+                ("other-speaker", studio, [studio_entry, other], "111"),
+                ("disconnected-speaker", "sink-sunshine-stereo", [studio_entry, other], None),
+                ("other-speaker", studio, [studio_entry, other, other], None),
+                ("sink-sunshine-stereo", studio,
+                 [{"name": "sink-sunshine-stereo", "properties": {"object.id": "333"}}], None),
+            ]
+            for selected, default, sinks, expected in scenarios:
+                with self.subTest(selected=selected, default=default, expected=expected):
+                    preference.write_text(selected + "\n")
+                    log = directory / "log"
+                    log.write_text("")
+                    env = dict(os.environ, PATH=d + ":" + os.environ["PATH"], XDG_CONFIG_HOME=d,
+                               TEST_DEFAULT=default, TEST_SINKS=json.dumps(sinks), TEST_LOG=str(log))
+                    subprocess.run(["bash", str(ROOT / "fleet/media-key.sh"), "volume-up", "5"],
+                                   env=env, check=True)
+                    if expected is None:
+                        self.assertEqual(log.read_text(), "")
+                    else:
+                        self.assertIn(f"set-volume -l 1.0 {expected} 5%+", log.read_text())
 
     def test_invalid_brightness_rejected(self):
         for value in ['-1', '101', 'NaN', '']:

@@ -8,6 +8,38 @@ osd() {
   fi
 }
 
+# Keep hardware keys on the same speaker selected by either desktop.
+# A saved speaker that is unavailable must never redirect a volume write.
+main_volume_target() {
+  local preference="${XDG_CONFIG_HOME:-$HOME/.config}/hp-os-primary-audio-output"
+  local primary="" default_sink
+  if [[ -e "$preference" ]]; then
+    primary=$(<"$preference") || return 1
+  fi
+
+  if [[ -z "$primary" ]]; then
+    default_sink=$(timeout 2 pactl get-default-sink 2>/dev/null) || default_sink=""
+    case "$default_sink" in
+      sink-sunshine-stereo|sink-sunshine-surround51|sink-sunshine-surround71|sink-sunshine-surround714) ;;
+      *) printf '%s\n' '@DEFAULT_AUDIO_SINK@'; return ;;
+    esac
+  fi
+
+  timeout 2 pactl --format=json list sinks | jq -er --arg primary "$primary" '
+    map(select(
+      (.properties["node.virtual"] // "false") != "true"
+      and .properties["factory.name"] != "support.null-audio-sink"
+      and (.name | test("^sink-sunshine-(stereo|surround51|surround71|surround714)$") | not)
+      and (if $primary == "" then
+        .name | test("^alsa_output[.]usb-Apple_Inc[.]_Studio_Display_.+[.]analog-stereo$")
+      else .name == $primary end)
+    ))
+    | if length == 1 then
+        .[0].properties["object.id"] | tostring | select(test("^[1-9][0-9]*$"))
+      elif $primary == "" then "@DEFAULT_AUDIO_SINK@"
+      else empty end'
+}
+
 case "${1:-}" in
   volume-up|volume-down|brightness-up|brightness-down)
     step=${2:-}
@@ -20,15 +52,21 @@ case "${1:-}" in
 esac
 
 case "${1:-}" in
+  volume-up|volume-down|mute)
+    target=$(main_volume_target) || exit 0
+    ;;
+esac
+
+case "${1:-}" in
   volume-up)
-    wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ "${step}%+"
-    wpctl set-mute @DEFAULT_AUDIO_SINK@ 0
+    wpctl set-volume -l 1.0 "$target" "${step}%+"
+    wpctl set-mute "$target" 0
     ;;
   volume-down)
-    wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ "${step}%-"
-    wpctl set-mute @DEFAULT_AUDIO_SINK@ 0
+    wpctl set-volume -l 1.0 "$target" "${step}%-"
+    wpctl set-mute "$target" 0
     ;;
-  mute) wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle ;;
+  mute) wpctl set-mute "$target" toggle ;;
   mic-mute) wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle ;;
   play-pause|stop|next|previous) playerctl "$1" ;;
   brightness-up|brightness-down)

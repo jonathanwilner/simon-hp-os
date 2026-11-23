@@ -17,12 +17,18 @@ def stage(upstream, destination):
     revision = subprocess.check_output(["git", "-C", str(upstream), "rev-parse", "HEAD"], text=True).strip()
     if revision != PIN:
         raise ValueError(f"Expected iNiR {PIN}, got {revision}")
-    patch = ROOT / "patches/inir-hpos.patch"
-    if not patch.is_file():
-        raise ValueError(f"Missing integration patch: {patch}")
+    patches = (
+        "inir-hpos.patch",
+        "hpos-style.patch",
+        "hpos-wallpaper-startup.patch",
+        "hpos-desktop-labels.patch",
+        "hpos-media-key-osd.patch",
+        "hpos-centered-osd.patch",
+        "hpos-main-volume.patch",
+    )
     subprocess.run([sys.executable, str(upstream / "sdata/lib/runtime-payload.py"), "copy", "--root", str(upstream), "--target", str(destination)], check=True)
-    for patch in (patch, ROOT / "patches/hpos-style.patch", ROOT / "patches/hpos-wallpaper-startup.patch", ROOT / "patches/hpos-desktop-labels.patch"):
-        subprocess.run(["patch", "-p1", "--batch", "-i", str(patch)], cwd=destination, check=True)
+    for patch in patches:
+        subprocess.run(["patch", "-p1", "--batch", "-i", str(ROOT / "patches" / patch)], cwd=destination, check=True)
     shutil.copytree(ROOT / "overlay", destination, dirs_exist_ok=True)
     # Upstream helpers target /usr/bin. Resolve helpers from the caller's PATH on Nix.
     for tree in ("modules", "services", "defaults", "scripts"):

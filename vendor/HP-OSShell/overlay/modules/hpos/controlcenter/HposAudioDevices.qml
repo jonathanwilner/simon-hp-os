@@ -27,15 +27,22 @@ ColumnLayout {
         color: IrisStyle.subtext
     }
 
-    function isVirtual(node): bool {
-        const props = node.properties ?? {}
-        return String(props["node.virtual"]) === "true"
-            || props["factory.name"] === "support.null-audio-sink"
+    IrisButton {
+        visible: Audio.primarySpeakerName.length > 0
+        text: HposTokens.tr("Follow system default for main volume", "主音量跟随系统默认设备")
+        enabled: !Audio.primarySpeakerWritePending
+        onClicked: Audio.choosePrimarySpeaker(null)
+    }
+
+    IrisText {
+        visible: Audio.primarySpeakerSaveFailed
+        text: HposTokens.tr("Could not save the primary speaker", "无法保存主扬声器")
+        color: IrisStyle.danger
     }
 
     Repeater {
         model: Array.from(Audio.outputDevices).sort((a, b) =>
-            Number(root.isVirtual(a)) - Number(root.isVirtual(b)))
+            Number(Audio.isPhysicalSpeaker(b)) - Number(Audio.isPhysicalSpeaker(a)))
 
         delegate: ColumnLayout {
             id: device
@@ -43,7 +50,7 @@ ColumnLayout {
             required property PwNode modelData
             readonly property string deviceName: root.outputName(modelData)
             readonly property bool isDefault: Audio.rawSink === modelData
-            readonly property bool isVirtual: root.isVirtual(modelData)
+            readonly property bool isVirtual: !Audio.isPhysicalSpeaker(modelData)
             readonly property bool muted: modelData.audio?.muted ?? false
             readonly property real volume: modelData.audio?.volume ?? 0
 
@@ -59,6 +66,17 @@ ColumnLayout {
                     : device.deviceName
                 font.weight: Font.DemiBold
                 wrapMode: Text.WrapAnywhere
+            }
+
+            IrisButton {
+                visible: !device.isVirtual
+                readonly property bool primary: Audio.primarySpeakerName === device.modelData.name
+                text: primary ? HposTokens.tr("Primary speaker", "主扬声器")
+                    : HposTokens.tr("Use for main volume", "用于主音量")
+                selected: primary
+                enabled: !primary && !Audio.primarySpeakerWritePending
+                Accessible.name: HposTokens.tr("Use %1 for main volume", "使用 %1 调节主音量").arg(device.deviceName)
+                onClicked: Audio.choosePrimarySpeaker(device.modelData)
             }
 
             RowLayout {

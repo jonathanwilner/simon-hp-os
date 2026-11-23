@@ -243,10 +243,18 @@ ColumnLayout {
         spacing: root.spacing
         IrisText {
             Layout.fillWidth: true
-            text: Audio.rawSink
-                ? HposTokens.tr("Default output: %1 · %2%", "默认输出：%1 · %2%")
-                    .arg(root.outputName(Audio.rawSink)).arg(Math.round((Audio.rawSink.audio?.volume ?? 0) * 100))
-                : HposTokens.tr("No audio output", "无音频输出")
+            text: {
+                if (!Audio.mainVolumeSink)
+                    return Audio.primarySpeakerName || !Audio.primarySpeakerLoaded
+                        ? HposTokens.tr("Primary speaker unavailable", "主扬声器不可用")
+                        : HposTokens.tr("No audio output", "无音频输出")
+                const label = Audio.primarySpeakerName
+                    ? HposTokens.tr("Primary speaker: %1 · %2%", "主扬声器：%1 · %2%")
+                    : Audio.mainVolumeSink !== Audio.rawSink
+                        ? HposTokens.tr("Local output: %1 · %2%", "本地输出：%1 · %2%")
+                        : HposTokens.tr("Default output: %1 · %2%", "默认输出：%1 · %2%")
+                return label.arg(root.outputName(Audio.mainVolumeSink)).arg(Math.round(Audio.mainVolume * 100))
+            }
             elide: Text.ElideRight
             font.pixelSize: IrisStyle.typeCaption
             color: IrisStyle.subtext
@@ -588,7 +596,7 @@ ColumnLayout {
         Layout.fillWidth: true
         implicitHeight: 42 * root.d
         readonly property bool brightness: kind === "brightness"
-        readonly property bool ready: brightness ? Boolean(root.monitor?.ready) && Number.isFinite(Number(root.monitor?.brightness)) : Boolean(Audio.rawSink?.audio)
+        readonly property bool ready: brightness ? Boolean(root.monitor?.ready) && Number.isFinite(Number(root.monitor?.brightness)) : Boolean(Audio.mainVolumeSink?.audio)
         enabled: ready
         opacity: ready ? 1 : 0.4
         vertical: false
@@ -608,13 +616,13 @@ ColumnLayout {
         readout: true
         fillColor: HposTokens.dark ? "#586577" : "#dce2ed"
         filledForeground: HposTokens.text
-        muted: !brightness && (Audio.rawSink?.audio?.muted ?? false)
+        muted: !brightness && Audio.mainVolumeMuted
         icon: brightness ? "light_mode" : muted ? "volume_off" : "volume_up"
-        value: ready ? brightness ? root.monitor.brightness : Math.min(1, Audio.rawSink.audio.volume) : 0
+        value: ready ? brightness ? root.monitor.brightness : Math.min(1, Audio.mainVolume) : 0
         Accessible.onIncreaseAction: if (enabled) moved(Math.min(1, value + 0.05))
         Accessible.onDecreaseAction: if (enabled) moved(Math.max(0, value - 0.05))
-        Accessible.name: brightness ? Translation.tr("Brightness") : HposTokens.tr("Default output volume", "默认输出音量")
-        onMoved: next => { if (brightness) root.monitor?.setBrightness(next); else Audio.setSinkVolume(next) }
-        onIconClicked: if (!brightness && Audio.rawSink?.audio) Audio.rawSink.audio.muted = !muted
+        Accessible.name: brightness ? Translation.tr("Brightness") : HposTokens.tr("%1 volume", "%1 音量").arg(root.outputName(Audio.mainVolumeSink))
+        onMoved: next => { if (brightness) root.monitor?.setBrightness(next); else Audio.setMainVolume(next) }
+        onIconClicked: if (!brightness) Audio.toggleMainVolumeMute()
     }
 }

@@ -1,0 +1,167 @@
+--- a/services/Audio.qml
++++ b/services/Audio.qml
+@@ -111,6 +111,90 @@
+     readonly property list<var> inputAppNodes: root.appNodes(false)
+     readonly property list<var> outputDevices: root.devices(true)
+     readonly property list<var> inputDevices: root.devices(false)
++
++    // A streaming sink can temporarily take over the system default.
++    // The saved speaker remains independent of routing and matches by node name.
++    property string primarySpeakerName: ""
++    property bool primarySpeakerLoaded: false
++    property bool primarySpeakerWritePending: false
++    property bool primarySpeakerSaveFailed: false
++    property string _pendingPrimarySpeakerName: ""
++    readonly property PwNode mainVolumeSink: root.resolveMainVolumeSink()
++    readonly property real mainVolume: mainVolumeSink?.audio?.volume ?? 0
++    readonly property bool mainVolumeMuted: mainVolumeSink?.audio?.muted ?? false
++
++    FileView {
++        id: primarySpeakerFile
++        path: (Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config") + "/hp-os-primary-audio-output"
++        watchChanges: true
++        printErrors: false
++        atomicWrites: true
++        onFileChanged: reload()
++        onLoaded: {
++            root.primarySpeakerName = text().trim()
++            root.primarySpeakerLoaded = true
++        }
++        onLoadFailed: error => {
++            if (error === FileViewError.FileNotFound)
++                root.primarySpeakerName = ""
++            root.primarySpeakerLoaded = error === FileViewError.FileNotFound
++        }
++        onSaved: {
++            root.primarySpeakerName = root._pendingPrimarySpeakerName
++            root.primarySpeakerLoaded = true
++            root.primarySpeakerWritePending = false
++        }
++        onSaveFailed: {
++            root.primarySpeakerSaveFailed = true
++            root.primarySpeakerWritePending = false
++        }
++    }
++
++    function isPhysicalSpeaker(node): bool {
++        const props = node.properties ?? {}
++        return String(props["node.virtual"] ?? "false") !== "true"
++            && props["factory.name"] !== "support.null-audio-sink"
++            && !/^sink-sunshine-(stereo|surround51|surround71|surround714)$/.test(node.name)
++    }
++
++    function choosePrimarySpeaker(node): void {
++        if (root.primarySpeakerWritePending || (node && !root.isPhysicalSpeaker(node))) return
++        root.primarySpeakerSaveFailed = false
++        root._pendingPrimarySpeakerName = node?.name ?? ""
++        root.primarySpeakerWritePending = true
++        primarySpeakerFile.setText(node ? node.name + "\n" : "")
++    }
++
++    function resolveMainVolumeSink(): PwNode {
++        if (!root.primarySpeakerLoaded) return null
++        if (root.primarySpeakerName) {
++            const matches = root.outputDevices.filter(node =>
++                node.name === root.primarySpeakerName && root.isPhysicalSpeaker(node))
++            return matches.length === 1 ? matches[0] : null
++        }
++        if (!/^sink-sunshine-(stereo|surround51|surround71|surround714)$/.test(root.rawSink?.name ?? ""))
++            return root.rawSink
++        const displays = root.outputDevices.filter(node =>
++            /^alsa_output\.usb-Apple_Inc\._Studio_Display_.+\.analog-stereo$/.test(node.name))
++        return displays.length === 1 ? displays[0] : root.rawSink
++    }
++
++    function setMainVolume(target: real): void {
++        if (!root.mainVolumeSink?.audio) return
++        if (root.mainVolumeSink === root.rawSink && !root.primarySpeakerName) {
++            root.setSinkVolume(target)
++        } else {
++            root.lastUserChange = Date.now()
++            root.mainVolumeSink.audio.volume = Math.max(0, Math.min(root.ceiling, target))
++        }
++    }
++
++    function toggleMainVolumeMute(): void {
++        if (root.mainVolumeSink?.audio) {
++            root.lastUserChange = Date.now()
++            root.mainVolumeSink.audio.muted = !root.mainVolumeMuted
++        }
++    }
+ 
+     // Signals
+     signal sinkProtectionTriggered(string reason);
+@@ -378,7 +462,7 @@
+ 
+     // Internals
+     PwObjectTracker {
+-        objects: [rawSink, sink, source]
++        objects: [rawSink, sink, source, mainVolumeSink]
+             .concat(root.outputAppNodes ?? [])
+             .concat(root.inputAppNodes ?? [])
+             .filter(node => node)
+@@ -489,15 +573,15 @@
+         target: "audio"
+ 
+         function volumeUp(): void {
+-            root.incrementVolume();
++            root.setMainVolume(root.mainVolume + 0.02);
+         }
+ 
+         function volumeDown(): void {
+-            root.decrementVolume();
++            root.setMainVolume(root.mainVolume - 0.02);
+         }
+ 
+         function mute(): void {
+-            root.toggleMute();
++            root.toggleMainVolumeMute();
+         }
+ 
+         function playEvent(event: string): void {
+--- a/modules/iris/onScreenDisplay/IrisOSD.qml
++++ b/modules/iris/onScreenDisplay/IrisOSD.qml
+@@ -93,9 +93,9 @@
+         ? (GlobalStates.externalBrightnessPercent >= 0 ? GlobalStates.externalBrightnessPercent / 100 : (root.brightnessMonitor?.brightness ?? 0))
+         : root.kind === "mic"
+             ? Math.max(0, Math.min(1, Audio.micVolume ?? 0))
+-            : Math.max(0, Math.min(1, Audio.value ?? 0))
++            : Math.max(0, Math.min(1, Audio.mainVolume))
+     readonly property bool muted: root.kind === "mic" ? Audio.micMuted
+-        : root.kind === "volume" ? (Audio.sink?.audio?.muted ?? false) : false
++        : root.kind === "volume" ? Audio.mainVolumeMuted : false
+     readonly property string icon: root.kind === "brightness" ? "light_mode"
+         : root.kind === "mic" ? (Audio.micMuted ? "mic_off" : "mic")
+         : root.muted ? "volume_off"
+@@ -151,7 +151,7 @@
+         function onBrightnessChanged(): void { root.showLevel("brightness") }
+     }
+     Connections {
+-        target: Audio.sink?.audio ?? null
++        target: Audio.mainVolumeSink?.audio ?? null
+         function onVolumeChanged(): void { root.showLevel("volume") }
+         function onMutedChanged(): void { root.showLevel("volume") }
+     }
+--- a/modules/iris/bar/IrisIsland.qml
++++ b/modules/iris/bar/IrisIsland.qml
+@@ -338,9 +338,9 @@
+     readonly property var brightnessMonitor: Brightness.getMonitorForScreen(root.targetScreen)
+     readonly property real feedbackValue: root.feedbackKind === "brightness"
+         ? (GlobalStates.externalBrightnessPercent >= 0 ? GlobalStates.externalBrightnessPercent / 100 : (root.brightnessMonitor?.brightness ?? 0))
+-        : root.feedbackKind === "mic" ? (Audio.micVolume ?? 0) : (Audio.value ?? 0)
++        : root.feedbackKind === "mic" ? (Audio.micVolume ?? 0) : Audio.mainVolume
+     readonly property bool feedbackMuted: root.feedbackKind === "mic" ? Audio.micMuted
+-        : root.feedbackKind === "volume" ? (Audio.sink?.audio?.muted ?? false) : false
++        : root.feedbackKind === "volume" ? Audio.mainVolumeMuted : false
+     readonly property string feedbackIcon: root.feedbackKind === "brightness" ? "light_mode"
+         : root.feedbackKind === "mic" ? (Audio.micMuted ? "mic_off" : "mic")
+         : root.feedbackMuted ? "volume_off"
+@@ -830,7 +830,7 @@
+         } else if (level === "mic") {
+             Audio.setSourceVolume(Math.max(0, Math.min(1, (Audio.micVolume ?? 0) + steps * 0.05)))
+         } else {
+-            Audio.setSinkVolume(Math.max(0, Math.min(Math.max(1, Audio.ceiling), (Audio.value ?? 0) + steps * 0.05)))
++            Audio.setMainVolume(Audio.mainVolume + steps * 0.05)
+         }
+     }
+     function applyWheel(event): void {
