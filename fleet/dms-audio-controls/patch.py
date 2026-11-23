@@ -11,8 +11,24 @@ TILE = CONTROL_CENTER / "Widgets/AudioDeviceTile.qml"
 GRID = CONTROL_CENTER / "Components/DragDropGrid.qml"
 POPOUT = CONTROL_CENTER / "ControlCenterPopout.qml"
 SERVICE = Path("Services/AudioService.qml")
+BAR = Path("Modules/DankBar/Widgets/ControlCenterButton.qml")
+VOLUME_OSD = Path("Modules/OSD/VolumeOSD.qml")
 MARKER = "// Fleet per-device audio controls."
 FOCUSED_MARKER = "readonly property bool audioOutputsOpen:"
+MAIN_VOLUME_MARKER = "readonly property PwNode mainVolumeSink:"
+
+MAIN_VOLUME = '''
+    // Sunshine may own the default while local audio plays through Studio Display.
+    readonly property PwNode mainVolumeSink: {
+        if (!sink?.name?.startsWith("sink-sunshine-"))
+            return sink;
+        const speakers = Pipewire.nodes.values.filter(node => node?.audio && node.isSink && !node.isStream
+            && node.name?.startsWith("alsa_output.usb-Apple_Inc._Studio_Display_")
+            && node.name.endsWith(".analog-stereo"));
+        return speakers.length === 1 ? speakers[0] : sink;
+    }
+    readonly property int mainVolumeMax: getMaxVolumePercent(mainVolumeSink)
+'''
 
 OUTPUT_NAME = '''    function outputDisplayName(node) {
         const alias = getDeviceAlias(node?.name);
@@ -295,23 +311,64 @@ def patch_focused_outputs(detail, popout):
     return {DETAIL: detail, POPOUT: popout}
 
 
+def patch_main_volume(service, slider, grid, bar, osd):
+    service = replace(
+        service, "    readonly property PwNode sink: Pipewire.defaultAudioSink\n",
+        "    readonly property PwNode sink: Pipewire.defaultAudioSink\n" + MAIN_VOLUME,
+    )
+    service = service.replace("root.sinkMaxVolume", "root.mainVolumeMax")
+    service = re.sub(r"\broot\.sink\b(?=\??\.audio)", "root.mainVolumeSink", service)
+    start = service.index("        function setmaxvolume(")
+    end = service.index("        function getmaxvolumefor(", start)
+    service = service[:start] + service[start:end].replace("root.sink", "root.mainVolumeSink") + service[end:]
+    service = replace(
+        service, '                result += `Output: ${volume}%${muteStatus} (max: ${maxVol}%)\\n`;',
+        '''                result += `Output: ${volume}%${muteStatus} (max: ${maxVol}%)\\n`;
+                if (root.mainVolumeSink !== root.sink)
+                    result += `Local output: ${root.outputDisplayName(root.mainVolumeSink)}\\n`;''',
+    )
+
+    def volume_target(qml):
+        qml = re.sub(r"\bAudioService\.sink\b", "AudioService.mainVolumeSink", qml)
+        return re.sub(r"\bAudioService\.sinkMaxVolume\b", "AudioService.mainVolumeMax", qml)
+
+    slider = volume_target(slider)
+    grid = volume_target(grid)
+    grid = replace(
+        grid, 'return I18n.tr("Default output") + " · " + Math.round(volume * 100) + "%";',
+        '''const role = AudioService.mainVolumeSink === AudioService.sink ? I18n.tr("Default output") : I18n.tr("Local output");
+                        return role + " · " + Math.round(volume * 100) + "%";''',
+    )
+    osd = replace(volume_target(osd), "function onSinkChanged()", "function onMainVolumeSinkChanged()")
+    return {SERVICE: service, SLIDER: slider, GRID: grid, BAR: volume_target(bar), VOLUME_OSD: osd}
+
+
 def patch(shell):
     detail = (shell / DETAIL).read_text()
     popout = (shell / POPOUT).read_text()
     supports_focused_outputs = (
         "id: contentFlickable" in popout and "function _contentTargetHeight()" in popout
     )
+    service = (shell / SERVICE).read_text()
+    is_dux = "CcListRow {" in detail
     changes = {}
     if MARKER not in detail:
         changes.update(
             patch_dux(detail, (shell / TILE).read_text())
-            if "CcListRow {" in detail
+            if is_dux
             else patch_legacy(detail, (shell / SLIDER).read_text(), (shell / GRID).read_text())
         )
-        service = (shell / SERVICE).read_text()
         changes[SERVICE] = replace(service, "    function displayName(node) {", OUTPUT_NAME + "    function displayName(node) {")
     if supports_focused_outputs and FOCUSED_MARKER not in popout:
         changes.update(patch_focused_outputs(changes.get(DETAIL, detail), popout))
+    if not is_dux and MAIN_VOLUME_MARKER not in service:
+        changes.update(patch_main_volume(
+            changes.get(SERVICE, service),
+            changes[SLIDER] if SLIDER in changes else (shell / SLIDER).read_text(),
+            changes[GRID] if GRID in changes else (shell / GRID).read_text(),
+            (shell / BAR).read_text(),
+            (shell / VOLUME_OSD).read_text(),
+        ))
     for path, contents in changes.items():
         (shell / path).write_text(contents)
 
