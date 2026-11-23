@@ -67,6 +67,9 @@
       packages.x86_64-linux.ghostty = (self.overlays.ghostty null nixpkgs.legacyPackages.x86_64-linux).ghostty;
       packages.aarch64-linux.ghostty = (self.overlays.ghostty null nixpkgs.legacyPackages.aarch64-linux).ghostty;
       overlays.chromeChannels = import ./fleet/chrome-channels/overlay.nix;
+      overlays.chromeChannelsSilentDebugger = import ./fleet/chrome-channels/overlay-with-args.nix {
+        extraCommandLineArgs = "--silent-debugger-extension-api";
+      };
       nixosModules.branding = import ./fleet/ubuntu-branding/nixos.nix;
       homeModules.microsoft365 = ./fleet/microsoft365/home.nix;
       homeModules.chromeChannels = ./fleet/chrome-channels/home.nix;

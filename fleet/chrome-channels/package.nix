@@ -1,11 +1,17 @@
 # Reuse nixpkgs' maintained binary patching and runtime dependencies.
-{ lib, fetchurl, google-chrome, stdenv, channel, commandLineArgs ? "", withSymlink ? true, sources ? builtins.fromJSON (builtins.readFile ./sources.json) }:
+{ lib, fetchurl, google-chrome, stdenv, channel, commandLineArgs ? "", extraCommandLineArgs ? "", withSymlink ? true, sources ? builtins.fromJSON (builtins.readFile ./sources.json) }:
 let
   dist = if channel == "dev" then "unstable" else channel;
   appname = if channel == "stable" then "chrome" else "chrome-${dist}";
   release = sources.${channel};
   source = release.platforms.${stdenv.hostPlatform.system};
-  upstream = google-chrome.override { inherit commandLineArgs withSymlink; };
+  upstream = google-chrome.override {
+    inherit withSymlink;
+    commandLineArgs = lib.concatStringsSep " " (lib.filter (args: args != "") [
+      commandLineArgs
+      extraCommandLineArgs
+    ]);
+  };
 in
 upstream.overrideAttrs (old: {
   pname = "google-chrome-${dist}";
