@@ -9,8 +9,10 @@ DETAIL = CONTROL_CENTER / "Details/AudioOutputDetail.qml"
 SLIDER = CONTROL_CENTER / "Widgets/AudioSliderRow.qml"
 TILE = CONTROL_CENTER / "Widgets/AudioDeviceTile.qml"
 GRID = CONTROL_CENTER / "Components/DragDropGrid.qml"
+POPOUT = CONTROL_CENTER / "ControlCenterPopout.qml"
 SERVICE = Path("Services/AudioService.qml")
 MARKER = "// Fleet per-device audio controls."
+FOCUSED_MARKER = "readonly property bool audioOutputsOpen:"
 
 OUTPUT_NAME = '''    function outputDisplayName(node) {
         const alias = getDeviceAlias(node?.name);
@@ -224,17 +226,92 @@ def patch_dux(detail, tile):
     return {DETAIL: detail, TILE: tile}
 
 
+def patch_focused_outputs(detail, popout):
+    detail = replace(
+        detail,
+        "    implicitHeight: headerRow.height + audioContent.height + Theme.spacingM",
+        """    property bool showBackButton: false
+    signal backRequested
+
+    implicitHeight: headerRow.height + audioColumn.height + Theme.spacingS + Theme.spacingM * 2""",
+    )
+    detail = replace(
+        detail,
+        "        StyledText {\n            id: headerText",
+        """        DankActionButton {
+            id: backButton
+            visible: root.showBackButton
+            anchors.verticalCenter: parent.verticalCenter
+            iconName: I18n.isRtl ? "arrow_forward" : "arrow_back"
+            buttonSize: 28
+            iconSize: 18
+            iconColor: Theme.surfaceVariantText
+            Accessible.name: I18n.tr("Back to Control Center")
+            onClicked: root.backRequested()
+        }
+
+        StyledText {
+            id: headerText""",
+    )
+    detail = replace(
+        detail, "width: parent.width - headerText.width - settingsButton.width",
+        "width: parent.width - headerText.width - settingsButton.width - (backButton.visible ? backButton.width : 0)",
+    )
+    popout = replace(
+        popout,
+        "            readonly property real targetImplicitHeight: {",
+        """            readonly property bool audioOutputsOpen: root.expandedSection === "audioOutput" && !root.editMode
+            readonly property real targetImplicitHeight: {
+                if (audioOutputsOpen)
+                    return (audioOutputsView.item?.implicitHeight ?? 0) + Theme.spacingL * 2;""",
+    )
+    popout = replace(
+        popout, "                id: contentFlickable\n",
+        "                id: contentFlickable\n                visible: !controlContent.audioOutputsOpen\n",
+    )
+    popout = replace(
+        popout, "                        expandedSection: root.expandedSection\n",
+        "                        expandedSection: controlContent.audioOutputsOpen ? \"\" : root.expandedSection\n",
+    )
+    popout = replace(
+        popout,
+        "            BluetoothCodecSelector {\n                id: bluetoothCodecSelector",
+        """            Loader {
+                id: audioOutputsView
+                anchors.fill: parent
+                anchors.margins: Theme.spacingL
+                active: controlContent.audioOutputsOpen
+                sourceComponent: Component {
+                    AudioOutputDetail {
+                        showBackButton: true
+                        onBackRequested: root.collapseAll()
+                    }
+                }
+            }
+
+            BluetoothCodecSelector {
+                id: bluetoothCodecSelector""",
+    )
+    return {DETAIL: detail, POPOUT: popout}
+
+
 def patch(shell):
     detail = (shell / DETAIL).read_text()
-    if MARKER in detail:
-        return
-    service = (shell / SERVICE).read_text()
-    changes = (
-        patch_dux(detail, (shell / TILE).read_text())
-        if "CcListRow {" in detail
-        else patch_legacy(detail, (shell / SLIDER).read_text(), (shell / GRID).read_text())
+    popout = (shell / POPOUT).read_text()
+    supports_focused_outputs = (
+        "id: contentFlickable" in popout and "function _contentTargetHeight()" in popout
     )
-    changes[SERVICE] = replace(service, "    function displayName(node) {", OUTPUT_NAME + "    function displayName(node) {")
+    changes = {}
+    if MARKER not in detail:
+        changes.update(
+            patch_dux(detail, (shell / TILE).read_text())
+            if "CcListRow {" in detail
+            else patch_legacy(detail, (shell / SLIDER).read_text(), (shell / GRID).read_text())
+        )
+        service = (shell / SERVICE).read_text()
+        changes[SERVICE] = replace(service, "    function displayName(node) {", OUTPUT_NAME + "    function displayName(node) {")
+    if supports_focused_outputs and FOCUSED_MARKER not in popout:
+        changes.update(patch_focused_outputs(changes.get(DETAIL, detail), popout))
     for path, contents in changes.items():
         (shell / path).write_text(contents)
 
