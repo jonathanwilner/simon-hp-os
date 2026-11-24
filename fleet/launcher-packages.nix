@@ -1,6 +1,6 @@
 # Shared with Home Manager and NixOS environment.systemPackages so launchers
 # work for every normal account. Never add personal data or hardware overrides.
-{ pkgs, ghostty ? pkgs.ghostty }:
+{ pkgs, ghostty ? pkgs.ghostty, bluebubbles ? pkgs.bluebubbles }:
 let
   cosmicFiles = pkgs.callPackage ./cosmic/files-package.nix { };
   moonlight = pkgs.callPackage ./pkgs/moonlight-qt-foundation { };

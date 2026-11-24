@@ -55,9 +55,9 @@ The baseline installs applications without starting or restarting them.
 account without separate Home Manager profiles. The list also includes COSMIC
 Files with GVfs network-drive support, COSMIC Terminal, Emacs, KDE Connect,
 LibrePods, OpenFreebuds, Fcitx configuration, BlueBubbles and the same pinned
-source build of Moonlight Foundation used on Goran. Native BlueBubbles currently
-uses nixpkgs 2.1.1; Slazenger's independently pinned private 2.1.5 build and
-Goran's Ubuntu Flatpak launcher remain separate integrations. Emacs uses native
+source build of Moonlight Foundation used on Goran. Set
+`programs.hp-os-fleet.bluebubbles.package` to install the private Glass build
+from a consumer flake. Public configurations default to the nixpkgs client. Emacs uses native
 Emacs PGTK without copying personal mail credentials or the private Emacs setup.
 
 Goran's DeepSeek Harness desktop command depends on a separate ARM64 package

@@ -42,6 +42,9 @@ in {
     default = pkgs.ghostty;
     description = "Ghostty 1.4 native Wayland package. Hosts can supply the shared overlay with their GPU overrides.";
   };
+  options.programs.hp-os-fleet.bluebubbles.package = lib.mkPackageOption pkgs "bluebubbles" {
+    extraDescription = "Private fleet consumers can supply the Glass build.";
+  };
   config = lib.mkIf config.programs.hp-os-fleet.enable {
     # A scope inherits the calling desktop environment. A transient service
     # instead uses the user manager environment, which can be stale or empty.
@@ -59,7 +62,11 @@ in {
           --unit="fuzzel-launched-$(${pkgs.coreutils}/bin/date +%s%N)-$RANDOM" -- "$@"
       '';
     };
-    home.packages = import ./launcher-packages.nix { inherit pkgs; ghostty = config.programs.hp-os-fleet.ghostty.package; };
+    home.packages = import ./launcher-packages.nix {
+      inherit pkgs;
+      ghostty = config.programs.hp-os-fleet.ghostty.package;
+      bluebubbles = config.programs.hp-os-fleet.bluebubbles.package;
+    };
     # Goran's theme service maintains its existing writable file. Seed the same
     # launcher appearance only for new accounts, without replacing user edits.
     home.activation.hpOsFleetLauncherDefaults = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
