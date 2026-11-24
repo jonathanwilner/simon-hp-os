@@ -3,14 +3,14 @@
     "dist": "stable",
     "platforms": {
       "x86_64-linux": {
-        "version": "157.0.8103.38",
-        "url": "https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_157.0.8103.38-1_amd64.deb",
-        "hash": "sha256-pisnfcA9os/1DMBFid62b2h1vjOcBm1GrbSbSe7bYp0="
+        "version": "158.0.8127.88",
+        "url": "https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_158.0.8127.88-1_amd64.deb",
+        "hash": "sha256-play2wCoy38ToddU9qrZH4QBSQZFLG37fz6tkwNdoDs="
       },
       "aarch64-linux": {
-        "version": "157.0.8103.38",
-        "url": "https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_157.0.8103.38-1_arm64.deb",
-        "hash": "sha256-6huY7aX/lIvgflIjfge7zI997cNGC2k/a/KeYuicO9Y="
+        "version": "158.0.8127.88",
+        "url": "https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_158.0.8127.88-1_arm64.deb",
+        "hash": "sha256-bHQ5mBJAun+wXDU0tKo+oxBM44jzAMK732aIT4xVQJg="
       }
     }
   },
@@ -18,14 +18,14 @@
     "dist": "beta",
     "platforms": {
       "x86_64-linux": {
-        "version": "158.0.8127.18",
-        "url": "https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-beta/google-chrome-beta_158.0.8127.18-1_amd64.deb",
-        "hash": "sha256-RhxK8pw00DjRsoxtwpUeXNsYN3by1kRRBUPqEIo0Xmg="
+        "version": "159.0.8154.13",
+        "url": "https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-beta/google-chrome-beta_159.0.8154.13-1_amd64.deb",
+        "hash": "sha256-wcP2hrNukv9e/CBr/vRCvfNokGcnd4nQw7qrpPgDjr4="
       },
       "aarch64-linux": {
-        "version": "158.0.8127.18",
-        "url": "https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-beta/google-chrome-beta_158.0.8127.18-1_arm64.deb",
-        "hash": "sha256-XR/9TyF+gZwDepzc86fAp/YxnQOXFKvn37+Ns3C8O48="
+        "version": "159.0.8154.13",
+        "url": "https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-beta/google-chrome-beta_159.0.8154.13-1_arm64.deb",
+        "hash": "sha256-cpy9zq4yiUB+liI2z7uDWW7b2Gs1nkubN6eRkYlv2WY="
       }
     }
   },
@@ -33,14 +33,14 @@
     "dist": "unstable",
     "platforms": {
       "x86_64-linux": {
-        "version": "159.0.8144.0",
-        "url": "https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-unstable/google-chrome-unstable_159.0.8144.0-1_amd64.deb",
-        "hash": "sha256-2zMp5ZSi5gE1+VKi07wPvn2VucNWctHnnvhMkLkDwPo="
+        "version": "160.0.8171.0",
+        "url": "https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-unstable/google-chrome-unstable_160.0.8171.0-1_amd64.deb",
+        "hash": "sha256-bz1zgX8gdMK3NN+lgydEYdx0heogSKhimKEQa+ZsSsU="
       },
       "aarch64-linux": {
-        "version": "159.0.8144.0",
-        "url": "https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-unstable/google-chrome-unstable_159.0.8144.0-1_arm64.deb",
-        "hash": "sha256-H3LK6TxwXcpk52/5tfZM3gzT6JwZ/puji3Fm3IXtfrg="
+        "version": "160.0.8171.0",
+        "url": "https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-unstable/google-chrome-unstable_160.0.8171.0-1_arm64.deb",
+        "hash": "sha256-VGZ81je7RsehFRRN0a9Dm3lJKudiGMNWSol8DxyNFxE="
       }
     }
   },
@@ -48,14 +48,14 @@
     "dist": "canary",
     "platforms": {
       "x86_64-linux": {
-        "version": "159.0.8146.2",
-        "url": "https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-canary/google-chrome-canary_159.0.8146.2-1_amd64.deb",
-        "hash": "sha256-UTEWFAulyk6/oj6JjLp8aA+CTmOkJdfLbFBiGIvINJA="
+        "version": "160.0.8181.0",
+        "url": "https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-canary/google-chrome-canary_160.0.8181.0-1_amd64.deb",
+        "hash": "sha256-qjjhcIyU3rNlczu0iwvT6xOCRStEU1k760uQahcmt6A="
       },
       "aarch64-linux": {
-        "version": "159.0.8146.2",
-        "url": "https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-canary/google-chrome-canary_159.0.8146.2-1_arm64.deb",
-        "hash": "sha256-aNC6C+snOevPQzwzKeg/+jLIZnxHWEUN1hKe7DGVeJs="
+        "version": "160.0.8181.0",
+        "url": "https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-canary/google-chrome-canary_160.0.8181.0-1_arm64.deb",
+        "hash": "sha256-rm1FuZVVhU8A8ygP8+CC5x/SNXw9USQdiMScoW9hg10="
       }
     }
   }
