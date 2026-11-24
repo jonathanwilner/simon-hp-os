@@ -1,21 +1,7 @@
 { config, lib, pkgs, ... }:
 let
   catalogue = builtins.fromJSON (builtins.readFile ./microsoft365-webapps/apps.json);
-  # Host wrappers retain their established profile and hardware configuration.
-  # New fleet devices get native Chrome without Goran's NVIDIA-specific flags.
-  browser = if (pkgs.google-chrome.channel or null) == "stable" then pkgs.google-chrome else pkgs.callPackage ../../fleet/chrome-channels/package.nix {
-    channel = "stable";
-    google-chrome = pkgs.google-chrome;
-  };
-  launcher = pkgs.writeShellScript "hp-os-microsoft365" ''
-    if [ -x "$HOME/.local/bin/chrome-live-control" ]; then
-      exec "$HOME/.local/bin/chrome-live-control" "$@"
-    fi
-    exec ${browser}/bin/google-chrome-stable \
-      --ozone-platform=wayland \
-      --remote-debugging-address=127.0.0.1 --remote-debugging-port=9222 \
-      --user-data-dir="$HOME/.config/google-chrome-live-control" "$@"
-  '';
+  launcher = import ../../fleet/pwa/browser.nix { inherit pkgs; };
   desktopDir = if config.xdg.userDirs.desktop != null then config.xdg.userDirs.desktop else "${config.home.homeDirectory}/Desktop";
   # Chromium derives a Wayland app ID from the launch URL and profile basename.
   # Match the existing shared Default profile, including path-bearing web apps.
