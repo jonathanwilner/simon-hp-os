@@ -21,6 +21,18 @@ WINDOW_MODE = """({
 })"""
 
 
+# Chrome preinstalls these apps without desktop shortcuts. Several use normal
+# browser tabs by default, where CSS display-mode alone cannot identify them.
+CHROME_PREINSTALLED_SCOPES = (
+    "https://docs.google.com/document/",
+    "https://docs.google.com/spreadsheets/",
+    "https://docs.google.com/presentation/",
+    "https://chat.google.com/",
+    "https://drive.google.com/",
+    "https://www.youtube.com/",
+)
+
+
 class Target:
     def __init__(self, target_id):
         self.socket = websocket.create_connection(
@@ -73,7 +85,8 @@ class Appearance:
                 target = self.session(tid)
                 result = target.call("Runtime.evaluate", {
                     "expression": WINDOW_MODE, "returnByValue": True})["result"].get("value", {})
-                if result.get("app") or (result.get("fullscreen") and target.dark is not None):
+                preinstalled = info["url"].startswith(CHROME_PREINSTALLED_SCOPES)
+                if preinstalled or result.get("app") or (result.get("fullscreen") and target.dark is not None):
                     target.set_mode(result["dark"])
                     app_modes[tid] = result["dark"]
                 else:
