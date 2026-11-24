@@ -4,11 +4,12 @@ let
   scheduler = pkgs.writeShellScriptBin "hp-os-appearance-schedule" ''
     exec ${pkgs.python3}/bin/python3 ${./hp-os-appearance-schedule.py} \
       --sunwait ${pkgs.sunwait}/bin/sunwait \
-      --appearance ${config.programs.hp-os.package}/bin/hp-os-appearance \
+      --appearance ${cfg.package}/bin/hp-os-appearance \
       --latitude ${toString cfg.latitude} --longitude ${toString cfg.longitude} "$@"
   '';
 in {
   options.programs.goran-hp-os.appearanceSchedule = {
+    package = lib.mkOption { type = lib.types.package; default = config.programs.hp-os.package; description = "HP-OS package that publishes the desktop appearance."; };
     enable = lib.mkEnableOption "local sunrise/sunset application appearance" // { default = true; };
     # Match the established DMS_THEME_LAT/LON fleet location in home.nix.
     latitude = lib.mkOption { type = lib.types.float; default = 34.05; description = "Latitude for local sunrise and sunset (Los Angeles by default)."; };
