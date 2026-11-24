@@ -2,6 +2,8 @@
 import itertools
 import json
 import re
+import subprocess
+import sys
 import time
 from urllib.error import URLError
 from urllib.request import ProxyHandler, build_opener
@@ -51,8 +53,10 @@ class Target:
 
     def set_mode(self, dark):
         if self.dark != dark:
-            # Blink darkens unthemed web content while websites receive Chrome's
-            # native prefers-color-scheme, including live portal changes.
+            # Chrome can cache the launch-time GTK preference on Linux.
+            self.call("Emulation.setEmulatedMedia", {"features": [
+                {"name": "prefers-color-scheme", "value": "dark" if dark else "light"}]})
+            # Blink also darkens web content without native dark styling.
             self.call("Emulation.setAutoDarkModeOverride", {"enabled": dark})
             self.dark = dark
 
@@ -70,7 +74,7 @@ class Appearance:
         if target:
             target.close()
 
-    def refresh(self, targets):
+    def refresh(self, targets, desktop_dark):
         now = time.monotonic()
         by_id = {t["id"]: t for t in targets if re.fullmatch(r"[a-fA-F0-9]{32}", t.get("id", ""))}
         self.ordinary = {key: value for key, value in self.ordinary.items()
@@ -87,8 +91,9 @@ class Appearance:
                     "expression": WINDOW_MODE, "returnByValue": True})["result"].get("value", {})
                 preinstalled = info["url"].startswith(CHROME_PREINSTALLED_SCOPES)
                 if preinstalled or result.get("app") or (result.get("fullscreen") and target.dark is not None):
-                    target.set_mode(result["dark"])
-                    app_modes[tid] = result["dark"]
+                    dark = desktop_dark if desktop_dark is not None else result["dark"]
+                    target.set_mode(dark)
+                    app_modes[tid] = dark
                 else:
                     self.ordinary[tid] = (info["url"], now + 30)
             except (OSError, ValueError, RuntimeError, websocket.WebSocketException):
@@ -118,6 +123,19 @@ class Appearance:
         return self.sessions[target_id]
 
 
+def portal_scheme(gdbus):
+    try:
+        value = subprocess.check_output([
+            gdbus, "call", "--session", "--dest", "org.freedesktop.portal.Desktop",
+            "--object-path", "/org/freedesktop/portal/desktop", "--method",
+            "org.freedesktop.portal.Settings.Read", "org.freedesktop.appearance",
+            "color-scheme"], stderr=subprocess.DEVNULL, text=True, timeout=2)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    match = re.search(r"uint32 ([012])", value)
+    return match.group(1) == "1" if match else None
+
+
 def main():
     appearance = Appearance()
     while True:
@@ -126,7 +144,7 @@ def main():
                 targets = json.load(response)
         except (OSError, URLError, ValueError):
             targets = []
-        appearance.refresh(targets)
+        appearance.refresh(targets, portal_scheme(sys.argv[1]) if targets else None)
         time.sleep(5 if targets else 15)
 
 

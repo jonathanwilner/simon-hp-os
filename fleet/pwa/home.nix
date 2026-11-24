@@ -33,7 +33,7 @@ in {
     systemd.user.services.chrome-pwa-appearance = {
       Unit.Description = "Follow the desktop color scheme in Chrome web app windows";
       Service = {
-        ExecStart = "${python}/bin/python3 ${./appearance.py}";
+        ExecStart = "${python}/bin/python3 ${./appearance.py} ${pkgs.glib}/bin/gdbus";
         Restart = "on-failure";
         RestartSec = 5;
       };
