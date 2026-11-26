@@ -11,6 +11,27 @@
   ],
   "encoding": "Original bytes; extensions corrected to match format. No resizing or upscaling.",
   "files": {
+    "harmonyos5-01-23076.jpg": "de2dfb0489ece8f098c448b9372cb8b44fb2a2449f9010631f9092204ec50a77",
+    "harmonyos5-02-23075.jpg": "94c22599f80c1544917f40a344405805e6be90f6caa5974d4f7a64d1473e98d1",
+    "harmonyos5-03-23074.jpg": "6a24379387e93502d726b94b4993c16173a3a59904c1b3b6e5f9fc46811f1e5f",
+    "harmonyos5-04-23073.jpg": "853efcaebbfba7d667f4ce2a4f73eed6198ea2d7249b490fa7ddfec923f84d19",
+    "harmonyos5-05-23072.jpg": "c6258b97a984d10fa6ac498f1b8a2f9b74249d4486bf7fd87abb1fbe0eb3a4cb",
+    "harmonyos5-06-23071.jpg": "d33e2113ae72ea9a5a4b2b165dc3911131d1651645e6c8a89a13ffc1cdf2fbff",
+    "harmonyos5-07-23070.jpg": "b84a2c15e1bd6cc98d9c511769e81318ad5ae961bea558fec859114389acedf6",
+    "harmonyos5-08-23069.jpg": "2a2a166ba9065dd4c4f8171d5fce6b0df952c312fbfd345aba951c4035670ad3",
+    "harmonyos5-09-23068.jpg": "a32a586db015fd4a4538afc5898bea1a4a08c2d1fb243f5db080a374a74b9a04",
+    "harmonyos5-10-23067.jpg": "ad5fac1048981720e802d1f28c290cc4562008cd122cacc23f591fb4a237f65a",
+    "harmonyos5-11-23066.jpg": "bddd1ebbd11ba208baadb6fcfa9647f67c3642df159825e41689f0e0fa3b10f0",
+    "harmonyos5-12-23065.jpg": "8c8bfbddcb7fe092903433f8fb38cfdc9df373886a5add7dc70f4c57e589fea9",
+    "harmonyos5-13-23064.jpg": "d1244bd11c0d840356de55914371a0cf80b50c66aa09edfe84dd309748643576",
+    "harmonyos5-14-23063.jpg": "624086b185a113eb5791b8ed1db5b9f59f6d8f977fe5dd01650e912519e24bba",
+    "harmonyos5-15-23062.jpg": "1238457a5510660bbcc32aaf54edd269ec8a5bb867b4e080a6f64b748c49060c",
+    "harmonyos5-16-23061.jpg": "d6e5d51c49ffdb87a435bbcc5eb7d923b77da283d185f869ca380d6ac413940d",
+    "harmonyos5-17-23060.jpg": "3df144bde845973ba37a8fe0f7f5e430a2a297a94648199011563eec51fc6b12",
+    "harmonyos5-18-23059.jpg": "d65a347531a8401c435d7a9d86b6db58c0fdbbf35ce8b6ac1d106fc793238929",
+    "harmonyos5-19-23058.jpg": "574c6b4b422219d9e25e3a3124914fc0376c01b860d837ea01e14ca5b26649f9",
+    "harmonyos5-20-23057.jpg": "f83c42e7f00a0a6e49d4aff9a276de20b938bb7ae6177c57cd9422b75ca08589",
+    "harmonyos5-21-23056.jpg": "fa16430c14410c028ceaae2eb3a68691ba450ec167fd2b77ab35341dd86369a7",
     "harmonyos7-default.png": "35f1b1ad617b55ddbb9a2490134ed0ad93d704c843294f949c39eae512a7ca1c",
     "home_wallpaper_00.png": "4ec955c58e0656e3477e4974678e181c0a3f0ae68bc4ff3cd4f2c4ed95be45de",
     "home_wallpaper_01.jpg": "07b80bb2644060a69befc08149c61e5f607d1378dd52e0556d85ac9789b4aa81",
@@ -27,6 +48,40 @@
     "home_wallpaper_12.jpg": "25690a39f6d5ae9131bfc8aae2c41bfb4a642509c0d23d1af3e88608aafe7726",
     "home_wallpaper_13.jpg": "3c3d829ed1a5e12eecc62f7968daf0f305012722e39bc709813744eb12c0c4dc",
     "home_wallpaper_14.jpg": "8d3ead7d6ac30806cabb1ada056965d16440542103c805de7f590d3ae23c78a5",
-    "home_wallpaper_15.jpg": "7edf408bfda81591ff326a6858c59792b678394996ab48a6e8a3b64216ffc5f4"
-  }
+    "home_wallpaper_15.jpg": "7edf408bfda81591ff326a6858c59792b678394996ab48a6e8a3b64216ffc5f4",
+    "matebook-fold-01-22549.png": "4da19cdd0057534b8833f40e39dff5030c818d23b99308243745f3899fa38acb",
+    "matebook-fold-02-22554.png": "cfd751dce1c91871501be69372bb84d6c10453a046dbf220f681a1ba3e24906a",
+    "matebook-fold-03-22551.png": "ce4a8828e5286f9d52ca858a94bd4be1c709e1e7442939ca4e105991deb74f9e",
+    "matebook-fold-04-22553.png": "4200e31d68595c2c7d720c3af661f8cbadaa544dba3542a0e70ac0d8d04e152e",
+    "matebook-fold-05-22550.png": "2012ac40e1bc99ba7c004a51142c9018dcef0eb888ceaf39022d62620107c5a6",
+    "matebook-fold-06-22552.png": "622e853c2db235792badc398fe312daeed5aa291e7253dd4720410c7b48a07cb",
+    "matebook-fold-07-22556.png": "c5150a28323d75c9131e589d0388958ca4ce5c6c337a5a409efdb8e11b164af2",
+    "matebook-fold-08-22557.png": "22d3c11e7aa95083e7d7d5bf698d3fe66973dea0d9ead44dcdb85ce57151c652",
+    "matebook-fold-09-22555.png": "e9763efc04ad876c3353180c5b7b317f4a254e06bef7577f7769d882861ff467",
+    "matebook-fold-10-22559.png": "267a378321814c6bd00a8e58bce090b3c3e860669cf52ab2cb37b9834ade43c1",
+    "matebook-fold-11-22558.png": "c858128b6622ed5dc7d835a3fdfde19cfecaf15b514b5cc2c7c9c75498dde2a1",
+    "matebook-fold-12-22560.png": "1ed4674e951fb04ab045a3d83783bef8f08ac49764600677f68f5a0aca3334b2"
+  },
+  "additionalSources": [
+    {
+      "name": "Huawei MateBook Fold Ultimate (HarmonyOS PC) stock wallpapers",
+      "source": "https://4kwallpapers.com/huawei-matebook-fold-wallpapers/",
+      "dimensions": [
+        4120,
+        4120
+      ],
+      "format": "PNG",
+      "count": 12
+    },
+    {
+      "name": "HarmonyOS 5 (HarmonyOS NEXT) stock wallpapers",
+      "source": "https://4kwallpapers.com/harmonyos-5-wallpapers/",
+      "dimensions": [
+        3200,
+        3200
+      ],
+      "format": "JPEG",
+      "count": 21
+    }
+  ]
 }
